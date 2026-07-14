@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useMeals } from '../../meals/context/MealsContext';
 import { getClientProfile, getDailyQuote } from '../services/clientService';
@@ -12,7 +12,7 @@ import {
 import { Alert } from 'react-native';
 
 export const useDashboardViewModel = () => {
-    const { completedMeals, hydrateCompletedMeals, toggleMealCompletion } = useMeals();
+    const { hydrateCompletedMeals, toggleMealCompletion } = useMeals();
     const [water, setWater] = useState(0);
     const [waterInput, setWaterInput] = useState('200');
     const [weight, setWeight] = useState(null);
@@ -24,6 +24,7 @@ export const useDashboardViewModel = () => {
     const [isSidebarVisible, setIsSidebarVisible] = useState(false);
     const [selectedMeal, setSelectedMeal] = useState(null);
     const [dailyQuote, setDailyQuote] = useState('');
+    const mealRequestVersionsRef = useRef({});
     const {
         connectionStatus,
         activeDietitian,
@@ -125,14 +126,14 @@ export const useDashboardViewModel = () => {
     const waterProgress = Math.min(water / 3, 1);
 
     const firstIncompleteMeal = useMemo(
-        () => meals.find((meal) => !completedMeals[meal.id]?.completed),
-        [completedMeals, meals],
+        () => meals.find((meal) => !meal.is_eaten),
+        [meals],
     );
 
     const displayedMeal =
         (focusedMealId && meals.find((meal) => meal.id === focusedMealId)) || firstIncompleteMeal;
 
-    const isMealCompleted = displayedMeal ? !!completedMeals[displayedMeal.id]?.completed : false;
+    const isMealCompleted = !!displayedMeal?.is_eaten;
 
     const addWater = async () => {
         const amount = parseInt(waterInput, 10) || 200;
@@ -175,12 +176,24 @@ export const useDashboardViewModel = () => {
 
         const mealId = displayedMeal.id;
         const nextIsEaten = !isMealCompleted;
+        const previousIsEaten = !!displayedMeal.is_eaten;
+        const requestVersion = (mealRequestVersionsRef.current[mealId] || 0) + 1;
+
+        mealRequestVersionsRef.current[mealId] = requestVersion;
+        setMeals((currentMeals) => currentMeals.map((meal) => (
+            meal.id === mealId ? { ...meal, is_eaten: nextIsEaten } : meal
+        )));
+        setFocusedMealId(mealId);
 
         try {
             const updatedMeal = await toggleMealCompletion(mealId, {
                 completed: nextIsEaten,
                 photoUri: nextIsEaten ? photoUri : null,
             });
+
+            if (mealRequestVersionsRef.current[mealId] !== requestVersion) {
+                return;
+            }
 
             setMeals((currentMeals) => currentMeals.map((meal) => {
                 if (meal.id !== mealId) return meal;
@@ -198,12 +211,20 @@ export const useDashboardViewModel = () => {
                     photo_url: updatedMeal?.photo_url || meal.photo_url,
                 };
             }));
-            setFocusedMealId(mealId);
         } catch (error) {
+            if (mealRequestVersionsRef.current[mealId] === requestVersion) {
+                setMeals((currentMeals) => currentMeals.map((meal) => (
+                    meal.id === mealId ? { ...meal, is_eaten: previousIsEaten } : meal
+                )));
+            }
+
             if (__DEV__) {
                 console.error('Failed to update meal completion.');
             }
-            Alert.alert('Hata', error.message || 'Öğün durumu kaydedilemedi. Lütfen tekrar deneyin.');
+            Alert.alert(
+                'Hata',
+                'Öğün durumu güncellenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.',
+            );
         }
     };
 

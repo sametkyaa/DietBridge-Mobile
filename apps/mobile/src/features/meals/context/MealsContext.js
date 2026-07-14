@@ -12,30 +12,53 @@ const MealsContext = createContext(defaultContext);
 export const MealsProvider = ({ children }) => {
     const [completedMeals, setCompletedMeals] = useState({});
     const completedMealsRef = useRef({});
+    const completionRequestVersionsRef = useRef({});
 
     const setCompletedMealsState = useCallback((nextCompletedMeals) => {
-        completedMealsRef.current = nextCompletedMeals;
-        setCompletedMeals(nextCompletedMeals);
+        const currentCompletedMeals = completedMealsRef.current;
+        const nextState = typeof nextCompletedMeals === 'function'
+            ? nextCompletedMeals(currentCompletedMeals)
+            : nextCompletedMeals;
+
+        completedMealsRef.current = nextState;
+        setCompletedMeals(nextState);
+        return nextState;
     }, []);
 
-    const hydrateCompletedMeals = useCallback((meals = []) => {
-        const next = { ...completedMealsRef.current };
+    const updateMealCompletionState = useCallback((mealId, completion) => {
+        return setCompletedMealsState((currentCompletedMeals) => {
+            const nextCompletedMeals = { ...currentCompletedMeals };
 
-        meals.forEach((meal) => {
-            if (!meal?.id) return;
-
-            if (meal.is_eaten) {
-                const current = next[meal.id];
-                next[meal.id] = {
-                    completed: true,
-                    photoUri: current?.photoUri || meal.photo_url || null,
-                };
+            if (completion) {
+                nextCompletedMeals[mealId] = completion;
             } else {
-                delete next[meal.id];
+                delete nextCompletedMeals[mealId];
             }
-        });
 
-        setCompletedMealsState(next);
+            return nextCompletedMeals;
+        });
+    }, [setCompletedMealsState]);
+
+    const hydrateCompletedMeals = useCallback((meals = []) => {
+        setCompletedMealsState((currentCompletedMeals) => {
+            const next = { ...currentCompletedMeals };
+
+            meals.forEach((meal) => {
+                if (!meal?.id) return;
+
+                if (meal.is_eaten) {
+                    const current = next[meal.id];
+                    next[meal.id] = {
+                        completed: true,
+                        photoUri: current?.photoUri || meal.photo_url || null,
+                    };
+                } else {
+                    delete next[meal.id];
+                }
+            });
+
+            return next;
+        });
     }, [setCompletedMealsState]);
 
     const toggleMealCompletion = useCallback(async (mealId, options = {}) => {
@@ -46,30 +69,29 @@ export const MealsProvider = ({ children }) => {
         const normalizedOptions = typeof options === 'object' && options !== null
             ? options
             : { photoUri: options };
-        const previous = completedMealsRef.current;
-        const wasCompleted = !!previous[mealId]?.completed;
+        const previousCompletion = completedMealsRef.current[mealId];
+        const wasCompleted = !!previousCompletion?.completed;
         const shouldComplete = normalizedOptions.completed ?? !wasCompleted;
-        const next = { ...previous };
+        const requestVersion = (completionRequestVersionsRef.current[mealId] || 0) + 1;
 
-        if (shouldComplete) {
-            next[mealId] = {
+        completionRequestVersionsRef.current[mealId] = requestVersion;
+        updateMealCompletionState(mealId, shouldComplete
+            ? {
                 completed: true,
-                photoUri: normalizedOptions.photoUri ?? previous[mealId]?.photoUri ?? null,
-            };
-        } else {
-            delete next[mealId];
-        }
-
-        setCompletedMealsState(next);
+                photoUri: normalizedOptions.photoUri ?? previousCompletion?.photoUri ?? null,
+            }
+            : null);
 
         try {
-            const updatedMeal = await updateMealCompletion(mealId, shouldComplete);
-            return updatedMeal;
+            return await updateMealCompletion(mealId, shouldComplete);
         } catch (error) {
-            setCompletedMealsState(previous);
+            if (completionRequestVersionsRef.current[mealId] === requestVersion) {
+                updateMealCompletionState(mealId, previousCompletion);
+            }
+
             throw error;
         }
-    }, [setCompletedMealsState]);
+    }, [updateMealCompletionState]);
 
     const value = useMemo(() => ({
         completedMeals,

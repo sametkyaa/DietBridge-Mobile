@@ -80,15 +80,24 @@ export const updateMealCompletion = async (mealId, isEaten) => {
         throw new Error(MEAL_COMPLETION_UPDATE_ERROR_MESSAGE);
     }
 
-    const { data, error } = await supabase.rpc('set_my_meal_completion', {
-        p_meal_id: mealId,
-        p_is_eaten: isEaten,
-    });
+    try {
+        const { data, error } = await supabase.rpc('set_my_meal_completion', {
+            p_meal_id: mealId,
+            p_is_eaten: isEaten,
+        });
 
-    if (error || data !== true) {
+        if (error || data !== true) {
+            throw new Error(MEAL_COMPLETION_UPDATE_ERROR_MESSAGE);
+        }
+
+        // The RPC returns a boolean rather than a meal row; preserve callers' meal state by merging this minimal result.
+        return { id: mealId, is_eaten: isEaten };
+    } catch (error) {
+        if (__DEV__) {
+            console.warn('Meal completion RPC failed.', { mealId });
+        }
+
+        // Keep the rejection contract while preventing transport details from reaching the UI.
         throw new Error(MEAL_COMPLETION_UPDATE_ERROR_MESSAGE);
     }
-
-    // The RPC returns a boolean rather than a meal row; preserve callers' meal state by merging this minimal result.
-    return { id: mealId, is_eaten: isEaten };
 };
