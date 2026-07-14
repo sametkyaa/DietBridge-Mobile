@@ -166,9 +166,9 @@ export const useDashboardViewModel = () => {
 
     const completeMeal = async (photoUri = null) => {
         if (!displayedMeal?.id) {
-            console.error('Meal completion skipped: missing meal id', {
-                meal: displayedMeal,
-            });
+            if (__DEV__) {
+                console.error('Meal completion skipped: missing meal id');
+            }
             Alert.alert('Hata', 'Geçerli öğün ID bulunamadı.');
             return;
         }
@@ -177,12 +177,6 @@ export const useDashboardViewModel = () => {
         const nextIsEaten = !isMealCompleted;
 
         try {
-            console.log('Dashboard meal completion request:', {
-                mealId,
-                currentIsEaten: !!displayedMeal.is_eaten,
-                nextIsEaten,
-            });
-
             const updatedMeal = await toggleMealCompletion(mealId, {
                 completed: nextIsEaten,
                 photoUri: nextIsEaten ? photoUri : null,
@@ -206,13 +200,9 @@ export const useDashboardViewModel = () => {
             }));
             setFocusedMealId(mealId);
         } catch (error) {
-            console.error('Failed to update meal completion:', {
-                mealId,
-                userId: error?.debugContext?.userId,
-                supabaseError: error?.debugContext?.supabaseError,
-                debugContext: error?.debugContext,
-                error,
-            });
+            if (__DEV__) {
+                console.error('Failed to update meal completion.');
+            }
             Alert.alert('Hata', error.message || 'Öğün durumu kaydedilemedi. Lütfen tekrar deneyin.');
         }
     };
