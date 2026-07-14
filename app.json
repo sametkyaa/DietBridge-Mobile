@@ -1,0 +1,8 @@
+{
+  "expo": {
+    "name": "dietbridge",
+    "slug": "dietbridge",
+    "version": "1.0.0",
+    "plugins": ["expo-font"]
+  }
+}
