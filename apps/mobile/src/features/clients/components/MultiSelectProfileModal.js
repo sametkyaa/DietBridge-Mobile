@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     Keyboard,
     KeyboardAvoidingView,
     Modal,
@@ -53,6 +54,16 @@ const MultiSelectProfileModal = ({
         [draftValues],
     );
     const isBusy = loading || isSubmitting;
+    const initialKeys = useMemo(
+        () => normalizeMultiValue(selectedValues).map(normalizeKey).sort(),
+        [selectedValues],
+    );
+    const draftKeys = useMemo(
+        () => draftValues.map(normalizeKey).sort(),
+        [draftValues],
+    );
+    const hasUnsavedChanges = customValue.trim().length > 0
+        || JSON.stringify(initialKeys) !== JSON.stringify(draftKeys);
 
     const toggleOption = (option) => {
         if (isBusy || submitLockRef.current) return;
@@ -97,8 +108,18 @@ const MultiSelectProfileModal = ({
 
     const handleClose = () => {
         if (isBusy || submitLockRef.current) return;
-        Keyboard.dismiss();
-        onClose();
+        const close = () => {
+            Keyboard.dismiss();
+            onClose();
+        };
+        if (!hasUnsavedChanges) {
+            close();
+            return;
+        }
+        Alert.alert('Kaydedilmemiş değişiklikler', 'Değişiklikleri kaydetmeden çıkmak istiyor musunuz?', [
+            { text: 'Düzenlemeye devam et', style: 'cancel' },
+            { text: 'Kaydetmeden çık', style: 'destructive', onPress: close },
+        ]);
     };
 
     const handleSave = async () => {

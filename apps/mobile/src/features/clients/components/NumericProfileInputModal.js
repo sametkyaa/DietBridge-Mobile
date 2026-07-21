@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     Keyboard,
     KeyboardAvoidingView,
     Modal,
@@ -40,6 +41,8 @@ const NumericProfileInputModal = ({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const submitLockRef = useRef(false);
     const isBusy = loading || isSubmitting;
+    const initialValue = value === null || value === undefined ? '' : formatDecimalValue(value);
+    const hasUnsavedChanges = normalizeDecimalInput(inputValue) !== normalizeDecimalInput(initialValue);
 
     useEffect(() => {
         if (!visible) return;
@@ -51,8 +54,18 @@ const NumericProfileInputModal = ({
 
     const handleClose = () => {
         if (isBusy || submitLockRef.current) return;
-        Keyboard.dismiss();
-        onClose();
+        const close = () => {
+            Keyboard.dismiss();
+            onClose();
+        };
+        if (!hasUnsavedChanges) {
+            close();
+            return;
+        }
+        Alert.alert('Kaydedilmemiş değişiklikler', 'Değişiklikleri kaydetmeden çıkmak istiyor musunuz?', [
+            { text: 'Düzenlemeye devam et', style: 'cancel' },
+            { text: 'Kaydetmeden çık', style: 'destructive', onPress: close },
+        ]);
     };
 
     const handleSave = async () => {
@@ -61,6 +74,8 @@ const NumericProfileInputModal = ({
         const normalizedValue = normalizeDecimalInput(inputValue);
         const parsedValue = normalizedValue === '' ? null : Number.parseFloat(normalizedValue);
         const isInvalid = parsedValue !== null && (
+            !/^\d+(?:\.\d+)?$/.test(normalizedValue)
+            ||
             !Number.isFinite(parsedValue)
             || parsedValue < minimum
             || parsedValue > maximum
