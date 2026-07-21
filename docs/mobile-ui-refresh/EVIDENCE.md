@@ -91,3 +91,40 @@ Remaining risks:
 
 - Existing npm audit findings remain out of scope (19 total after remediation).
 - Authenticated Android 8+ minute background/reload/token-refresh acceptance remains open.
+
+## P1 UI Foundation — PASS
+
+Commit: `fafe6ca` (`feat(ui): add DietBridge mobile design foundation`)
+
+Files: six theme modules and fourteen shared UI modules under the P1 allowlist. Existing `fonts.js`, `styles.js`, production screens, navigation and package files were unchanged.
+
+Commands:
+
+- Babel parse of all 20 new JavaScript files
+- shared UI backend-boundary `rg` scan
+- `git diff --check`
+- `npx expo export --platform android --output-dir .tmp-ui-check/p1-android`
+- repair export to `.tmp-ui-check/p1-repair-android`
+
+Results:
+
+- 20/20 new files parsed successfully.
+- Supabase, AsyncStorage, network and backend-call scan: no matches.
+- Android export: PASS before and after review repairs.
+- Package/dependency changes: none.
+- Production screen/navigation changes: none.
+
+Reviewer findings:
+
+- P1: standard TextInput prop forwarding and two text contrast failures.
+- P2: per-instance skeleton animation risk and pressable card minimum target.
+
+Resolved findings:
+
+- AppInput explicitly forwards/merges accessibility and placeholder props and passes remaining TextInput props.
+- Text/button semantic foregrounds meet at least 4.5:1 contrast in checked pairings.
+- Skeletons share one ref-counted animation loop.
+- Pressable cards have a 44 px minimum target.
+- Repair review found no remaining P0/P1/P2 findings.
+
+Remaining risks: physical-device visual and screen-reader acceptance is pending.

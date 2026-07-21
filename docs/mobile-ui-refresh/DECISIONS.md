@@ -23,3 +23,7 @@ Meal `unlinked` remains distinct from `empty`; retrying remains visible. Screens
 ## D-006 — Remain on Expo SDK 54
 
 The baseline issue was patch-level package drift, not a requirement for an SDK major/minor upgrade. React, React Native, navigation, Supabase, auth/session, configuration and application source were preserved.
+
+## D-007 — Adapt reference primitives to the existing host contracts
+
+The reference theme/component filenames were retained under `shared/theme` and `shared/components/ui`. Theme import depth was adapted for the target layout, typography uses the already-loaded Inter families, semantic foreground tokens were darkened for accessible text contrast, and skeleton instances share one animation loop. Existing `fonts.js` and `styles.js` remain unchanged for incremental migration.
