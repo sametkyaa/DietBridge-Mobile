@@ -3,11 +3,11 @@
 ## Publication status
 
 - Local branch: `codex/mobile-ui-refresh`
-- Local commits ahead of main: 23
-- Worktree: clean at the P9 package boundary
-- Push: pending for the P9 evidence commit
+- Local commits ahead of main: 25
+- Worktree: clean at the P10 package boundary
+- Push: PASS; remote tracking branch updated through P10
 - Draft PR: pending
-- Reason: GitHub connector returned HTTP 403 (`Resource not accessible by integration`); GitHub CLI remains unavailable
+- Draft PR reason: GitHub connector returned HTTP 403 (`Resource not accessible by integration`); GitHub CLI remains unavailable
 - Engineering impact: none
 
 ## P0B Pre-remediation dependency snapshot
@@ -465,3 +465,57 @@ Resolved findings:
 - Final functional/boundary and UI/accessibility P9 reviews reported no P0, P1, P2 or P3 findings in the cleanup diff.
 
 Remaining risks: the frozen `App.js` startup loader is not announced to screen readers; modal focus transfer/restore depends on native Modal behavior; both require device acceptance. Physical screen checks and the authenticated 8+ minute background/reload/token-refresh release blocker remain open.
+
+## P10 Final Review — PASS
+
+Commit: `a365035` (`fix(ui): address final accessibility review`)
+
+Files: 12 shared/feature presentation modules adjusted from final reviewer findings; final state/evidence documents.
+
+Commands:
+
+- three independent read-only branch reviews against `main`
+- `npm ci`
+- `npm audit --json` and dependency-path inspection
+- `npx expo-doctor`
+- Babel parse of all 98 application JavaScript modules
+- Git status/log/stat/name/diff checks
+- preview, secret, Supabase singleton and shared-presentation boundary scans
+- reviewed Android and iOS release exports
+
+Results:
+
+- Review A functional regression: PASS, no P0–P3 findings.
+- Review B UI/accessibility: PASS after low-risk P2/P3 repairs, no remaining P0–P3 findings.
+- Review C scope/security and final branch review: PASS after correcting stale publication evidence, no remaining P0–P3 findings.
+- `npm ci`: PASS; 663 packages installed from lockfile.
+- Expo Doctor: PASS, 18/18.
+- Android export: PASS; reviewed bundle `AppEntry-38395bbeeeae4c67a0277b81795d02aa.hbc`.
+- iOS export: PASS; reviewed bundle `AppEntry-5d836c29d60616fdd70432cb140336f2.hbc`.
+- Preview/reference imports, tracked secret patterns, duplicate Supabase clients and shared-component data access: none. The single expected client factory remains in `lib/supabaseClient.js`.
+- Meaningful small text/placeholders now meet at least 4.5:1 contrast; chart labels use the 12 px caption token.
+- Busy specialist save buttons retain an explicit accessible name; shared empty/error and modal titles expose heading semantics.
+- Contextual sidebar/meal images are removed from duplicate screen-reader focus.
+
+Reviewer findings:
+
+- P2: meaningful `textTertiary` captions/placeholders failed small-text contrast.
+- P2: specialist modal save buttons lost their accessible name while showing only a busy spinner.
+- P3: state/modal heading semantics and contextual image focus were incomplete.
+- P3: top-level publication evidence still said branch push pending after a successful push.
+
+Resolved findings:
+
+- Contrast, minimum caption size, busy labels, headings and image semantics were repaired and re-reviewed.
+- Publication evidence now distinguishes successful branch push from the still-pending draft PR.
+- All three final reviews report no remaining P0, P1, P2 or P3 findings.
+
+Remaining risks:
+
+- `npm audit` reports 19 advisories (1 low, 12 moderate, 5 high, 1 critical). The critical `shell-quote` path is transitive under `react-native > react-devtools-core`; suggested broad remediation includes an Expo 57 major upgrade, so no forced fix was applied in this Expo 54 UI package.
+- `DEVICE_UI_ACCEPTANCE_PENDING`: no authorized Android device/emulator was connected.
+- The frozen `App.js` startup loader announcement and native Modal focus transfer/restore require TalkBack/VoiceOver device checks.
+- Supabase Dashboard policies/e-mail/reset configuration remain manual checks.
+- The authenticated Android 8+ minute background/reload/token-refresh release blocker remains open.
+
+Final engineering decision: `READY_FOR_DEVICE_ACCEPTANCE`.

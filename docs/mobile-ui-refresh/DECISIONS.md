@@ -59,3 +59,7 @@ Chat remains a status-only placeholder because no production message service, Vi
 ## D-015 — Keep P9 cleanup evidence-driven
 
 P9 removes only the unreferenced legacy `shared/theme/styles.js` file and tokenizes the two retained Profile specialist editors. Functional repairs are limited to the verified Dashboard focus race, repeated Analysis authorization queries and unbounded signed-photo cache. The silent `App.js` startup loader remains documented accessibility debt because App auth/session lifecycle is frozen for this refresh; modal focus transfer remains a physical-device check.
+
+## D-016 — Separate dependency audit remediation from the UI release candidate
+
+The clean install reports 19 npm audit advisories, including a critical transitive `shell-quote` advisory under React Native devtools. npm proposes an Expo 57 major upgrade for part of the tree, which is outside this Expo 54 UI refresh and would invalidate the verified baseline. No forced audit fix is applied; the advisories remain an explicit dependency-remediation risk for a separately scoped upgrade.
