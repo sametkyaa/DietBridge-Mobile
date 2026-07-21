@@ -25,6 +25,7 @@ export const useAuthViewModel = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+    const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
 
     // Focus states
     const [isEmailFocused, setIsEmailFocused] = useState(false);
@@ -37,6 +38,10 @@ export const useAuthViewModel = () => {
 
     const togglePasswordVisibility = () => {
         setIsPasswordVisible((currentValue) => !currentValue);
+    };
+
+    const toggleConfirmPasswordVisibility = () => {
+        setIsConfirmPasswordVisible((currentValue) => !currentValue);
     };
 
     const getDisplayErrorMessage = (error) => {
@@ -95,6 +100,8 @@ export const useAuthViewModel = () => {
         loading,
         isPasswordVisible,
         togglePasswordVisibility,
+        isConfirmPasswordVisible,
+        toggleConfirmPasswordVisibility,
         isEmailFocused,
         setIsEmailFocused,
         isPasswordFocused,
