@@ -39,3 +39,7 @@ Dashboard nutrition values are presentation-only totals derived from real comple
 ## D-010 — Share one meal-detail presentation
 
 Dashboard and the meal-plan screen delegate to one `features/meals` meal-detail sheet. Dashboard keeps only a thin adapter for its presentation-shaped meal object. This avoids duplicate detail implementations while preserving signed-photo, canonical field and feature ownership boundaries.
+
+## D-011 — Keep Analysis read-only for weight and honest for unavailable data
+
+Current-weight entry stays on Dashboard; Analysis only reads persisted weight history. Missing weight records are not converted to 0 kg points, missing water days are not converted to persisted zeroes, and the unavailable MVP badge source is shown as empty rather than as demo achievements. Water totals do not claim a target that the analytics contract does not load.

@@ -3,9 +3,9 @@
 ## Publication status
 
 - Local branch: `codex/mobile-ui-refresh`
-- Local commits ahead of main: 12
-- Worktree: clean at the P4 package boundary
-- Push: PASS; remote tracking branch updated through P4
+- Local commits ahead of main: 14
+- Worktree: clean at the P5 package boundary
+- Push: PASS; remote tracking branch updated through P5
 - Draft PR: pending
 - Reason: GitHub connector returned HTTP 403 (`Resource not accessible by integration`); GitHub CLI remains unavailable
 - Engineering impact: none
@@ -253,3 +253,48 @@ Resolved findings:
 - Final contract, scope and UI/accessibility re-reviews reported no P0, P1, P2 or P3 findings.
 
 Remaining risks: TalkBack/VoiceOver focus order, Android keyboard behavior, real signed-photo preview and authenticated grocery/change-request acceptance remain physical-device/manual checks.
+
+## P5 Analysis / Progress — PASS
+
+Commit: `fd5c93a` (`feat(ui): refresh progress and analytics views`)
+
+Files: Analysis screen/ViewModel/service honesty remediation and six analytics presentation modules.
+
+Commands:
+
+- Supabase changelog review for relevant `supabase-js` / Data API changes
+- Babel parse of all 9 changed/new JavaScript modules
+- presentation-layer Supabase/network/storage/auth boundary scan
+- fake analytics/raw backend message scans
+- `git diff --check` and scope/frozen-boundary review
+- Android exports before and after review repairs
+
+Results:
+
+- Babel parse: PASS (9/9 files).
+- Android export: PASS after final repairs.
+- Explicit loading, retrying, ready, empty, locked and error states are user-visible; retry refreshes the connection before reloading data.
+- Weight delta/max/start/current calculations and selected-record behavior remain authoritative and read-only.
+- Empty weight history is `[]`, not a synthetic 0 kg point; query errors are no longer disguised as empty.
+- Measurement save remains on the existing service upsert chain with full Turkish decimal validation, at-least-one-field validation, duplicate guard and pending locks.
+- Water shows only persisted non-null log rows, without fabricated missing-day zeroes or an unfetched target; the seven-day daily average uses total divided by seven.
+- Static demo badges were removed; the absent MVP badge source produces an honest empty state.
+- Backend error detail remains in logs while UI uses a stable Turkish message.
+- Current-weight entry remains on Dashboard; the callbacks-less Analysis `+` affordance was removed.
+- Supabase access remains only in `analyticsService`; no schema, RLS, policy, bucket or Dashboard mutation occurred.
+
+Reviewer findings:
+
+- P1: synthetic weight/water points, demo badges, incomplete measurement validation and a collapsible preview-style chart presentation risked false data.
+- P2: stale connection retry, post-save refresh messaging, raw backend error text, small-width water columns and pending/form semantics required repair.
+- P3: the first weight record needed “başlangıç kaydı” semantics rather than a claimed 0 kg change.
+
+Resolved findings:
+
+- Service outputs now preserve real empty/error semantics and never seed demo achievements.
+- Loads are sequence-gated and committed atomically; retry refreshes connection state.
+- Save validation/pending/refresh outcomes are explicit and accurate.
+- Charts use real records, responsive columns and accessible selection labels; missing records are not rendered as zero measurements.
+- Final contract, scope and UI/accessibility re-reviews reported no P0, P1, P2 or P3 findings.
+
+Remaining risks: real authenticated Supabase query/write acceptance, TalkBack/VoiceOver chart navigation and Android measurement-sheet keyboard behavior remain manual checks. Data API grants/RLS remain Supabase Dashboard checks and were not changed in app code.
