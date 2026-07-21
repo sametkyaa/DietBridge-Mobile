@@ -1,29 +1,39 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { Alert } from 'react-native';
 import { useMeals } from '../../meals/context/MealsContext';
 import { getClientProfile, getDailyQuote } from '../services/clientService';
 import { getDailyLog, upsertWaterIntake, upsertDailyWeight } from '../services/dailyLogService';
-import { getDailyMeals } from '../../meals/services/mealService';
+import { getDailyMealPlan } from '../../meals/services/mealService';
+import { getNextIncompleteMeal } from '../../meals/services/mealReadModel';
+import { toLocalDateKey } from '../../../shared/utils/localDate';
 import { useDietitianConnection } from '../../dietitianConnection/context/DietitianConnectionContext';
 import {
     CONNECTION_GENERIC_ERROR_MESSAGE,
     CONNECTION_REQUIRED_MESSAGE,
 } from '../../dietitianConnection/services/dietitianConnectionService';
-import { Alert } from 'react-native';
 
 export const useDashboardViewModel = () => {
     const { completedMeals, hydrateCompletedMeals, toggleMealCompletion } = useMeals();
     const [water, setWater] = useState(0);
     const [waterInput, setWaterInput] = useState('200');
+    const [dailyLogStatus, setDailyLogStatus] = useState('loading');
+    const [dailyLogError, setDailyLogError] = useState(null);
     const [weight, setWeight] = useState(null);
     const [weightInput, setWeightInput] = useState('');
     const [meals, setMeals] = useState([]);
+    const [mealPlanStatus, setMealPlanStatus] = useState('loading');
+    const [mealPlanError, setMealPlanError] = useState(null);
     const [focusedMealId, setFocusedMealId] = useState(null);
     const [userName, setUserName] = useState('Kullanıcı');
     const [avatarUrl, setAvatarUrl] = useState(null);
     const [isSidebarVisible, setIsSidebarVisible] = useState(false);
     const [selectedMeal, setSelectedMeal] = useState(null);
     const [dailyQuote, setDailyQuote] = useState('');
+    const mealRequestVersionsRef = useRef({});
+    const planRequestSequenceRef = useRef(0);
+    const inFlightPlanRequestsRef = useRef(new Map());
+    const isMountedRef = useRef(true);
     const {
         connectionStatus,
         activeDietitian,
@@ -37,30 +47,58 @@ export const useDashboardViewModel = () => {
         rejectPendingRequest,
     } = useDietitianConnection();
 
-    const getSafeTodayStr = useCallback(() => {
-        const d = new Date();
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+    useEffect(() => () => {
+        isMountedRef.current = false;
+        planRequestSequenceRef.current += 1;
     }, []);
 
-    const loadTodayMeals = useCallback(async () => {
-        const todayStr = getSafeTodayStr();
-        const todayMeals = await getDailyMeals(todayStr);
-        console.log('Loaded dashboard meals:', todayMeals.map((meal) => ({
-            id: meal.id,
-            planId: meal.plan_id,
-            type: meal.type,
-            isEaten: meal.is_eaten,
-        })));
-        hydrateCompletedMeals(todayMeals);
-        setMeals(todayMeals);
-    }, [getSafeTodayStr, hydrateCompletedMeals]);
+    const loadTodayMeals = useCallback((now = new Date(), { retry = false, force = false } = {}) => {
+        const planDate = toLocalDateKey(now);
+        const existingRequest = inFlightPlanRequestsRef.current.get(planDate);
+        if (existingRequest && !force) return existingRequest;
+
+        const requestSequence = planRequestSequenceRef.current + 1;
+        planRequestSequenceRef.current = requestSequence;
+        if (isMountedRef.current) {
+            setMealPlanStatus(retry ? 'retrying' : 'loading');
+            setMealPlanError(null);
+            setMeals([]);
+            setFocusedMealId(null);
+        }
+
+        const request = getDailyMealPlan(planDate)
+            .then((result) => {
+                if (!isMountedRef.current || planRequestSequenceRef.current !== requestSequence) return result;
+
+                hydrateCompletedMeals(result.meals);
+                setMeals(result.meals);
+                setMealPlanStatus(result.status);
+                return result;
+            })
+            .catch((error) => {
+                if (!isMountedRef.current || planRequestSequenceRef.current !== requestSequence) return null;
+
+                setMeals([]);
+                setMealPlanStatus('error');
+                setMealPlanError(error?.message || CONNECTION_GENERIC_ERROR_MESSAGE);
+                return null;
+            })
+            .finally(() => {
+                if (inFlightPlanRequestsRef.current.get(planDate) === request) {
+                    inFlightPlanRequestsRef.current.delete(planDate);
+                }
+            });
+
+        inFlightPlanRequestsRef.current.set(planDate, request);
+        return request;
+    }, [hydrateCompletedMeals]);
+
+    const retryMealPlan = useCallback(() => (
+        loadTodayMeals(new Date(), { retry: true, force: true })
+    ), [loadTodayMeals]);
 
     const greeting = useMemo(() => {
         const hour = new Date().getHours();
-
         if (hour >= 5 && hour < 11) return 'Günaydın';
         if (hour >= 11 && hour < 17) return 'İyi günler';
         if (hour >= 17 && hour < 22) return 'İyi akşamlar';
@@ -69,17 +107,13 @@ export const useDashboardViewModel = () => {
 
     useFocusEffect(
         useCallback(() => {
-            // Load Daily Quote
             setDailyQuote(getDailyQuote());
 
-            // Load User Profile
             const loadProfile = async () => {
                 try {
                     const profile = await getClientProfile();
                     const fullName = profile?.fullName?.trim();
-                    if (fullName) {
-                        setUserName(fullName.split(' ')[0]);
-                    }
+                    if (fullName) setUserName(fullName.split(' ')[0]);
                     setAvatarUrl(profile?.avatarUrl || null);
                     if (profile?.currentWeight !== null && profile?.currentWeight !== undefined) {
                         setWeight(profile.currentWeight);
@@ -89,143 +123,119 @@ export const useDashboardViewModel = () => {
                     console.error('Failed to load dashboard profile:', error);
                 }
             };
+
             const loadWaterIntake = async () => {
+                setDailyLogStatus('loading');
+                setDailyLogError(null);
                 try {
-                    const todayStr = getSafeTodayStr();
-                    const log = await getDailyLog(todayStr);
-                    if (log) {
-                        if (log.water_intake !== undefined && log.water_intake !== null) {
-                            setWater(log.water_intake);
-                        }
-                    }
-                } catch (error) {
-                    console.error("Failed to load water intake:", error);
-                }
-            };
-            const loadConnectionAndMeals = async () => {
-                try {
-                    const currentConnection = await refreshConnectionStatus();
-                    if (currentConnection.hasActiveDietitian) {
-                        await loadTodayMeals();
+                    const log = await getDailyLog(toLocalDateKey());
+                    if (log?.water_intake !== undefined && log?.water_intake !== null) {
+                        setWater(log.water_intake);
+                        setDailyLogStatus('ready');
                     } else {
-                        setMeals([]);
+                        setDailyLogStatus('empty');
                     }
                 } catch (error) {
-                    console.error("Failed to load connection or today's meals:", error);
-                    setMeals([]);
+                    console.warn('Daily log load failed:', error?.message || 'unknown error');
+                    setDailyLogStatus('error');
+                    setDailyLogError(error?.message || 'Günlük kayıt bilgileri yüklenemedi.');
                 }
             };
 
+            refreshConnectionStatus();
             loadProfile();
             loadWaterIntake();
-            loadConnectionAndMeals();
-        }, [getSafeTodayStr, loadTodayMeals, refreshConnectionStatus])
+            loadTodayMeals();
+
+            return () => {
+                planRequestSequenceRef.current += 1;
+            };
+        }, [loadTodayMeals, refreshConnectionStatus]),
     );
 
     const waterProgress = Math.min(water / 3, 1);
-
-    const firstIncompleteMeal = useMemo(
-        () => meals.find((meal) => !completedMeals[meal.id]?.completed),
-        [completedMeals, meals],
+    const firstIncompleteMeal = useMemo(() => getNextIncompleteMeal(meals), [meals]);
+    const displayedMeal = (
+        (focusedMealId && meals.find((meal) => meal.id === focusedMealId))
+        || firstIncompleteMeal
     );
-
-    const displayedMeal =
-        (focusedMealId && meals.find((meal) => meal.id === focusedMealId)) || firstIncompleteMeal;
-
-    const isMealCompleted = displayedMeal ? !!completedMeals[displayedMeal.id]?.completed : false;
+    const isMealCompleted = !!displayedMeal?.isEaten;
+    const displayedCompletionPhotoUri = displayedMeal?.id
+        ? completedMeals[displayedMeal.id]?.completionPhotoUri || null
+        : null;
 
     const addWater = async () => {
         const amount = parseInt(waterInput, 10) || 200;
-        const newWater = Math.min(water + amount / 1000, 5); // Max 5L for safety
-        const prevWater = water;
-        
-        setWater(newWater); // Optimistic UI
+        const previousWater = water;
+        const nextWater = Math.min(water + amount / 1000, 5);
+        setWater(nextWater);
         try {
-            const todayStr = getSafeTodayStr();
-            await upsertWaterIntake(todayStr, newWater);
+            await upsertWaterIntake(toLocalDateKey(), nextWater);
         } catch (error) {
-            setWater(prevWater); // Rollback
+            setWater(previousWater);
             Alert.alert('Hata', 'Su miktarı kaydedilemedi. Lütfen tekrar deneyin.');
         }
     };
 
     const removeWater = async () => {
         const amount = parseInt(waterInput, 10) || 200;
-        const newWater = Math.max(water - amount / 1000, 0);
-        const prevWater = water;
-
-        setWater(newWater); // Optimistic UI
+        const previousWater = water;
+        const nextWater = Math.max(water - amount / 1000, 0);
+        setWater(nextWater);
         try {
-            const todayStr = getSafeTodayStr();
-            await upsertWaterIntake(todayStr, newWater);
+            await upsertWaterIntake(toLocalDateKey(), nextWater);
         } catch (error) {
-            setWater(prevWater); // Rollback
+            setWater(previousWater);
             Alert.alert('Hata', 'Su miktarı kaydedilemedi. Lütfen tekrar deneyin.');
         }
     };
 
-    const completeMeal = async (photoUri = null) => {
+    const completeMeal = async (completionPhotoUri = null) => {
         if (!displayedMeal?.id) {
-            console.error('Meal completion skipped: missing meal id', {
-                meal: displayedMeal,
-            });
             Alert.alert('Hata', 'Geçerli öğün ID bulunamadı.');
             return;
         }
 
         const mealId = displayedMeal.id;
         const nextIsEaten = !isMealCompleted;
+        const previousIsEaten = !!displayedMeal.isEaten;
+        const requestVersion = (mealRequestVersionsRef.current[mealId] || 0) + 1;
+        mealRequestVersionsRef.current[mealId] = requestVersion;
+        setMeals((currentMeals) => currentMeals.map((meal) => (
+            meal.id === mealId ? { ...meal, isEaten: nextIsEaten } : meal
+        )));
+        setFocusedMealId(mealId);
 
         try {
-            console.log('Dashboard meal completion request:', {
-                mealId,
-                currentIsEaten: !!displayedMeal.is_eaten,
-                nextIsEaten,
-            });
-
             const updatedMeal = await toggleMealCompletion(mealId, {
                 completed: nextIsEaten,
-                photoUri: nextIsEaten ? photoUri : null,
+                completionPhotoUri: nextIsEaten ? completionPhotoUri : null,
             });
+            if (mealRequestVersionsRef.current[mealId] !== requestVersion) return;
 
-            setMeals((currentMeals) => currentMeals.map((meal) => {
-                if (meal.id !== mealId) return meal;
-
-                return {
-                    ...meal,
-                    ...updatedMeal,
-                    id: meal.id,
-                    plan_id: updatedMeal?.plan_id || meal.plan_id,
-                    title: updatedMeal?.title || meal.title,
-                    type: updatedMeal?.type || meal.type,
-                    time: meal.time,
-                    desc: updatedMeal?.calories ? `${updatedMeal.calories} kcal` : meal.desc,
-                    is_eaten: updatedMeal?.is_eaten ?? nextIsEaten,
-                    photo_url: updatedMeal?.photo_url || meal.photo_url,
-                };
-            }));
-            setFocusedMealId(mealId);
+            setMeals((currentMeals) => currentMeals.map((meal) => (
+                meal.id === mealId
+                    ? { ...meal, isEaten: updatedMeal?.isEaten ?? nextIsEaten }
+                    : meal
+            )));
         } catch (error) {
-            console.error('Failed to update meal completion:', {
-                mealId,
-                userId: error?.debugContext?.userId,
-                supabaseError: error?.debugContext?.supabaseError,
-                debugContext: error?.debugContext,
-                error,
-            });
-            Alert.alert('Hata', error.message || 'Öğün durumu kaydedilemedi. Lütfen tekrar deneyin.');
+            if (mealRequestVersionsRef.current[mealId] === requestVersion) {
+                setMeals((currentMeals) => currentMeals.map((meal) => (
+                    meal.id === mealId ? { ...meal, isEaten: previousIsEaten } : meal
+                )));
+            }
+            Alert.alert('Hata', 'Öğün durumu güncellenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.');
         }
     };
 
     const handleSaveWeight = async () => {
         const numWeight = parseFloat(weightInput);
-        if (isNaN(numWeight) || numWeight < 20 || numWeight > 500) {
+        if (Number.isNaN(numWeight) || numWeight < 20 || numWeight > 500) {
             Alert.alert('Hata', 'Lütfen geçerli bir kilo giriniz.');
             return;
         }
         try {
-            const todayStr = getSafeTodayStr();
-            await upsertDailyWeight(todayStr, numWeight);
+            await upsertDailyWeight(toLocalDateKey(), numWeight);
             setWeight(numWeight);
             Alert.alert('Başarılı', 'Güncel kilonuz kaydedildi.');
         } catch (error) {
@@ -233,21 +243,14 @@ export const useDashboardViewModel = () => {
         }
     };
 
-    const handleGoToNextMeal = () => {
-        if (firstIncompleteMeal) {
-            setFocusedMealId(firstIncompleteMeal.id);
-        } else {
-            setFocusedMealId(null);
-        }
-    };
+    const handleGoToNextMeal = () => setFocusedMealId(firstIncompleteMeal?.id || null);
 
     const handleApproveDietitianRequest = async () => {
         if (!pendingRequest?.id) return;
-
         try {
             await approvePendingRequest(pendingRequest.id);
             Alert.alert('Başarılı', 'Diyetisyen bağlantınız onaylandı.');
-            await loadTodayMeals();
+            await loadTodayMeals(new Date(), { force: true });
         } catch (error) {
             Alert.alert('Hata', error.message || CONNECTION_GENERIC_ERROR_MESSAGE);
         }
@@ -255,10 +258,10 @@ export const useDashboardViewModel = () => {
 
     const handleRejectDietitianRequest = async () => {
         if (!pendingRequest?.id) return;
-
         try {
             await rejectPendingRequest(pendingRequest.id);
             setMeals([]);
+            setMealPlanStatus('unlinked');
             Alert.alert('Bilgi', 'Bağlantı isteği reddedildi.');
         } catch (error) {
             Alert.alert('Hata', error.message || CONNECTION_GENERIC_ERROR_MESSAGE);
@@ -275,9 +278,14 @@ export const useDashboardViewModel = () => {
         connectionError,
         connectionRequiredMessage: CONNECTION_REQUIRED_MESSAGE,
         meals,
+        mealPlanStatus,
+        mealPlanError,
+        retryMealPlan,
         water,
         waterInput,
         setWaterInput,
+        dailyLogStatus,
+        dailyLogError,
         userName,
         greeting,
         avatarUrl,
@@ -288,6 +296,7 @@ export const useDashboardViewModel = () => {
         dailyQuote,
         waterProgress,
         displayedMeal,
+        displayedCompletionPhotoUri,
         isMealCompleted,
         addWater,
         removeWater,

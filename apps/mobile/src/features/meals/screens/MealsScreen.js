@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, T
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from '../../../shared/theme/styles';
+import { MealPhotoThumbnail } from '../components/MealPhotoThumbnail';
 import { useMealsViewModel } from '../viewmodels/useMealsViewModel';
 
 const MealsScreen = () => {
@@ -38,6 +39,9 @@ const MealsScreen = () => {
         getMealIconConfig,
         meals,
         isLoadingMeals,
+        mealPlanStatus,
+        mealPlanError,
+        retryMeals,
         hasActiveDietitian,
         isLoadingConnection,
         connectionError,
@@ -91,13 +95,26 @@ const MealsScreen = () => {
                     style={styles.mealsList}
                     contentContainerStyle={[styles.mealsListContent, { paddingBottom: screenBottomPadding + 24 }]}
                 >
-                    {isLoadingMeals || isLoadingConnection ? (
-                        <ActivityIndicator size="large" color="#047857" style={{ marginTop: 40 }} />
-                    ) : !hasActiveDietitian ? (
+                    {isLoadingMeals ? (
+                        <View style={localStyles.stateContainer}>
+                            <ActivityIndicator size="large" color="#047857" />
+                            <Text style={localStyles.stateText}>
+                                {mealPlanStatus === 'retrying' ? 'Beslenme planı yeniden yükleniyor...' : 'Beslenme planı yükleniyor...'}
+                            </Text>
+                        </View>
+                    ) : mealPlanStatus === 'unlinked' ? (
                         <View style={localStyles.lockedState}>
                             <Ionicons name="lock-closed-outline" size={28} color="#6B7280" />
                             <Text style={localStyles.lockedText}>{connectionRequiredMessage}</Text>
                             {!!connectionError && <Text style={localStyles.errorText}>{connectionError}</Text>}
+                        </View>
+                    ) : mealPlanStatus === 'error' ? (
+                        <View style={localStyles.stateContainer}>
+                            <Ionicons name="alert-circle-outline" size={30} color="#B91C1C" />
+                            <Text style={[localStyles.stateText, localStyles.errorText]}>{mealPlanError}</Text>
+                            <TouchableOpacity style={localStyles.retryButton} onPress={retryMeals}>
+                                <Text style={localStyles.retryButtonText}>Tekrar Dene</Text>
+                            </TouchableOpacity>
                         </View>
                     ) : meals.length === 0 ? (
                         <Text style={{ textAlign: 'center', marginTop: 40, color: '#6B7280' }}>
@@ -107,30 +124,28 @@ const MealsScreen = () => {
                         meals.map((meal) => {
                             const completion = completedMeals[meal.id];
                             const isCompleted = !!completion?.completed;
-                            const photoUri = completion?.photoUri;
                             const iconConfig = getMealIconConfig(meal.type);
 
                             return (
                                 <TouchableOpacity
-                                    key={`${meal.type}-${meal.time || meal.id}`}
+                                    key={meal.id}
                                     activeOpacity={0.9}
                                     style={styles.mealCard}
                                     onPress={() => openMealModal(meal)}
                                 >
                                     <View style={styles.mealCardHeader}>
-                                        {photoUri ? (
-                                            <TouchableOpacity
-                                                activeOpacity={0.9}
-                                                onPress={() => openPhotoPreview(photoUri)}
-                                                style={styles.mealPhotoThumbWrapper}
-                                            >
-                                                <Image source={{ uri: photoUri }} style={styles.mealPhotoThumb} />
-                                            </TouchableOpacity>
-                                        ) : (
-                                            <View style={[styles.mealIconCircle, { backgroundColor: iconConfig.background }]}>
-                                                <Ionicons name={iconConfig.name} size={22} color={iconConfig.color} />
-                                            </View>
-                                        )}
+                                        <MealPhotoThumbnail
+                                            photoPath={meal.photoPath}
+                                            completionPhotoUri={completion?.completionPhotoUri}
+                                            imageStyle={styles.mealPhotoThumb}
+                                            wrapperStyle={styles.mealPhotoThumbWrapper}
+                                            onPress={openPhotoPreview}
+                                            fallback={(
+                                                <View style={[styles.mealIconCircle, { backgroundColor: iconConfig.background }]}>
+                                                    <Ionicons name={iconConfig.name} size={22} color={iconConfig.color} />
+                                                </View>
+                                            )}
+                                        />
                                         <View style={styles.mealInfo}>
                                             <Text style={styles.mealHeader}>
                                                 {meal.title || meal.type} {meal.time ? `• ${meal.time}` : ''}
@@ -370,6 +385,30 @@ const MealsScreen = () => {
 };
 
 const localStyles = StyleSheet.create({
+    stateContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+        paddingVertical: 48,
+    },
+    stateText: {
+        marginTop: 12,
+        color: '#4B5563',
+        fontSize: 15,
+        lineHeight: 22,
+        textAlign: 'center',
+    },
+    retryButton: {
+        marginTop: 16,
+        paddingHorizontal: 18,
+        paddingVertical: 10,
+        borderRadius: 8,
+        backgroundColor: '#047857',
+    },
+    retryButtonText: {
+        color: '#FFFFFF',
+        fontWeight: '700',
+    },
     lockedState: {
         alignItems: 'center',
         justifyContent: 'center',

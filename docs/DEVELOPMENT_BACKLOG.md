@@ -1,5 +1,13 @@
 # DietBridge Development Backlog
 
+## WP5.4A — Mobil Runtime Kabulü (Deferred Verification)
+
+- Auth refresh yarış durumu için hedefli mobil oturum yaşam döngüsü düzeltmesi hazırlandı.
+- Harness ve statik kalite kapıları geçti.
+- Kimlik doğrulanmış 8+ dakika Android runtime kabulü tamamlanmadı; staging fixture denemesi `MEALS_CREATE_FAILED` ile kesildi ve fixture kayıtları temizlendi.
+- `Invalid Refresh Token: Refresh Token Not Found` / `Response status 0` konusu Stage 5 sonrası release blocker olarak açık kalır.
+- Bu madde tamamlandı olarak işaretlenmeyecek; deferred verification durumunda izlenecek.
+
 ## Mevcut Durum
 
 DietBridge bu çalışma alanında danışan tarafı mobil uygulama olarak ilerliyor. Proje React Native + Expo ve JavaScript ile yazılmış durumda; MVVM ayrımı genel olarak korunmuş. Supabase client `apps/mobile/src/lib/supabaseClient.js` içinde tanımlı, veritabanı çağrıları feature bazlı `services/` dosyalarında toplanmış.
@@ -42,3 +50,18 @@ DietBridge bu çalışma alanında danışan tarafı mobil uygulama olarak ilerl
 - `apps/mobile/src/features/clients/viewmodels/useDashboardViewModel.js`
 - `apps/mobile/src/features/clients/screens/DashboardScreen.js`
 - `apps/mobile/src/features/meals/screens/MealsScreen.js`
+
+## WP5.3C1 — Canonical Mobil Meal Plan Read Model (Tamamlandı)
+
+- Canonical macro sözleşmesi: `protein`, `carbs`, `fat`; mobil eşleme `carbs → carbohydrate`.
+- PostgreSQL zaman değeri `HH:MM:SS` biçiminden canonical `HH:MM` biçimine normalize edilir.
+- WP5.3C2 kapsamında private meal photo path için signed-URL resolver hâlâ açıktır.
+- Cihaz/emülatör UI kabulü WP5.4 kapsamına ertelenmiştir.
+
+## WP5.3C2 — Private Meal Photo Resolver (Tamamlandı)
+
+- Private `meal-photos` bucket için 5 dakikalık signed URL kullanılır.
+- Resolver, 4 dakikalık in-memory cache ve eşzamanlı istek deduplication uygular.
+- Yetkisiz, 404 ve Storage hataları fail-closed placeholder ile sonuçlanır.
+- `photoPath`, geçici `photoUri` ve cihazdaki `completionPhotoUri` ayrı tutulur.
+- Cihaz/emülatör görsel kabulü WP5.4 kapsamına ertelenmiştir.

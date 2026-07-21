@@ -21,9 +21,9 @@ const createAuthState = ({ session = null, profile = null } = {}) => {
 };
 
 const safeSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) {
-        console.warn('Supabase sign out error:', error.message);
+        console.warn('Supabase yerel çıkış işlemi tamamlanamadı.');
     }
 };
 
@@ -35,7 +35,7 @@ export const getUserProfile = async (userId) => {
         .single();
 
     if (error || !profile) {
-        console.warn('Profile lookup error:', error?.message);
+        console.warn('Profil bilgisi alınamadı.');
         throw new Error(PROFILE_NOT_FOUND_ERROR_MESSAGE);
     }
 
@@ -47,10 +47,7 @@ export const ensureClientSession = async (session) => {
         return createAuthState();
     }
 
-    const profile = await getUserProfile(session.user.id).catch(async (error) => {
-        await safeSignOut();
-        throw error;
-    });
+    const profile = await getUserProfile(session.user.id);
 
     if (profile.role !== 'client') {
         await safeSignOut();
@@ -67,9 +64,8 @@ export const getCurrentClientAuthState = async () => {
     } = await supabase.auth.getSession();
 
     if (error) {
-        console.warn('Supabase session error:', error.message);
-        await safeSignOut();
-        return createAuthState();
+        console.warn('Oturum durumu alınamadı.');
+        throw error;
     }
 
     if (!session) {
@@ -80,7 +76,9 @@ export const getCurrentClientAuthState = async () => {
 };
 
 export const subscribeToAuthChanges = (callback) => {
-    return supabase.auth.onAuthStateChange(callback);
+    return supabase.auth.onAuthStateChange((event, session) => {
+        setTimeout(() => callback(event, session), 0);
+    });
 };
 
 export const signIn = async (email, password) => {

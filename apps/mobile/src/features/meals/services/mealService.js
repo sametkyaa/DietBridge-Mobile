@@ -1,211 +1,158 @@
 import { supabase } from '../../../lib/supabaseClient';
 import {
-    CONNECTION_GENERIC_ERROR_MESSAGE,
-    CONNECTION_REQUIRED_MESSAGE,
-    getActiveDietitianConnection,
-} from '../../dietitianConnection/services/dietitianConnectionService';
+    MealPlanReadError,
+    MealPlanReadErrorCode,
+    normalizeCanonicalMeal,
+    sortCanonicalMeals,
+} from './mealReadModel';
 
 const INVALID_MEAL_ID_MESSAGE = 'Geçerli öğün ID bulunamadı.';
-const MEAL_NOT_FOUND_OR_FORBIDDEN_MESSAGE = 'Öğün bulunamadı veya bu öğünü güncelleme yetkiniz yok.';
-const MEAL_SELECT_COLUMNS = 'id, plan_id, type, title, calories, macros, photo_url, is_eaten';
+const MEAL_COMPLETION_UPDATE_ERROR_MESSAGE = 'Öğün durumu güncellenemedi.';
+const ACTIVE_CONNECTION_SELECT_COLUMNS = 'id, client_id, dietitian_id, status';
+const MEAL_SELECT_COLUMNS = 'id, plan_id, type, title, calories, macros, time, sort_order, photo_url, source, recipe_id, is_eaten';
+const PLAN_SELECT_COLUMNS = `id, client_id, dietitian_id, plan_date, notes, meals (${MEAL_SELECT_COLUMNS})`;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const attachMealDebugContext = (error, context = {}) => {
-    if (error && typeof error === 'object') {
-        error.debugContext = {
-            ...(error.debugContext || {}),
-            ...context,
-        };
+const createReadError = (code, message) => new MealPlanReadError(code, message);
+
+const validatePlanDate = (planDate) => {
+    if (typeof planDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(planDate)) {
+        throw createReadError(MealPlanReadErrorCode.CONTRACT, 'Geçerli bir plan tarihi bulunamadı.');
     }
-
-    return error;
 };
 
-export const getDailyMeals = async (planDate) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+const getAuthenticatedClient = async () => {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data?.user?.id) {
+        throw createReadError(MealPlanReadErrorCode.AUTHORIZATION, 'Oturumunuz doğrulanamadı. Lütfen tekrar giriş yapın.');
+    }
+    return data.user;
+};
 
-    const activeConnection = await getActiveDietitianConnection(user.id);
-    if (!activeConnection) return [];
+const getSingleActiveConnection = async (clientId) => {
+    const { data, error } = await supabase
+        .from('dietitian_clients')
+        .select(ACTIVE_CONNECTION_SELECT_COLUMNS)
+        .eq('client_id', clientId)
+        .eq('status', 'active');
 
-    const { data: plan, error: planError } = await supabase
-        .from('meal_plans')
-        .select(`
-            id,
-            plan_date,
-            notes,
-            meals (${MEAL_SELECT_COLUMNS})
-        `)
-        .eq('client_id', user.id)
-        .eq('dietitian_id', activeConnection.dietitian_id)
-        .eq('plan_date', planDate)
-        .maybeSingle();
-
-    if (planError) {
-        console.error('Error fetching meal plan:', {
-            userId: user.id,
-            planDate,
-            dietitianId: activeConnection.dietitian_id,
-            supabaseError: planError,
-        });
-        return [];
+    if (error) {
+        throw createReadError(MealPlanReadErrorCode.FETCH, 'Diyetisyen bağlantısı alınamadı. Lütfen tekrar deneyin.');
     }
 
-    if (!plan || !plan.meals) return [];
+    if (!Array.isArray(data)) {
+        throw createReadError(MealPlanReadErrorCode.CONTRACT, 'Diyetisyen bağlantısı için geçersiz bir yanıt alındı.');
+    }
 
-    return plan.meals.map((meal) => {
-        const titles = {
-            breakfast: 'Kahvaltı',
-            lunch: 'Öğle Yemeği',
-            dinner: 'Akşam Yemeği',
-            snack: 'Ara Öğün',
-        };
+    if (data.length === 0) return null;
+    if (data.length !== 1 || !data[0]?.dietitian_id) {
+        throw createReadError(MealPlanReadErrorCode.CONTRACT, 'Birden fazla veya geçersiz aktif diyetisyen bağlantısı bulundu.');
+    }
 
-        const times = {
-            breakfast: '08:00',
-            lunch: '13:00',
-            dinner: '19:00',
-            snack: '15:30',
-        };
+    return data[0];
+};
 
-        return {
-            id: meal.id,
-            plan_id: meal.plan_id,
-            type: meal.type,
-            title: meal.title || titles[meal.type] || 'Öğün',
-            time: times[meal.type] || '',
-            desc: meal.calories ? `${meal.calories} kcal` : '',
-            calories: meal.calories,
-            macros: meal.macros,
-            is_eaten: !!meal.is_eaten,
-            photo_url: meal.photo_url || null,
-            ingredients: [],
-            steps: [],
-            note: plan.notes || '',
-        };
+const getSingleDailyPlan = async ({ clientId, dietitianId, planDate }) => {
+    const { data, error } = await supabase
+        .from('meal_plans')
+        .select(PLAN_SELECT_COLUMNS)
+        .eq('client_id', clientId)
+        .eq('dietitian_id', dietitianId)
+        .eq('plan_date', planDate);
+
+    if (error) {
+        throw createReadError(MealPlanReadErrorCode.FETCH, 'Beslenme planı alınamadı. Lütfen tekrar deneyin.');
+    }
+
+    if (!Array.isArray(data)) {
+        throw createReadError(MealPlanReadErrorCode.CONTRACT, 'Beslenme planı için geçersiz bir yanıt alındı.');
+    }
+
+    if (data.length === 0) return null;
+    if (data.length !== 1) {
+        throw createReadError(MealPlanReadErrorCode.CONTRACT, 'Aynı gün için birden fazla beslenme planı bulundu.');
+    }
+
+    return data[0];
+};
+
+const normalizePlan = (plan, { clientId, dietitianId, planDate }) => {
+    if (!plan || plan.id === undefined || plan.client_id !== clientId
+        || plan.dietitian_id !== dietitianId || plan.plan_date !== planDate
+        || !Array.isArray(plan.meals)) {
+        throw createReadError(MealPlanReadErrorCode.CONTRACT, 'Beslenme planı sözleşmesi doğrulanamadı.');
+    }
+
+    const normalizedPlan = {
+        id: String(plan.id),
+        clientId: clientId,
+        dietitianId: dietitianId,
+        planDate: planDate,
+        notes: plan.notes || '',
+    };
+    const meals = sortCanonicalMeals(plan.meals.map((meal) => normalizeCanonicalMeal(meal, normalizedPlan)));
+
+    return { plan: normalizedPlan, meals };
+};
+
+// This is the canonical mobile read contract. It distinguishes empty and unlinked
+// states from fetch, authorization, and data-contract failures.
+export const getDailyMealPlan = async (planDate) => {
+    validatePlanDate(planDate);
+    const user = await getAuthenticatedClient();
+    const activeConnection = await getSingleActiveConnection(user.id);
+
+    if (!activeConnection) {
+        return { status: 'unlinked', plan: null, meals: [] };
+    }
+
+    const plan = await getSingleDailyPlan({
+        clientId: user.id,
+        dietitianId: activeConnection.dietitian_id,
+        planDate,
     });
+
+    if (!plan) {
+        return { status: 'empty', plan: null, meals: [] };
+    }
+
+    const normalized = normalizePlan(plan, {
+        clientId: user.id,
+        dietitianId: activeConnection.dietitian_id,
+        planDate,
+    });
+
+    return {
+        status: normalized.meals.length === 0 ? 'empty' : 'success',
+        ...normalized,
+    };
 };
 
 export const updateMealCompletion = async (mealId, isEaten) => {
-    if (!mealId) {
+    if (typeof mealId !== 'string' || !UUID_PATTERN.test(mealId)) {
         throw new Error(INVALID_MEAL_ID_MESSAGE);
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Kullanıcı oturumu bulunamadı.');
-
-    const debugContext = {
-        mealId,
-        userId: user.id,
-        nextIsEaten: Boolean(isEaten),
-    };
-
-    console.log('Updating meal completion:', debugContext);
-
-    const activeConnection = await getActiveDietitianConnection(user.id);
-    if (!activeConnection) {
-        throw attachMealDebugContext(new Error(CONNECTION_REQUIRED_MESSAGE), debugContext);
+    if (typeof isEaten !== 'boolean') {
+        throw new Error(MEAL_COMPLETION_UPDATE_ERROR_MESSAGE);
     }
 
-    const { data: meal, error: mealLookupError } = await supabase
-        .from('meals')
-        .select('id, plan_id')
-        .eq('id', mealId)
-        .maybeSingle();
-
-    if (mealLookupError || !meal?.plan_id) {
-        console.error('Error looking up meal before completion update:', {
-            ...debugContext,
-            supabaseError: mealLookupError,
-            meal,
+    try {
+        const { data, error } = await supabase.rpc('set_my_meal_completion', {
+            p_meal_id: mealId,
+            p_is_eaten: isEaten,
         });
-        throw attachMealDebugContext(
-            new Error(MEAL_NOT_FOUND_OR_FORBIDDEN_MESSAGE),
-            { ...debugContext, supabaseError: mealLookupError, meal },
-        );
+
+        if (error || data !== true) {
+            throw new Error(MEAL_COMPLETION_UPDATE_ERROR_MESSAGE);
+        }
+
+        return { id: mealId, isEaten };
+    } catch (error) {
+        if (__DEV__) {
+            console.warn('Meal completion RPC failed.', { mealId });
+        }
+
+        throw new Error(MEAL_COMPLETION_UPDATE_ERROR_MESSAGE);
     }
-
-    const { data: plan, error: planLookupError } = await supabase
-        .from('meal_plans')
-        .select('id')
-        .eq('id', meal.plan_id)
-        .eq('client_id', user.id)
-        .eq('dietitian_id', activeConnection.dietitian_id)
-        .maybeSingle();
-
-    if (planLookupError) {
-        console.error('Error checking active meal plan relation:', {
-            ...debugContext,
-            planId: meal.plan_id,
-            dietitianId: activeConnection.dietitian_id,
-            supabaseError: planLookupError,
-        });
-        throw attachMealDebugContext(
-            new Error(CONNECTION_GENERIC_ERROR_MESSAGE),
-            {
-                ...debugContext,
-                planId: meal.plan_id,
-                dietitianId: activeConnection.dietitian_id,
-                supabaseError: planLookupError,
-            },
-        );
-    }
-
-    if (!plan) {
-        console.error('Meal plan relation not found for meal completion update:', {
-            ...debugContext,
-            planId: meal.plan_id,
-            dietitianId: activeConnection.dietitian_id,
-        });
-        throw attachMealDebugContext(
-            new Error(MEAL_NOT_FOUND_OR_FORBIDDEN_MESSAGE),
-            {
-                ...debugContext,
-                planId: meal.plan_id,
-                dietitianId: activeConnection.dietitian_id,
-            },
-        );
-    }
-
-    const { data, error } = await supabase
-        .from('meals')
-        .update({ is_eaten: Boolean(isEaten) })
-        .eq('id', mealId)
-        .select(MEAL_SELECT_COLUMNS)
-        .maybeSingle();
-
-    if (error) {
-        console.error('Error updating meal completion:', {
-            ...debugContext,
-            planId: meal.plan_id,
-            dietitianId: activeConnection.dietitian_id,
-            supabaseError: error,
-        });
-        throw attachMealDebugContext(
-            new Error(CONNECTION_GENERIC_ERROR_MESSAGE),
-            {
-                ...debugContext,
-                planId: meal.plan_id,
-                dietitianId: activeConnection.dietitian_id,
-                supabaseError: error,
-            },
-        );
-    }
-
-    if (!data) {
-        console.error('Meal completion update returned no rows:', {
-            ...debugContext,
-            planId: meal.plan_id,
-            dietitianId: activeConnection.dietitian_id,
-        });
-        throw attachMealDebugContext(
-            new Error(MEAL_NOT_FOUND_OR_FORBIDDEN_MESSAGE),
-            {
-                ...debugContext,
-                planId: meal.plan_id,
-                dietitianId: activeConnection.dietitian_id,
-            },
-        );
-    }
-
-    return data;
 };

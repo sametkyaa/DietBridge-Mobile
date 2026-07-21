@@ -20,6 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { macros } from '../../../config/dietData';
 import NutritionSummaryCard from '../../clients/components/NutritionSummaryCard';
 import { styles } from '../../../shared/theme/styles';
+import { MealPhotoThumbnail } from '../../meals/components/MealPhotoThumbnail';
 import { useDashboardViewModel } from '../viewmodels/useDashboardViewModel';
 
 const DashboardScreen = () => {
@@ -30,6 +31,8 @@ const DashboardScreen = () => {
         water,
         waterInput,
         setWaterInput,
+        dailyLogStatus,
+        dailyLogError,
         userName,
         greeting,
         avatarUrl,
@@ -40,7 +43,11 @@ const DashboardScreen = () => {
         dailyQuote,
         waterProgress,
         meals,
+        mealPlanStatus,
+        mealPlanError,
+        retryMealPlan,
         displayedMeal,
+        displayedCompletionPhotoUri,
         isMealCompleted,
         addWater,
         removeWater,
@@ -211,7 +218,9 @@ const DashboardScreen = () => {
     };
 
     const buttonLabel = displayedMeal ? (isMealCompleted ? 'Geri Al' : 'Öğünü Yedim') : 'Tamamlandı';
-    const emptyMealPlanMessage = hasActiveDietitian
+    const emptyMealPlanMessage = mealPlanStatus === 'unlinked'
+        ? connectionRequiredMessage
+        : hasActiveDietitian
         ? 'Bugün için henüz öğün planı bulunmuyor. Diyetisyeniniz plan eklediğinde burada görünecek.'
         : connectionRequiredMessage;
     const isButtonDisabled = !displayedMeal || !hasActiveDietitian;
@@ -253,6 +262,12 @@ const DashboardScreen = () => {
                     <View style={styles.waterRow}>
                         <View style={{ flex: 1 }}>
                             <Text style={styles.waterAmount}>{water.toFixed(2)} L</Text>
+                            {dailyLogStatus === 'empty' && (
+                                <Text style={localStyles.dailyLogHint}>Bugün için su kaydı yok.</Text>
+                            )}
+                            {dailyLogStatus === 'error' && (
+                                <Text style={localStyles.dailyLogError}>{dailyLogError}</Text>
+                            )}
                             <View style={styles.progressBackground}>
                                 <View style={[styles.waterProgressFill, { width: `${waterProgress * 100}%` }]} />
                             </View>
@@ -317,11 +332,32 @@ const DashboardScreen = () => {
                         )}
                     </View>
                     <View style={styles.nextMeal}>
-                        <View style={styles.mealIconPlaceholder}>
-                            <Text style={styles.mealEmoji}>🍽️</Text>
-                        </View>
+                        <MealPhotoThumbnail
+                            photoPath={displayedMeal?.photoPath}
+                            completionPhotoUri={displayedCompletionPhotoUri}
+                            imageStyle={localStyles.nextMealPhoto}
+                            fallback={(
+                                <View style={styles.mealIconPlaceholder}>
+                                    <Text style={styles.mealEmoji}>🍽️</Text>
+                                </View>
+                            )}
+                        />
                         <View>
-                            {displayedMeal ? (
+                            {mealPlanStatus === 'loading' || mealPlanStatus === 'retrying' ? (
+                                <View style={localStyles.mealPlanState}>
+                                    <ActivityIndicator size="small" color="#047857" />
+                                    <Text style={styles.mealDesc}>
+                                        {mealPlanStatus === 'retrying' ? 'Beslenme planı yeniden yükleniyor...' : 'Beslenme planı yükleniyor...'}
+                                    </Text>
+                                </View>
+                            ) : mealPlanStatus === 'error' ? (
+                                <View style={localStyles.mealPlanState}>
+                                    <Text style={localStyles.mealPlanError}>{mealPlanError}</Text>
+                                    <TouchableOpacity style={localStyles.mealPlanRetryButton} onPress={retryMealPlan}>
+                                        <Text style={localStyles.mealPlanRetryText}>Tekrar Dene</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ) : displayedMeal ? (
                                 <>
                                     <Text style={styles.mealTitle}>{displayedMeal.title || displayedMeal.type}</Text>
                                     <Text style={styles.mealDesc}>{displayedMeal.desc}</Text>
@@ -477,6 +513,32 @@ const DashboardScreen = () => {
 };
 
 const localStyles = StyleSheet.create({
+    nextMealPhoto: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        marginRight: 12,
+    },
+    mealPlanState: {
+        gap: 8,
+    },
+    mealPlanError: {
+        color: '#B91C1C',
+        fontSize: 14,
+        lineHeight: 20,
+    },
+    mealPlanRetryButton: {
+        alignSelf: 'flex-start',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        backgroundColor: '#047857',
+    },
+    mealPlanRetryText: {
+        color: '#FFFFFF',
+        fontSize: 13,
+        fontWeight: '700',
+    },
     connectionHeader: {
         flexDirection: 'row',
         alignItems: 'flex-start',
@@ -647,6 +709,17 @@ const localStyles = StyleSheet.create({
         color: '#1F2937',
         textAlign: 'center',
         minWidth: 30,
+    },
+    dailyLogHint: {
+        marginTop: 2,
+        color: '#6B7280',
+        fontSize: 12,
+    },
+    dailyLogError: {
+        marginTop: 2,
+        color: '#B91C1C',
+        fontSize: 12,
+        lineHeight: 17,
     },
     waterUnit: {
         fontSize: 12,
