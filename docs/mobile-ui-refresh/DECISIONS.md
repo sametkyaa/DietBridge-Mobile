@@ -27,3 +27,7 @@ The baseline issue was patch-level package drift, not a requirement for an SDK m
 ## D-007 — Adapt reference primitives to the existing host contracts
 
 The reference theme/component filenames were retained under `shared/theme` and `shared/components/ui`. Theme import depth was adapted for the target layout, typography uses the already-loaded Inter families, semantic foreground tokens were darkened for accessible text contrast, and skeleton instances share one animation loop. Existing `fonts.js` and `styles.js` remain unchanged for incremental migration.
+
+## D-008 — Publication gate separation
+
+GitHub CLI unavailability is not a hard blocker for the engineering loop. Local implementation, build verification, independent review and package commits continue while push, draft PR and remote CI are tracked as a separate publication loop. Completed packages will not be reapplied because a publication tool is unavailable.

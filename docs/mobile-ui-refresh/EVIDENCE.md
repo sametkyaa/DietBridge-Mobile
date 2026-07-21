@@ -1,5 +1,15 @@
 # UI Refresh Evidence
 
+## Publication status
+
+- Local branch: `codex/mobile-ui-refresh`
+- Local commits ahead of main: 4
+- Worktree: clean before publication-state documentation
+- Push: pending
+- Draft PR: pending
+- Reason: GitHub CLI unavailable
+- Engineering impact: none
+
 ## P0B Pre-remediation dependency snapshot
 
 | Dependency | `package.json` | Locked / installed |
