@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { getBadges, fetchMeasurements, getWaterHistory, getWeightHistory, saveBodyMeasurements } from '../services/analyticsService';
+import { getAnalyticsOverview, saveBodyMeasurements } from '../services/analyticsService';
 import { useDietitianConnection } from '../../dietitianConnection/context/DietitianConnectionContext';
 import { CONNECTION_REQUIRED_MESSAGE } from '../../dietitianConnection/services/dietitianConnectionService';
 
@@ -70,12 +70,12 @@ export const useAnalyticsViewModel = () => {
         }
 
         try {
-            const [weights, currentMeasurements, currentWaterHistory, currentBadges] = await Promise.all([
-                getWeightHistory(),
-                fetchMeasurements(),
-                getWaterHistory(),
-                getBadges(),
-            ]);
+            const {
+                weights,
+                measurements: currentMeasurements,
+                waterHistory: currentWaterHistory,
+                badges: currentBadges,
+            } = await getAnalyticsOverview();
             if (!isMountedRef.current || loadSequenceRef.current !== sequence) return false;
 
             setMonthlyWeightTrend(weights);

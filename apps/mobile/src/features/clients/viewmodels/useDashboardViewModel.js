@@ -57,6 +57,7 @@ export const useDashboardViewModel = () => {
     useEffect(() => () => {
         isMountedRef.current = false;
         planRequestSequenceRef.current += 1;
+        inFlightPlanRequestsRef.current.clear();
     }, []);
 
     const loadTodayMeals = useCallback((now = new Date(), { retry = false, force = false } = {}) => {
@@ -161,6 +162,7 @@ export const useDashboardViewModel = () => {
 
             return () => {
                 planRequestSequenceRef.current += 1;
+                inFlightPlanRequestsRef.current.clear();
             };
         }, [loadTodayMeals, loadWaterIntake, refreshConnectionStatus]),
     );

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Alert, ScrollView, StyleSheet, Text } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -177,6 +177,8 @@ const DashboardScreen = () => {
         <SafeAreaView style={screenStyles.safeArea} edges={['top', 'left', 'right']}>
             <ScrollView
                 contentContainerStyle={screenStyles.content}
+                automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+                keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
             >

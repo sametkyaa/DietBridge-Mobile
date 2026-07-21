@@ -117,6 +117,6 @@ const styles = StyleSheet.create({
   },
   footerText: { ...typography.supporting, color: colors.textSecondary },
   footerLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.x1 },
-  linkText: { ...typography.supporting, fontWeight: '600', color: colors.primaryDark },
+  linkText: { ...typography.supporting, fontFamily: typography.button.fontFamily, color: colors.primaryDark },
   pressed: { opacity: 0.6 },
 });

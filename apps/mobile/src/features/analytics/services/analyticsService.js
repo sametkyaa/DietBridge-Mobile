@@ -4,22 +4,18 @@ import {
     getActiveDietitianConnection,
 } from '../../dietitianConnection/services/dietitianConnectionService';
 
-const hasActiveDietitianConnection = async (clientId) => {
-    const relation = await getActiveDietitianConnection(clientId);
-    return !!relation;
+const getAuthorizedAnalyticsClientId = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const relation = await getActiveDietitianConnection(user.id);
+    return relation ? user.id : null;
 };
 
-export const getWeightHistory = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-    if (!(await hasActiveDietitianConnection(user.id))) {
-        return [];
-    }
-
+const getWeightHistory = async (clientId) => {
     const { data, error } = await supabase
         .from('measurements')
         .select('measured_at, weight')
-        .eq('client_id', user.id)
+        .eq('client_id', clientId)
         .not('weight', 'is', null)
         .order('measured_at', { ascending: false })
         .limit(5);
@@ -42,15 +38,11 @@ export const getWeightHistory = async () => {
     });
 };
 
-export const fetchMeasurements = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-    if (!(await hasActiveDietitianConnection(user.id))) return [];
-
+const fetchMeasurements = async (clientId) => {
     const { data, error } = await supabase
         .from('measurements')
         .select('*')
-        .eq('client_id', user.id)
+        .eq('client_id', clientId)
         .order('measured_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -90,7 +82,7 @@ export const saveBodyMeasurements = async (measurementData) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Aksiyon için oturum açmalısınız.");
 
-    if (!(await hasActiveDietitianConnection(user.id))) throw new Error(CONNECTION_REQUIRED_MESSAGE);
+    if (!(await getActiveDietitianConnection(user.id))) throw new Error(CONNECTION_REQUIRED_MESSAGE);
 
     validateMeasurementData(measurementData);
 
@@ -131,11 +123,7 @@ export const saveBodyMeasurements = async (measurementData) => {
     }
 };
 
-export const getWaterHistory = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-    if (!(await hasActiveDietitianConnection(user.id))) return [];
-
+const getWaterHistory = async (clientId) => {
     const today = new Date();
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(today.getDate() - 6);
@@ -147,7 +135,7 @@ export const getWaterHistory = async () => {
     const { data, error } = await supabase
         .from('daily_logs')
         .select('date, water_intake')
-        .eq('client_id', user.id)
+        .eq('client_id', clientId)
         .not('water_intake', 'is', null)
         .gte('date', startStr)
         .lte('date', endStr)
@@ -171,7 +159,28 @@ export const getWaterHistory = async () => {
     });
 };
 
-export const getBadges = async () => {
+const getBadges = async () => {
     // Persisted badge data is not available in the current MVP contract.
     return [];
+};
+
+export const getAnalyticsOverview = async () => {
+    const clientId = await getAuthorizedAnalyticsClientId();
+    if (!clientId) {
+        return {
+            weights: [],
+            measurements: [],
+            waterHistory: [],
+            badges: [],
+        };
+    }
+
+    const [weights, measurements, waterHistory, badges] = await Promise.all([
+        getWeightHistory(clientId),
+        fetchMeasurements(clientId),
+        getWaterHistory(clientId),
+        getBadges(),
+    ]);
+
+    return { weights, measurements, waterHistory, badges };
 };

@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabaseClient';
 export const MEAL_PHOTO_BUCKET = 'meal-photos';
 export const MEAL_PHOTO_SIGNED_URL_SECONDS = 5 * 60;
 export const MEAL_PHOTO_CACHE_MS = 4 * 60 * 1000;
+export const MEAL_PHOTO_CACHE_MAX_ENTRIES = 100;
 
 const CANONICAL_MEAL_PHOTO_PATH = /^meal-plans\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(?:jpe?g|png|webp)$/i;
 
@@ -55,13 +56,27 @@ export const createMealPhotoResolver = ({ storage = supabase.storage, now = () =
     const cache = new Map();
     const inFlight = new Map();
 
+    const pruneCache = (currentTime) => {
+        cache.forEach((entry, path) => {
+            if (entry.refreshAfter <= currentTime) cache.delete(path);
+        });
+    };
+
+    const makeCacheRoom = () => {
+        while (cache.size >= MEAL_PHOTO_CACHE_MAX_ENTRIES) {
+            cache.delete(cache.keys().next().value);
+        }
+    };
+
     const resolve = async (photoPath, { forceRefresh = false } = {}) => {
         if (!isCanonicalMealPhotoPath(photoPath)) return placeholderResult();
 
         if (forceRefresh) cache.delete(photoPath);
 
+        const currentTime = now();
+        pruneCache(currentTime);
         const cached = cache.get(photoPath);
-        if (cached && cached.refreshAfter > now()) return cached.result;
+        if (cached && cached.refreshAfter > currentTime) return cached.result;
 
         const existingRequest = inFlight.get(photoPath);
         if (existingRequest) return existingRequest;
@@ -77,6 +92,7 @@ export const createMealPhotoResolver = ({ storage = supabase.storage, now = () =
                     photoUri: data.signedUrl,
                     status: MealPhotoResolveStatus.READY,
                 };
+                makeCacheRoom();
                 cache.set(photoPath, {
                     result,
                     refreshAfter: now() + MEAL_PHOTO_CACHE_MS,

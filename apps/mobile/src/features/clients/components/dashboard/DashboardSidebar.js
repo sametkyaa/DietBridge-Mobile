@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../../../../shared/components/ui';
 import { colors, radius, shadows, spacing, typography } from '../../../../shared/theme';
 
@@ -10,10 +11,20 @@ const ITEMS = [
 ];
 
 export function DashboardSidebar({ visible, userName, avatarUrl, onClose, onNavigate, topInset = 0 }) {
+    const insets = useSafeAreaInsets();
+
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
             <View style={styles.overlay} accessibilityViewIsModal>
-                <View style={[styles.panel, { paddingTop: spacing.x6 + topInset }]}>
+                <View style={[
+                    styles.panel,
+                    {
+                        paddingTop: spacing.x6 + Math.max(topInset, insets.top),
+                        paddingBottom: spacing.x6 + insets.bottom,
+                        paddingLeft: spacing.x5 + insets.left,
+                        paddingRight: spacing.x5 + insets.right,
+                    },
+                ]}>
                     <View style={styles.profile}>
                         {avatarUrl ? <Image source={{ uri: avatarUrl }} style={styles.avatar} /> : <View style={styles.avatar} />}
                         <Text style={styles.name}>{userName}</Text>

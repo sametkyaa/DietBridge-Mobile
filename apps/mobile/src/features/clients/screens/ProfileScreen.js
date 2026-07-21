@@ -105,14 +105,14 @@ const ProfileScreen = ({ navigation }) => {
     ];
 
     if (loading) return (
-        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}><View style={styles.loading} accessible accessibilityRole="progressbar" accessibilityLabel="Profil bilgileri yükleniyor" accessibilityState={{ busy: true }}><AppSkeleton width="45%" height={28} animated /><AppSkeleton height={150} animated style={styles.gap} /><AppSkeleton height={220} animated style={styles.gap} /><Text style={styles.loadingText}>Profil bilgileri yükleniyor...</Text></View></SafeAreaView>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}><View style={styles.loading} accessible accessibilityRole="progressbar" accessibilityLabel="Profil bilgileri yükleniyor" accessibilityState={{ busy: true }}><AppSkeleton width="45%" height={28} animated /><AppSkeleton height={150} animated style={styles.gap} /><AppSkeleton height={220} animated style={styles.gap} /><Text style={styles.loadingText}>Profil bilgileri yükleniyor...</Text></View></SafeAreaView>
     );
     if (error && !profile) return (
-        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}><View style={styles.centered}><AppCard><ErrorState title="Profil yüklenemedi" description="Profil bilgileri yüklenemedi. Lütfen tekrar deneyin." onRetry={retry} /></AppCard></View></SafeAreaView>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}><View style={styles.centered}><AppCard><ErrorState title="Profil yüklenemedi" description="Profil bilgileri yüklenemedi. Lütfen tekrar deneyin." onRetry={retry} /></AppCard></View></SafeAreaView>
     );
 
     return (
-        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
             <View style={styles.topBar}>
                 <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Geri" style={({ pressed }) => [styles.back, pressed && styles.pressed]}><Icon name="back" size={22} /></Pressable>
                 <Text style={styles.topTitle} accessibilityRole="header">Profilim</Text><View style={styles.back} />

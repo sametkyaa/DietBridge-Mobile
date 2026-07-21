@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, radius, spacing, typography } from '../../../shared/theme';
 import {
     getUniqueCaseInsensitiveValues,
     normalizeMultiValue,
@@ -149,7 +150,7 @@ const MultiSelectProfileModal = ({
             navigationBarTranslucent
             onRequestClose={handleClose}
         >
-            <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+            <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
                 <KeyboardAvoidingView
                     style={styles.keyboardView}
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -181,7 +182,7 @@ const MultiSelectProfileModal = ({
                                                     disabled={isBusy}
                                                 >
                                                     {isSelected && (
-                                                        <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                                                        <Ionicons name="checkmark" size={16} color={colors.white} />
                                                     )}
                                                     <Text
                                                         style={[styles.optionText, isSelected && styles.optionTextSelected]}
@@ -210,7 +211,7 @@ const MultiSelectProfileModal = ({
                                                         <Text style={styles.selectedChipText} numberOfLines={2}>
                                                             {value}
                                                         </Text>
-                                                        <Ionicons name="close-circle" size={18} color="#047857" />
+                                                        <Ionicons name="close-circle" size={18} color={colors.primaryDark} />
                                                     </TouchableOpacity>
                                                 ))}
                                             </View>
@@ -227,7 +228,7 @@ const MultiSelectProfileModal = ({
                                                 setErrorMessage('');
                                             }}
                                             placeholder={customInputPlaceholder}
-                                            placeholderTextColor="#9CA3AF"
+                                            placeholderTextColor={colors.textTertiary}
                                             returnKeyType="done"
                                             onSubmitEditing={addCustomValue}
                                             editable={!isBusy}
@@ -268,7 +269,7 @@ const MultiSelectProfileModal = ({
                                         accessibilityState={{ disabled: isBusy, busy: isBusy }}
                                     >
                                         {isBusy ? (
-                                            <ActivityIndicator size="small" color="#FFFFFF" />
+                                            <ActivityIndicator size="small" color={colors.white} />
                                         ) : (
                                             <Text style={styles.saveButtonText}>Kaydet</Text>
                                         )}
@@ -295,40 +296,39 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: spacing.x4,
+        paddingVertical: spacing.x3,
     },
     modalContainer: {
         width: '100%',
         maxWidth: 560,
         maxHeight: '92%',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 20,
+        backgroundColor: colors.surface,
+        borderRadius: radius.card,
+        padding: spacing.x5,
     },
     modalTitle: {
-        color: '#111827',
-        fontSize: 18,
-        fontWeight: '700',
-        marginBottom: 16,
+        ...typography.cardTitle,
+        color: colors.textPrimary,
+        marginBottom: spacing.x4,
     },
     scrollView: {
         flexShrink: 1,
     },
     scrollContent: {
-        paddingBottom: 8,
+        paddingBottom: spacing.x2,
     },
     sectionLabel: {
-        color: '#4B5563',
-        fontSize: 13,
-        fontWeight: '600',
-        marginBottom: 8,
-        marginTop: 4,
+        ...typography.supporting,
+        color: colors.textSecondary,
+        fontFamily: typography.bodyMedium.fontFamily,
+        marginBottom: spacing.x2,
+        marginTop: spacing.x1,
     },
     chipContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginBottom: 14,
+        marginBottom: spacing.x4,
     },
     optionChip: {
         minHeight: 44,
@@ -336,116 +336,114 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 5,
-        backgroundColor: '#F3F4F6',
+        gap: spacing.x1,
+        backgroundColor: colors.surfaceMuted,
         borderWidth: 1,
-        borderColor: '#D1D5DB',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 9,
-        marginRight: 8,
-        marginBottom: 8,
+        borderColor: colors.borderSoft,
+        borderRadius: radius.control,
+        paddingHorizontal: spacing.x3,
+        paddingVertical: spacing.x2,
+        marginRight: spacing.x2,
+        marginBottom: spacing.x2,
     },
     optionChipSelected: {
-        backgroundColor: '#16A34A',
-        borderColor: '#16A34A',
+        backgroundColor: colors.primaryDark,
+        borderColor: colors.primaryDark,
     },
     optionText: {
         flexShrink: 1,
-        color: '#374151',
-        fontSize: 14,
-        fontWeight: '600',
+        ...typography.supporting,
+        color: colors.textPrimary,
+        fontFamily: typography.bodyMedium.fontFamily,
     },
     optionTextSelected: {
-        color: '#FFFFFF',
+        color: colors.white,
     },
     selectedChip: {
         minHeight: 44,
         maxWidth: '100%',
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        backgroundColor: '#ECFDF5',
+        gap: spacing.x2,
+        backgroundColor: colors.primarySoft,
         borderWidth: 1,
-        borderColor: '#A7F3D0',
-        borderRadius: 8,
-        paddingHorizontal: 11,
-        paddingVertical: 8,
-        marginRight: 8,
-        marginBottom: 8,
+        borderColor: colors.primary,
+        borderRadius: radius.control,
+        paddingHorizontal: spacing.x3,
+        paddingVertical: spacing.x2,
+        marginRight: spacing.x2,
+        marginBottom: spacing.x2,
     },
     selectedChipText: {
         flexShrink: 1,
-        color: '#065F46',
-        fontSize: 14,
-        fontWeight: '600',
+        ...typography.supporting,
+        color: colors.primaryDark,
+        fontFamily: typography.bodyMedium.fontFamily,
     },
     customInputRow: {
         flexDirection: 'row',
         alignItems: 'stretch',
-        marginBottom: 4,
+        marginBottom: spacing.x1,
     },
     input: {
         flex: 1,
         minHeight: 48,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: colors.surfaceMuted,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        color: '#1F2937',
-        fontSize: 15,
+        borderColor: colors.borderSoft,
+        borderRadius: radius.control,
+        paddingHorizontal: spacing.x3,
+        ...typography.body,
+        color: colors.textPrimary,
     },
     addButton: {
         minWidth: 72,
         minHeight: 48,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#E5E7EB',
-        borderRadius: 8,
-        marginLeft: 8,
-        paddingHorizontal: 14,
+        backgroundColor: colors.surfaceMuted,
+        borderRadius: radius.control,
+        marginLeft: spacing.x2,
+        paddingHorizontal: spacing.x4,
     },
     addButtonText: {
-        color: '#374151',
-        fontSize: 14,
-        fontWeight: '700',
+        ...typography.button,
+        color: colors.textPrimary,
     },
     errorText: {
-        color: '#B91C1C',
-        fontSize: 13,
-        lineHeight: 18,
-        marginTop: 6,
+        ...typography.supporting,
+        color: colors.errorDark,
+        marginTop: spacing.x2,
     },
     actions: {
         flexDirection: 'row',
-        marginTop: 16,
+        marginTop: spacing.x4,
     },
     cancelButton: {
         flex: 1,
         minHeight: 48,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F3F4F6',
-        borderRadius: 8,
-        marginRight: 6,
+        backgroundColor: colors.surfaceMuted,
+        borderRadius: radius.control,
+        marginRight: spacing.x2,
     },
     cancelButtonText: {
-        color: '#4B5563',
-        fontWeight: '700',
+        ...typography.button,
+        color: colors.textSecondary,
     },
     saveButton: {
         flex: 1,
         minHeight: 48,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#16A34A',
-        borderRadius: 8,
-        marginLeft: 6,
+        backgroundColor: colors.primaryDark,
+        borderRadius: radius.control,
+        marginLeft: spacing.x2,
     },
     saveButtonText: {
-        color: '#FFFFFF',
-        fontWeight: '700',
+        ...typography.button,
+        color: colors.white,
     },
     disabledButton: {
         opacity: 0.6,

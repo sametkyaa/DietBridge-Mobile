@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
 
 export function BottomSheetView({
@@ -26,6 +27,7 @@ export function BottomSheetView({
   keyboardAvoiding = true,
 }) {
   const { height: windowHeight } = useWindowDimensions();
+  const safeInsets = useSafeAreaInsets();
   const resolvedMaxHeight = maxHeight ?? Math.round(windowHeight * 0.9);
 
   const body = scrollable ? (
@@ -66,7 +68,12 @@ export function BottomSheetView({
           <View
             style={[
               styles.sheet,
-              { maxHeight: resolvedMaxHeight, paddingBottom: spacing.x6 + bottomInset },
+              {
+                maxHeight: resolvedMaxHeight,
+                paddingBottom: spacing.x6 + bottomInset,
+                paddingLeft: spacing.x5 + safeInsets.left,
+                paddingRight: spacing.x5 + safeInsets.right,
+              },
             ]}
           >
             <View style={styles.handle} accessible={false} importantForAccessibility="no" />
