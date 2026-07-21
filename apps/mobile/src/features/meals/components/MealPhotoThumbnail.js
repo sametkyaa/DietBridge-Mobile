@@ -8,6 +8,7 @@ export const MealPhotoThumbnail = ({
     imageStyle,
     wrapperStyle,
     onPress,
+    accessibilityLabel,
     fallback,
 }) => {
     const { photoUri, retryAfterImageError } = useMealPhotoUri(photoPath);
@@ -30,6 +31,8 @@ export const MealPhotoThumbnail = ({
             activeOpacity={0.9}
             onPress={() => onPress(activeUri)}
             style={wrapperStyle}
+            accessibilityRole="button"
+            accessibilityLabel={accessibilityLabel || 'Öğün fotoğrafını aç'}
         >
             {image}
         </TouchableOpacity>

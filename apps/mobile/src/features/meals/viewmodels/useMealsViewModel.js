@@ -21,10 +21,12 @@ export const useMealsViewModel = () => {
     const [mealsList, setMealsList] = useState([]);
     const [mealPlanStatus, setMealPlanStatus] = useState('loading');
     const [mealPlanError, setMealPlanError] = useState(null);
+    const [isSendingRequest, setIsSendingRequest] = useState(false);
     const { completedMeals, hydrateCompletedMeals } = useMeals();
     const requestSequenceRef = useRef(0);
     const inFlightRequestsRef = useRef(new Map());
     const isMountedRef = useRef(true);
+    const requestSubmissionRef = useRef(false);
     const {
         hasActiveDietitian,
         isLoadingConnection,
@@ -117,6 +119,7 @@ export const useMealsViewModel = () => {
     };
 
     const handleSendRequest = async () => {
+        if (requestSubmissionRef.current) return;
         if (!hasActiveDietitian) {
             Alert.alert('Bilgi', CONNECTION_REQUIRED_MESSAGE);
             return;
@@ -130,6 +133,8 @@ export const useMealsViewModel = () => {
             return;
         }
 
+        requestSubmissionRef.current = true;
+        setIsSendingRequest(true);
         try {
             await submitMealChangeRequest({
                 plan_date: getLocalWeekDateKey(requestSelectedDay),
@@ -142,6 +147,9 @@ export const useMealsViewModel = () => {
         } catch (error) {
             console.error(error);
             Alert.alert('Hata', error.message || CONNECTION_GENERIC_ERROR_MESSAGE);
+        } finally {
+            requestSubmissionRef.current = false;
+            if (isMountedRef.current) setIsSendingRequest(false);
         }
     };
 
@@ -177,15 +185,6 @@ export const useMealsViewModel = () => {
         setGroceryModalVisible(true);
     };
 
-    const getMealIconConfig = (type) => {
-        const value = (type || '').toLowerCase();
-        if (value.includes('breakfast')) return { name: 'sunny-outline', background: '#FEF3C7', color: '#F59E0B' };
-        if (value.includes('lunch')) return { name: 'fast-food-outline', background: '#DBEAFE', color: '#1D4ED8' };
-        if (value.includes('dinner')) return { name: 'moon-outline', background: '#EDE9FE', color: '#6D28D9' };
-        if (value.includes('snack')) return { name: 'nutrition-outline', background: '#FFE4E6', color: '#DB2777' };
-        return { name: 'restaurant-outline', background: '#E6F4EC', color: '#15803D' };
-    };
-
     return {
         dayOptions,
         selectedDay,
@@ -214,7 +213,6 @@ export const useMealsViewModel = () => {
         toggleGroceryItem: (name) => setGroceryItems((previous) => previous.map((item) => (
             item.name === name ? { ...item, checked: !item.checked } : item
         ))),
-        getMealIconConfig,
         meals: mealsList,
         mealPlanStatus,
         mealPlanError,
@@ -224,5 +222,6 @@ export const useMealsViewModel = () => {
         isLoadingConnection,
         connectionError,
         connectionRequiredMessage: CONNECTION_REQUIRED_MESSAGE,
+        isSendingRequest,
     };
 };

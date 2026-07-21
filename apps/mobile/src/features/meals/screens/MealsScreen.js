@@ -1,15 +1,50 @@
-import React from 'react';
-import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo } from 'react';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { styles } from '../../../shared/theme/styles';
-import { MealPhotoThumbnail } from '../components/MealPhotoThumbnail';
+import {
+    AppButton,
+    AppCard,
+    AppSkeleton,
+    EmptyState,
+    ErrorState,
+    InlineAlert,
+} from '../../../shared/components/ui';
+import { colors, radius, spacing, typography } from '../../../shared/theme';
+import { MealDetailSheet } from '../components/MealDetailSheet';
+import {
+    GroceryListSheet,
+    MealPhotoPreviewModal,
+    MealPlanHeader,
+    MealPlanItem,
+    MealRequestSheet,
+} from '../components/plan';
 import { useMealsViewModel } from '../viewmodels/useMealsViewModel';
+
+const todayIndex = (new Date().getDay() + 6) % 7;
+
+function LoadingState({ retrying }) {
+    return (
+        <AppCard style={screenStyles.stateCard}>
+            <View
+                accessible
+                accessibilityRole="progressbar"
+                accessibilityLabel={retrying ? 'Beslenme planı yeniden yükleniyor' : 'Beslenme planı yükleniyor'}
+                accessibilityState={{ busy: true }}
+                style={screenStyles.loading}
+            >
+                <AppSkeleton width={56} height={56} borderRadius={radius.small} animated />
+                <View style={screenStyles.loadingText}>
+                    <AppSkeleton width="55%" height={16} animated />
+                    <AppSkeleton width="80%" height={12} animated />
+                    <Text style={screenStyles.supporting}>{retrying ? 'Plan yeniden yükleniyor...' : 'Plan yükleniyor...'}</Text>
+                </View>
+            </View>
+        </AppCard>
+    );
+}
 
 const MealsScreen = () => {
     const insets = useSafeAreaInsets();
-    const screenBottomPadding = 64 + insets.bottom + insets.bottom + 16;
-    const floatingButtonBottom = Math.max(insets.bottom, 16);
     const {
         dayOptions,
         selectedDay,
@@ -36,7 +71,6 @@ const MealsScreen = () => {
         handleGenerateGroceryList,
         openMealModal,
         openPhotoPreview,
-        getMealIconConfig,
         meals,
         isLoadingMeals,
         mealPlanStatus,
@@ -45,396 +79,133 @@ const MealsScreen = () => {
         hasActiveDietitian,
         isLoadingConnection,
         connectionError,
-        connectionRequiredMessage
+        connectionRequiredMessage,
+        isSendingRequest,
     } = useMealsViewModel();
 
+    const selectedCompletion = selectedMeal ? completedMeals[selectedMeal.id] : null;
+    const showLoading = isLoadingMeals || (isLoadingConnection && mealPlanStatus === 'loading');
+    const listData = mealPlanStatus === 'success' ? meals : [];
+
+    useEffect(() => {
+        if (!hasActiveDietitian && photoPreviewUri) closePhotoPreview();
+    }, [closePhotoPreview, hasActiveDietitian, photoPreviewUri]);
+
+    const renderItem = useCallback(({ item }) => (
+        <MealPlanItem meal={item} completion={completedMeals[item.id]} onPress={openMealModal} />
+    ), [completedMeals, openMealModal]);
+
+    const listEmpty = useMemo(() => {
+        if (showLoading) return <LoadingState retrying={mealPlanStatus === 'retrying'} />;
+        if (mealPlanStatus === 'unlinked') {
+            return (
+                <AppCard style={screenStyles.stateCard}>
+                    <InlineAlert variant="warning" title="Diyetisyen bağlantısı gerekli" message={connectionRequiredMessage} />
+                    {connectionError ? <InlineAlert variant="error" message={connectionError} style={screenStyles.alertGap} /> : null}
+                </AppCard>
+            );
+        }
+        if (mealPlanStatus === 'error') {
+            return (
+                <AppCard style={screenStyles.stateCard}>
+                    <ErrorState title="Plan yüklenemedi" description={mealPlanError} onRetry={retryMeals} />
+                </AppCard>
+            );
+        }
+        return (
+            <AppCard style={screenStyles.stateCard}>
+                <EmptyState
+                    icon="calendar"
+                    title="Bu gün için plan bulunmuyor"
+                    description="Diyetisyeniniz plan eklediğinde burada görünecek."
+                />
+            </AppCard>
+        );
+    }, [connectionError, connectionRequiredMessage, mealPlanError, mealPlanStatus, retryMeals, showLoading]);
+
+    const header = useMemo(() => (
+        <MealPlanHeader
+            dayOptions={dayOptions}
+            selectedDay={selectedDay}
+            todayIndex={todayIndex}
+            onSelectDay={setSelectedDay}
+            onOpenGrocery={handleGenerateGroceryList}
+            groceryDisabled={!hasActiveDietitian}
+        />
+    ), [dayOptions, handleGenerateGroceryList, hasActiveDietitian, selectedDay, setSelectedDay]);
+
+    const footer = (
+        <View style={screenStyles.footer}>
+            <AppButton
+                variant="secondary"
+                label="Öğün değişikliği talep et"
+                onPress={handleOpenRequestModal}
+                disabled={!hasActiveDietitian}
+            />
+            {!hasActiveDietitian ? <Text style={screenStyles.supporting}>{connectionRequiredMessage}</Text> : null}
+        </View>
+    );
+
     return (
-        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-            <View style={[styles.mealsContainer, { paddingBottom: screenBottomPadding }]}>
-                <View style={styles.mealsHeader}>
-                    {/* Note: Update asset path */}
-                    <Image source={require('../../../../../../assets/meal_icon.png')} style={{ width: 40, height: 40, marginRight: 12 }} resizeMode="contain" />
-                    <View>
-                        <Text style={styles.mealsTitle}>Haftalık Öğün Planınız</Text>
-                    </View>
-                    <TouchableOpacity
-                        style={[
-                            styles.groceryButton,
-                            { marginBottom: 0, alignSelf: 'center', paddingHorizontal: 10, paddingVertical: 10, borderRadius: 50 },
-                            !hasActiveDietitian && localStyles.disabledControl,
-                        ]}
-                        onPress={handleGenerateGroceryList}
-                        disabled={!hasActiveDietitian}
-                    >
-                        <Ionicons name="cart-outline" size={24} color="#047857" />
-                    </TouchableOpacity>
-                </View>
+        <SafeAreaView style={screenStyles.safeArea} edges={['top', 'left', 'right']}>
+            <FlatList
+                data={listData}
+                keyExtractor={(item) => item.id}
+                renderItem={renderItem}
+                ItemSeparatorComponent={() => <View style={screenStyles.separator} />}
+                ListHeaderComponent={header}
+                ListEmptyComponent={listEmpty}
+                ListFooterComponent={footer}
+                contentContainerStyle={screenStyles.content}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            />
 
-
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.dayScroll}
-                    contentContainerStyle={styles.daySelector}
-                >
-                    {dayOptions.map((day, index) => {
-                        const selected = index === selectedDay;
-                        return (
-                            <TouchableOpacity
-                                key={day}
-                                style={[styles.dayPill, selected && styles.dayPillSelected]}
-                                onPress={() => setSelectedDay(index)}
-                            >
-                                <Text style={[styles.dayText, selected && styles.dayTextSelected]}>{day}</Text>
-                            </TouchableOpacity>
-                        );
-                    })}
-                </ScrollView>
-
-                <ScrollView
-                    style={styles.mealsList}
-                    contentContainerStyle={[styles.mealsListContent, { paddingBottom: screenBottomPadding + 24 }]}
-                >
-                    {isLoadingMeals ? (
-                        <View style={localStyles.stateContainer}>
-                            <ActivityIndicator size="large" color="#047857" />
-                            <Text style={localStyles.stateText}>
-                                {mealPlanStatus === 'retrying' ? 'Beslenme planı yeniden yükleniyor...' : 'Beslenme planı yükleniyor...'}
-                            </Text>
-                        </View>
-                    ) : mealPlanStatus === 'unlinked' ? (
-                        <View style={localStyles.lockedState}>
-                            <Ionicons name="lock-closed-outline" size={28} color="#6B7280" />
-                            <Text style={localStyles.lockedText}>{connectionRequiredMessage}</Text>
-                            {!!connectionError && <Text style={localStyles.errorText}>{connectionError}</Text>}
-                        </View>
-                    ) : mealPlanStatus === 'error' ? (
-                        <View style={localStyles.stateContainer}>
-                            <Ionicons name="alert-circle-outline" size={30} color="#B91C1C" />
-                            <Text style={[localStyles.stateText, localStyles.errorText]}>{mealPlanError}</Text>
-                            <TouchableOpacity style={localStyles.retryButton} onPress={retryMeals}>
-                                <Text style={localStyles.retryButtonText}>Tekrar Dene</Text>
-                            </TouchableOpacity>
-                        </View>
-                    ) : meals.length === 0 ? (
-                        <Text style={{ textAlign: 'center', marginTop: 40, color: '#6B7280' }}>
-                            Bugün için henüz öğün planı bulunmuyor. Diyetisyeniniz plan eklediğinde burada görünecek.
-                        </Text>
-                    ) : (
-                        meals.map((meal) => {
-                            const completion = completedMeals[meal.id];
-                            const isCompleted = !!completion?.completed;
-                            const iconConfig = getMealIconConfig(meal.type);
-
-                            return (
-                                <TouchableOpacity
-                                    key={meal.id}
-                                    activeOpacity={0.9}
-                                    style={styles.mealCard}
-                                    onPress={() => openMealModal(meal)}
-                                >
-                                    <View style={styles.mealCardHeader}>
-                                        <MealPhotoThumbnail
-                                            photoPath={meal.photoPath}
-                                            completionPhotoUri={completion?.completionPhotoUri}
-                                            imageStyle={styles.mealPhotoThumb}
-                                            wrapperStyle={styles.mealPhotoThumbWrapper}
-                                            onPress={openPhotoPreview}
-                                            fallback={(
-                                                <View style={[styles.mealIconCircle, { backgroundColor: iconConfig.background }]}>
-                                                    <Ionicons name={iconConfig.name} size={22} color={iconConfig.color} />
-                                                </View>
-                                            )}
-                                        />
-                                        <View style={styles.mealInfo}>
-                                            <Text style={styles.mealHeader}>
-                                                {meal.title || meal.type} {meal.time ? `• ${meal.time}` : ''}
-                                            </Text>
-                                            <Text style={styles.mealDesc}>{meal.desc}</Text>
-                                            <Text style={styles.mealSubtleText}>Tarifi görüntüle</Text>
-                                        </View>
-                                        <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-                                    </View>
-                                    {meal.note && (
-                                        <View style={styles.mealDetails}>
-                                            <Text style={styles.mealNote}>{meal.note}</Text>
-                                        </View>
-                                    )}
-                                    {isCompleted && (
-                                        <View style={styles.checkBadge}>
-                                            <Ionicons name="checkmark" size={16} color="#2E7D32" />
-                                        </View>
-                                    )}
-                                </TouchableOpacity>
-                            );
-                        })
-                    )}
-                </ScrollView>
-
-                <TouchableOpacity
-                    style={[
-                        styles.requestButton,
-                        { bottom: floatingButtonBottom },
-                        !hasActiveDietitian && localStyles.disabledRequestButton,
-                    ]}
-                    onPress={handleOpenRequestModal}
-                    disabled={!hasActiveDietitian}
-                >
-                    <Text style={styles.requestButtonText}>Öğün Değişikliği Talep Et</Text>
-                </TouchableOpacity>
-            </View>
-            <Modal
+            <MealDetailSheet
+                meal={selectedMeal}
+                completion={selectedCompletion}
                 visible={!!selectedMeal && hasActiveDietitian}
-                animationType="slide"
-                transparent
-                onRequestClose={closeMealModal}
-            >
-                <View style={styles.mealModalOverlay}>
-                    <View style={styles.mealModalCard}>
-                        {selectedMeal && (
-                            <>
-                                <View style={styles.mealModalHeader}>
-                                    <View>
-                                        <Text style={styles.mealModalTitle}>{selectedMeal.title || selectedMeal.type}</Text>
-                                        <Text style={styles.mealModalSubtitle}>{selectedMeal.time}</Text>
-                                    </View>
-                                    <TouchableOpacity style={styles.mealModalCloseButton} onPress={closeMealModal}>
-                                        <Ionicons name="close" size={20} color="#1F2A37" />
-                                    </TouchableOpacity>
-                                </View>
-                                <Text style={styles.mealModalDesc}>{selectedMeal.desc}</Text>
-                                {selectedMeal.note && <Text style={styles.mealModalNote}>{selectedMeal.note}</Text>}
-                                <ScrollView style={styles.mealModalBody} showsVerticalScrollIndicator={false}>
-                                    <Text style={styles.mealModalSectionTitle}>Malzemeler</Text>
-                                    {selectedMeal.ingredients?.map((item) => (
-                                        <View key={item} style={styles.mealModalListRow}>
-                                            <View style={styles.mealModalBullet} />
-                                            <Text style={styles.mealModalListText}>{item}</Text>
-                                        </View>
-                                    ))}
-                                    <Text style={styles.mealModalSectionTitle}>Hazırlanış</Text>
-                                    {selectedMeal.steps?.map((step, index) => (
-                                        <View key={`${step}-${index}`} style={styles.mealModalStepRow}>
-                                            <View style={styles.mealModalStepIndex}>
-                                                <Text style={styles.mealModalStepIndexText}>{index + 1}</Text>
-                                            </View>
-                                            <Text style={styles.mealModalListText}>{step}</Text>
-                                        </View>
-                                    ))}
-                                </ScrollView>
-                            </>
-                        )}
-                    </View>
-                </View>
-            </Modal>
-            <Modal
+                onClose={closeMealModal}
+                onPhotoPress={openPhotoPreview}
+                bottomInset={insets.bottom}
+            />
+            <GroceryListSheet
                 visible={groceryModalVisible && hasActiveDietitian}
-                animationType="slide"
-                transparent
-                onRequestClose={() => setGroceryModalVisible(false)}
-            >
-                <View style={styles.mealModalOverlay}>
-                    <View style={styles.mealModalCard}>
-                        <View style={styles.mealModalHeader}>
-                            <View>
-                                <Text style={styles.mealModalTitle}>Alışveriş Listesi</Text>
-                                <Text style={styles.mealModalSubtitle}>Haftalık plan</Text>
-                            </View>
-                            <TouchableOpacity
-                                style={styles.mealModalCloseButton}
-                                onPress={() => setGroceryModalVisible(false)}
-                            >
-                                <Ionicons name="close" size={20} color="#1F2A37" />
-                            </TouchableOpacity>
-                        </View>
-                        <ScrollView style={styles.mealModalBody} showsVerticalScrollIndicator={false}>
-                            {groceryItems.map((item) => (
-                                <TouchableOpacity
-                                    key={item.name}
-                                    style={styles.groceryListRow}
-                                    onPress={() => toggleGroceryItem(item.name)}
-                                    activeOpacity={0.8}
-                                >
-                                    <Ionicons
-                                        name={item.checked ? 'checkbox-outline' : 'square-outline'}
-                                        size={20}
-                                        color={item.checked ? '#16A34A' : '#9CA3AF'}
-                                        style={styles.groceryCheckbox}
-                                    />
-                                    <Text
-                                        style={[styles.groceryListText, item.checked && styles.groceryListTextChecked]}
-                                    >
-                                        {item.name}
-                                        {item.count > 1 ? ` x${item.count}` : ''}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal>
-            <Modal
-                visible={!!photoPreviewUri && hasActiveDietitian}
-                animationType="fade"
-                transparent
-                onRequestClose={closePhotoPreview}
-            >
-                <TouchableOpacity
-                    activeOpacity={1}
-                    style={styles.photoModalOverlay}
-                    onPress={closePhotoPreview}
-                >
-                    <View style={styles.photoModalBody}>
-                        {photoPreviewUri && (
-                            <Image source={{ uri: photoPreviewUri }} style={styles.photoModalImage} />
-                        )}
-                    </View>
-                </TouchableOpacity>
-            </Modal>
-            {/* Meal Change Request Modal */}
-            <Modal
+                items={groceryItems}
+                onToggle={toggleGroceryItem}
+                onClose={() => setGroceryModalVisible(false)}
+                bottomInset={insets.bottom}
+            />
+            <MealRequestSheet
                 visible={requestModalVisible && hasActiveDietitian}
-                animationType="slide"
-                transparent
-                onRequestClose={() => setRequestModalVisible(false)}
-            >
-                <View style={styles.mealModalOverlay}>
-                    <View style={styles.mealModalCard}>
-                        <View style={styles.mealModalHeader}>
-                            <View>
-                                <Text style={styles.mealModalTitle}>Öğün Değişikliği Talep Et</Text>
-                                <Text style={styles.mealModalSubtitle}>Değişiklik istediğiniz gün ve öğünleri seçin</Text>
-                            </View>
-                            <TouchableOpacity
-                                style={styles.mealModalCloseButton}
-                                onPress={() => setRequestModalVisible(false)}
-                            >
-                                <Ionicons name="close" size={20} color="#1F2A37" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <ScrollView style={styles.mealModalBody} showsVerticalScrollIndicator={false}>
-                            {/* Day Selection */}
-                            <Text style={styles.mealModalSectionTitle}>Gün Seçimi</Text>
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                style={styles.dayScroll}
-                                contentContainerStyle={styles.daySelector}
-                            >
-                                {dayOptions.map((day, index) => {
-                                    const selected = index === requestSelectedDay;
-                                    return (
-                                        <TouchableOpacity
-                                            key={`req-${day}`}
-                                            style={[styles.dayPill, selected && styles.dayPillSelected]}
-                                            onPress={() => handleRequestDayChange(index)}
-                                        >
-                                            <Text style={[styles.dayText, selected && styles.dayTextSelected]}>{day}</Text>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                            </ScrollView>
-
-                            {/* Meal Selection */}
-                            <Text style={styles.mealModalSectionTitle}>Öğün Seçimi</Text>
-                            <View style={styles.mealSelectionGrid}>
-                                {meals.map((meal) => {
-                                    const isSelected = requestSelectedMeals.includes(meal.type);
-                                    return (
-                                        <TouchableOpacity
-                                            key={`req-meal-${meal.type}`}
-                                            style={[styles.mealSelectionBtn, isSelected && styles.mealSelectionBtnActive]}
-                                            onPress={() => handleToggleRequestMeal(meal.type)}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.mealSelectionText,
-                                                    isSelected && styles.mealSelectionTextActive,
-                                                ]}
-                                            >
-                                                {meal.title || meal.type}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                            </View>
-
-                            {/* Message Input */}
-                            <Text style={styles.mealModalSectionTitle}>Mesajınız</Text>
-                            <TextInput
-                                style={styles.requestInput}
-                                placeholder="Örn: Kahvaltıda yulaf yerine yumurta tercih ederim..."
-                                placeholderTextColor="#9CA3AF"
-                                multiline
-                                value={requestMessage}
-                                onChangeText={setRequestMessage}
-                            />
-
-                            {/* Send Button */}
-                            <TouchableOpacity style={styles.sendButton} onPress={handleSendRequest}>
-                                <Text style={styles.sendButtonText}>Talebi Gönder</Text>
-                            </TouchableOpacity>
-                            <View style={{ height: 40 }} />
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal>
+                dayOptions={dayOptions}
+                selectedDay={requestSelectedDay}
+                selectedMeals={requestSelectedMeals}
+                meals={meals}
+                message={requestMessage}
+                onDayChange={handleRequestDayChange}
+                onToggleMeal={handleToggleRequestMeal}
+                onMessageChange={setRequestMessage}
+                onSend={handleSendRequest}
+                onClose={() => setRequestModalVisible(false)}
+                isSending={isSendingRequest}
+                bottomInset={insets.bottom}
+            />
+            <MealPhotoPreviewModal uri={hasActiveDietitian ? photoPreviewUri : null} onClose={closePhotoPreview} />
         </SafeAreaView>
     );
 };
 
-const localStyles = StyleSheet.create({
-    stateContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 24,
-        paddingVertical: 48,
-    },
-    stateText: {
-        marginTop: 12,
-        color: '#4B5563',
-        fontSize: 15,
-        lineHeight: 22,
-        textAlign: 'center',
-    },
-    retryButton: {
-        marginTop: 16,
-        paddingHorizontal: 18,
-        paddingVertical: 10,
-        borderRadius: 8,
-        backgroundColor: '#047857',
-    },
-    retryButtonText: {
-        color: '#FFFFFF',
-        fontWeight: '700',
-    },
-    lockedState: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 24,
-        paddingVertical: 48,
-    },
-    lockedText: {
-        marginTop: 12,
-        color: '#4B5563',
-        fontSize: 15,
-        lineHeight: 22,
-        textAlign: 'center',
-    },
-    errorText: {
-        marginTop: 8,
-        color: '#B91C1C',
-        fontSize: 13,
-        textAlign: 'center',
-    },
-    disabledControl: {
-        opacity: 0.45,
-    },
-    disabledRequestButton: {
-        opacity: 0.6,
-        backgroundColor: '#9CA3AF',
-    },
+const screenStyles = StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: colors.background },
+    content: { paddingHorizontal: spacing.x5, paddingTop: spacing.x3, paddingBottom: spacing.x8 },
+    separator: { height: spacing.x3 },
+    stateCard: { marginTop: spacing.x2 },
+    loading: { flexDirection: 'row', alignItems: 'center', gap: spacing.x3 },
+    loadingText: { flex: 1, gap: spacing.x2 },
+    supporting: { ...typography.supporting, color: colors.textSecondary, textAlign: 'center' },
+    alertGap: { marginTop: spacing.x3 },
+    footer: { gap: spacing.x2, paddingTop: spacing.x5 },
 });
 
 export default MealsScreen;

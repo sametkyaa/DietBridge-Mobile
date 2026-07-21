@@ -24,6 +24,8 @@ const ICON_MAP = {
   chevronRight: 'chevron-right',
   send: 'send',
   calendar: 'calendar-outline',
+  cart: 'cart-outline',
+  lock: 'lock-outline',
   message: 'message-text-outline',
   person: 'account-outline',
   dot: 'circle-small',
