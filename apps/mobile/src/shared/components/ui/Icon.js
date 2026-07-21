@@ -31,6 +31,7 @@ const ICON_MAP = {
   camera: 'camera-outline',
   image: 'image-outline',
   settings: 'cog-outline',
+  support: 'help-circle-outline',
   bell: 'bell-outline',
   undo: 'undo',
   wifiOff: 'wifi-off',

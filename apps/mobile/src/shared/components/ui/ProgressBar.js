@@ -11,7 +11,7 @@ const TONES = {
   error: colors.error,
 };
 
-export function ProgressBar({ value = 0, tone = 'primary', height = 8, style }) {
+export function ProgressBar({ value = 0, tone = 'primary', height = 8, style, accessibilityLabel }) {
   const numericValue = Number(value);
   const clamped = Number.isFinite(numericValue) ? Math.min(100, Math.max(0, numericValue)) : 0;
 
@@ -19,6 +19,7 @@ export function ProgressBar({ value = 0, tone = 'primary', height = 8, style }) 
     <View
       style={[styles.track, { height, borderRadius: height / 2 }, style]}
       accessibilityRole="progressbar"
+      accessibilityLabel={accessibilityLabel}
       accessibilityValue={{ min: 0, max: 100, now: Math.round(clamped) }}
     >
       <View
