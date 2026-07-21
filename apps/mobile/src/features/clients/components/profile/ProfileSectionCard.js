@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     textWrap: { flex: 1, minWidth: 0 },
     label: { ...typography.caption, color: colors.textSecondary },
     value: { ...typography.bodyMedium, color: colors.textPrimary, marginTop: 2 },
-    empty: { color: colors.textTertiary, fontFamily: typography.body.fontFamily },
+    empty: { color: colors.textSecondary, fontFamily: typography.body.fontFamily },
     pressed: { opacity: 0.8 },
 });
 

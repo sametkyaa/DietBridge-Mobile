@@ -20,7 +20,7 @@ export function AppInput({
   accessibilityLabel,
   accessibilityHint,
   accessibilityState,
-  placeholderTextColor = colors.textTertiary,
+  placeholderTextColor = colors.textSecondary,
   multiline = false,
   ...textInputProps
 }) {

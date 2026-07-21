@@ -21,6 +21,7 @@ export const MealPhotoThumbnail = ({
             source={{ uri: activeUri }}
             style={imageStyle}
             onError={completionPhotoUri ? undefined : retryAfterImageError}
+            accessible={false}
         />
     );
 

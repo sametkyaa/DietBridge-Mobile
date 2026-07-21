@@ -26,7 +26,7 @@ export function DashboardSidebar({ visible, userName, avatarUrl, onClose, onNavi
                     },
                 ]}>
                     <View style={styles.profile}>
-                        {avatarUrl ? <Image source={{ uri: avatarUrl }} style={styles.avatar} /> : <View style={styles.avatar} />}
+                        {avatarUrl ? <Image source={{ uri: avatarUrl }} style={styles.avatar} accessible={false} /> : <View style={styles.avatar} />}
                         <Text style={styles.name}>{userName}</Text>
                     </View>
                     {ITEMS.map((item) => (

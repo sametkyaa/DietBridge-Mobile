@@ -10,7 +10,7 @@ export function ErrorState({ title, description, onRetry, retryLabel = 'Tekrar d
       <View style={styles.iconWrap} accessible={false} importantForAccessibility="no">
         <Icon name="alert" size={26} color={colors.error} />
       </View>
-      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.title} accessibilityRole="header">{title}</Text>
       {description ? <Text style={styles.description}>{description}</Text> : null}
       {onRetry ? (
         <AppButton

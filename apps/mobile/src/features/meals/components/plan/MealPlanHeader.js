@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     days: { gap: spacing.x1, paddingVertical: spacing.x5 },
     day: { width: 48, minHeight: 68, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center', gap: 2 },
     daySelected: { backgroundColor: colors.primarySoft },
-    dayLabel: { ...typography.caption, color: colors.textTertiary },
+    dayLabel: { ...typography.caption, color: colors.textSecondary },
     dayLabelSelected: { color: colors.primaryDark },
     dateLabel: { ...typography.bodyMedium, color: colors.textSecondary },
     dateLabelSelected: { color: colors.primaryDark },

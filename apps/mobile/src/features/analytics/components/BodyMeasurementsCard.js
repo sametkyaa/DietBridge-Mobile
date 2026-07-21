@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     item: { minWidth: 112, flexGrow: 1, flexBasis: '30%', borderRadius: radius.control, backgroundColor: colors.surfaceMuted, padding: spacing.x3 },
     label: { ...typography.caption, color: colors.textSecondary },
     value: { ...typography.cardTitle, color: colors.textPrimary, marginTop: spacing.x1 },
-    unit: { ...typography.supporting, color: colors.textTertiary },
+    unit: { ...typography.supporting, color: colors.textSecondary },
 });
 
 export default BodyMeasurementsCard;

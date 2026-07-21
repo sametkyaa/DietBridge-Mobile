@@ -49,8 +49,8 @@ const styles = StyleSheet.create({
     day: { flex: 1, minWidth: 0, alignItems: 'center' },
     track: { width: 18, height: 106, borderRadius: radius.round, backgroundColor: colors.tealSoft, justifyContent: 'flex-end', overflow: 'hidden' },
     fill: { width: '100%', minHeight: 2, borderRadius: radius.round, backgroundColor: colors.teal },
-    dayLabel: { ...typography.caption, fontSize: 10, color: colors.textSecondary, marginTop: spacing.x1 },
-    amount: { ...typography.caption, fontSize: 9, color: colors.textTertiary, marginTop: 2 },
+    dayLabel: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.x1 },
+    amount: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
 });
 
 export default WaterHistoryCard;

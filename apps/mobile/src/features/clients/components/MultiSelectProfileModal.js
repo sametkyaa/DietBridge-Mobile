@@ -158,7 +158,7 @@ const MultiSelectProfileModal = ({
                     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                         <View style={styles.overlay}>
                             <View style={styles.modalContainer}>
-                                <Text style={styles.modalTitle}>{title}</Text>
+                                <Text style={styles.modalTitle} accessibilityRole="header">{title}</Text>
 
                                 <ScrollView
                                     style={styles.scrollView}
@@ -228,7 +228,7 @@ const MultiSelectProfileModal = ({
                                                 setErrorMessage('');
                                             }}
                                             placeholder={customInputPlaceholder}
-                                            placeholderTextColor={colors.textTertiary}
+                                            placeholderTextColor={colors.textSecondary}
                                             returnKeyType="done"
                                             onSubmitEditing={addCustomValue}
                                             editable={!isBusy}
@@ -266,6 +266,7 @@ const MultiSelectProfileModal = ({
                                         onPress={handleSave}
                                         disabled={isBusy}
                                         accessibilityRole="button"
+                                        accessibilityLabel="Kaydet"
                                         accessibilityState={{ disabled: isBusy, busy: isBusy }}
                                     >
                                         {isBusy ? (

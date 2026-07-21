@@ -123,7 +123,7 @@ const NumericProfileInputModal = ({
                     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                         <View style={styles.overlay}>
                             <View style={styles.modalContainer}>
-                                <Text style={styles.modalTitle}>{title}</Text>
+                                <Text style={styles.modalTitle} accessibilityRole="header">{title}</Text>
                                 <View style={styles.inputRow}>
                                     <TextInput
                                         style={styles.input}
@@ -134,7 +134,7 @@ const NumericProfileInputModal = ({
                                         }}
                                         keyboardType="decimal-pad"
                                         placeholder={placeholder}
-                                        placeholderTextColor={colors.textTertiary}
+                                        placeholderTextColor={colors.textSecondary}
                                         editable={!isBusy}
                                         returnKeyType="done"
                                         onSubmitEditing={handleSave}
@@ -163,6 +163,7 @@ const NumericProfileInputModal = ({
                                         onPress={handleSave}
                                         disabled={isBusy}
                                         accessibilityRole="button"
+                                        accessibilityLabel="Kaydet"
                                         accessibilityState={{ disabled: isBusy, busy: isBusy }}
                                     >
                                         {isBusy ? (

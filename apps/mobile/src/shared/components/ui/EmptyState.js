@@ -12,7 +12,7 @@ export function EmptyState({ icon, title, description, actionLabel, onAction, st
           {typeof icon === 'string' ? <Icon name={icon} size={28} color={colors.textTertiary} /> : icon}
         </View>
       ) : null}
-      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.title} accessibilityRole="header">{title}</Text>
       {description ? <Text style={styles.description}>{description}</Text> : null}
       {actionLabel && onAction ? (
         <AppButton variant="secondary" label={actionLabel} onPress={onAction} style={styles.action} />
