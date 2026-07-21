@@ -3,9 +3,9 @@
 ## Publication status
 
 - Local branch: `codex/mobile-ui-refresh`
-- Local commits ahead of main: 10
-- Worktree: clean at the P3 package boundary
-- Push: PASS; remote tracking branch updated through P3
+- Local commits ahead of main: 12
+- Worktree: clean at the P4 package boundary
+- Push: PASS; remote tracking branch updated through P4
 - Draft PR: pending
 - Reason: GitHub connector returned HTTP 403 (`Resource not accessible by integration`); GitHub CLI remains unavailable
 - Engineering impact: none
@@ -210,3 +210,46 @@ Resolved findings:
 - Final contract and UI/accessibility re-reviews reported no P0, P1 or P2 findings.
 
 Remaining risks: physical-device visual, camera/gallery permission, screen-reader and authenticated backend acceptance remain manual checks. The existing authenticated Android background/reload/token-refresh release blocker is unchanged.
+
+## P4 Meals and Meal Detail — PASS
+
+Commit: `d98aaa5` (`feat(ui): refresh meal plan and detail views`)
+
+Files: Meals screen/ViewModel presentation state, meal-plan components, a shared meal-detail sheet, signed-thumbnail accessibility passthrough, semantic icons, Dashboard’s thin detail adapter, and removal of MealsScreen-only legacy style keys.
+
+Commands:
+
+- Babel parse of all 13 changed/new JavaScript modules
+- UI Supabase/network/storage/auth boundary `rg` scan
+- dead presentation helper/style reference scans
+- frozen service/read-model/context/hook/navigation/package diff checks
+- `git diff --check` and staged allowlist inspection
+- Android exports before and after review repair
+
+Results:
+
+- Babel parse: PASS (13/13 files).
+- Android export: PASS after final repairs.
+- The screen uses one primary vertical `FlatList`; both seven-day selectors are horizontal and no same-axis nested virtual list exists.
+- Monday-based local dates, selected-date requests, per-date in-flight deduplication, latest-result gating and forced retry are unchanged.
+- Loading/retrying, success, selected-day empty, unlinked and error states remain distinct.
+- Signed plan photos still resolve through `MealPhotoThumbnail` / `useMealPhotoUri`; preview receives only the resolved signed/local URI.
+- Detail shows only real canonical fields and omits empty ingredients/steps; no completion or upload callback was invented.
+- Grocery derives only from real selected-day ingredients and shows an honest empty state.
+- Change-request validation and payload/service chain remain unchanged; a ViewModel pending guard prevents duplicate submission and locks the form while pending.
+- Active-dietitian guards remain at both ViewModel and screen/modal boundaries.
+- Superseded meal-only legacy style keys and the unused presentation icon mapper were removed with no remaining references.
+- Dashboard delegates to the same shared meal-detail implementation through a thin adapter.
+
+Reviewer findings:
+
+- P1: photo preview initially lacked the active-dietitian visibility guard; preview layout initially lacked a definite parent height.
+- P2: request chips/sheet close were initially interactive during submission; the preview used React Native’s deprecated safe-area component.
+
+Resolved findings:
+
+- Preview is gated and cleared on connection loss, has definite modal dimensions, uses safe-area-context and exposes labeled close paths.
+- Request day/meal chips, input, send and close/backdrop are locked during submission.
+- Final contract, scope and UI/accessibility re-reviews reported no P0, P1, P2 or P3 findings.
+
+Remaining risks: TalkBack/VoiceOver focus order, Android keyboard behavior, real signed-photo preview and authenticated grocery/change-request acceptance remain physical-device/manual checks.

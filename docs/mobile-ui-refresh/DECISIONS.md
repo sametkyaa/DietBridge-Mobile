@@ -35,3 +35,7 @@ GitHub CLI unavailability is not a hard blocker for the engineering loop. Local 
 ## D-009 — Derive dashboard nutrition from canonical completed meals
 
 Dashboard nutrition values are presentation-only totals derived from real completed meals and the canonical `calories`, `protein`, `carbohydrate` and `fat` fields. Reference preview goals and static totals are not product data and are therefore omitted. Current-weight write ownership remains on Dashboard as established in D-003.
+
+## D-010 — Share one meal-detail presentation
+
+Dashboard and the meal-plan screen delegate to one `features/meals` meal-detail sheet. Dashboard keeps only a thin adapter for its presentation-shaped meal object. This avoids duplicate detail implementations while preserving signed-photo, canonical field and feature ownership boundaries.
