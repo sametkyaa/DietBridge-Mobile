@@ -1,7 +1,7 @@
 ---
 overall_status: IN_PROGRESS
 engineering_status: IN_PROGRESS
-publication_status: PENDING_GH_CLI
+publication_status: BRANCH_PUSHED_PR_PENDING
 base_commit: d5c869c183117c3b3bc6944a580f15daa0b26196
 reference_ui_commit: 8b3f1159bf41a0e7b97084da29f7ce58d2373470
 branch: codex/mobile-ui-refresh

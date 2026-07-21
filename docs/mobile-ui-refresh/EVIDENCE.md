@@ -5,9 +5,9 @@
 - Local branch: `codex/mobile-ui-refresh`
 - Local commits ahead of main: 4
 - Worktree: clean before publication-state documentation
-- Push: pending
+- Push: PASS; remote tracking branch created
 - Draft PR: pending
-- Reason: GitHub CLI unavailable
+- Reason: GitHub connector returned HTTP 403 (`Resource not accessible by integration`); GitHub CLI remains unavailable
 - Engineering impact: none
 
 ## P0B Pre-remediation dependency snapshot
