@@ -1,11 +1,10 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
-import { useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { getDayOptions, getDateFromWeekIndex } from '../../../config/dietData';
-import { useMeals } from '../../meals/context/MealsContext'; 
+import { getLocalWeekDateKey, getLocalWeekDayOptions } from '../../../shared/utils/localDate';
+import { useMeals } from '../../meals/context/MealsContext';
 import { submitMealChangeRequest } from '../services/mealChangeRequestService';
-import { getDailyMeals } from '../services/mealService';
+import { getDailyMealPlan } from '../services/mealService';
 import { useDietitianConnection } from '../../dietitianConnection/context/DietitianConnectionContext';
 import {
     CONNECTION_GENERIC_ERROR_MESSAGE,
@@ -13,18 +12,19 @@ import {
 } from '../../dietitianConnection/services/dietitianConnectionService';
 
 export const useMealsViewModel = () => {
-    const dayOptions = useMemo(() => getDayOptions() ?? [], []);
-    const [selectedDay, setSelectedDay] = useState(() => {
-        const currentDayIndex = new Date().getDay();
-        return (currentDayIndex + 6) % 7;
-    });
+    const dayOptions = useMemo(() => getLocalWeekDayOptions(), []);
+    const [selectedDay, setSelectedDay] = useState(() => (new Date().getDay() + 6) % 7);
     const [selectedMeal, setSelectedMeal] = useState(null);
     const [groceryModalVisible, setGroceryModalVisible] = useState(false);
     const [groceryItems, setGroceryItems] = useState([]);
     const [photoPreviewUri, setPhotoPreviewUri] = useState(null);
-    const [mealsList, setMealsList] = useState([]); 
-    const [isLoadingMeals, setIsLoadingMeals] = useState(false);
+    const [mealsList, setMealsList] = useState([]);
+    const [mealPlanStatus, setMealPlanStatus] = useState('loading');
+    const [mealPlanError, setMealPlanError] = useState(null);
     const { completedMeals, hydrateCompletedMeals } = useMeals();
+    const requestSequenceRef = useRef(0);
+    const inFlightRequestsRef = useRef(new Map());
+    const isMountedRef = useRef(true);
     const {
         hasActiveDietitian,
         isLoadingConnection,
@@ -32,37 +32,66 @@ export const useMealsViewModel = () => {
         refreshConnectionStatus,
     } = useDietitianConnection();
 
+    useEffect(() => () => {
+        isMountedRef.current = false;
+        requestSequenceRef.current += 1;
+    }, []);
+
     useFocusEffect(
         useCallback(() => {
             refreshConnectionStatus();
-        }, [refreshConnectionStatus])
+        }, [refreshConnectionStatus]),
     );
 
-    useEffect(() => {
-        const fetchPlan = async () => {
-            if (isLoadingConnection) return;
-            if (!hasActiveDietitian) {
+    const loadMealPlan = useCallback((planDate, { retry = false, force = false } = {}) => {
+        const existingRequest = inFlightRequestsRef.current.get(planDate);
+        if (existingRequest && !force) return existingRequest;
+
+        const requestSequence = requestSequenceRef.current + 1;
+        requestSequenceRef.current = requestSequence;
+        if (isMountedRef.current) {
+            setMealPlanStatus(retry ? 'retrying' : 'loading');
+            setMealPlanError(null);
+            setMealsList([]);
+        }
+
+        const request = getDailyMealPlan(planDate)
+            .then((result) => {
+                if (!isMountedRef.current || requestSequenceRef.current !== requestSequence) return result;
+
+                hydrateCompletedMeals(result.meals);
+                setMealsList(result.meals);
+                setMealPlanStatus(result.status);
+                return result;
+            })
+            .catch((error) => {
+                if (!isMountedRef.current || requestSequenceRef.current !== requestSequence) return null;
+
                 setMealsList([]);
-                setIsLoadingMeals(false);
-                return;
-            }
+                setMealPlanStatus('error');
+                setMealPlanError(error?.message || CONNECTION_GENERIC_ERROR_MESSAGE);
+                return null;
+            })
+            .finally(() => {
+                if (inFlightRequestsRef.current.get(planDate) === request) {
+                    inFlightRequestsRef.current.delete(planDate);
+                }
+            });
 
-            setIsLoadingMeals(true);
-            try {
-                const plan_date = getDateFromWeekIndex(selectedDay);
-                const fetchedMeals = await getDailyMeals(plan_date);
-                hydrateCompletedMeals(fetchedMeals);
-                setMealsList(fetchedMeals);
-            } catch (error) {
-                console.error("Error fetching daily meals in viewmodel:", error);
-            } finally {
-                setIsLoadingMeals(false);
-            }
-        };
-        fetchPlan();
-    }, [selectedDay, hydrateCompletedMeals, hasActiveDietitian, isLoadingConnection]);
+        inFlightRequestsRef.current.set(planDate, request);
+        return request;
+    }, [hydrateCompletedMeals]);
 
-    // Request Modal State
+    const selectedPlanDate = getLocalWeekDateKey(selectedDay);
+
+    useEffect(() => {
+        loadMealPlan(selectedPlanDate);
+    }, [loadMealPlan, selectedPlanDate]);
+
+    const retryMeals = useCallback(() => (
+        loadMealPlan(selectedPlanDate, { retry: true, force: true })
+    ), [loadMealPlan, selectedPlanDate]);
+
     const [requestModalVisible, setRequestModalVisible] = useState(false);
     const [requestSelectedDay, setRequestSelectedDay] = useState(0);
     const [requestSelectedMeals, setRequestSelectedMeals] = useState([]);
@@ -80,12 +109,11 @@ export const useMealsViewModel = () => {
     };
 
     const handleToggleRequestMeal = (mealType) => {
-        setRequestSelectedMeals((prev) => {
-            if (prev.includes(mealType)) {
-                return prev.filter((t) => t !== mealType);
-            }
-            return [...prev, mealType];
-        });
+        setRequestSelectedMeals((previous) => (
+            previous.includes(mealType)
+                ? previous.filter((type) => type !== mealType)
+                : [...previous, mealType]
+        ));
     };
 
     const handleSendRequest = async () => {
@@ -103,13 +131,11 @@ export const useMealsViewModel = () => {
         }
 
         try {
-            const plan_date = getDateFromWeekIndex(requestSelectedDay);
-            
             await submitMealChangeRequest({
-                plan_date,
-                meal_slot: requestSelectedMeals[0] || 'all', // Simplify if multiple are selected, or assume primary slot. Let's just pass all as array or first one if slot is string. Oh wait, 'meal_slot' is text. Let's join or just use first. New schema: meal_slot (text).
+                plan_date: getLocalWeekDateKey(requestSelectedDay),
+                meal_slot: requestSelectedMeals[0] || 'all',
                 requested_meals: { alternatives: requestSelectedMeals },
-                notes: requestMessage
+                notes: requestMessage,
             });
             Alert.alert('Başarılı', 'Öğün değişikliği talebiniz diyetisyeninize iletildi.');
             setRequestModalVisible(false);
@@ -124,18 +150,12 @@ export const useMealsViewModel = () => {
             Alert.alert(
                 'Tamamlanmamış Talep',
                 'Başka bir güne geçmeden önce lütfen mevcut gün için talebinizi gönderin veya temizleyin.',
-                [{ text: 'Tamam', style: 'cancel' }]
+                [{ text: 'Tamam', style: 'cancel' }],
             );
             return;
         }
         setRequestSelectedDay(index);
     };
-
-    const openMealModal = (meal) => setSelectedMeal(meal);
-    const closeMealModal = () => setSelectedMeal(null);
-
-    const openPhotoPreview = (uri) => setPhotoPreviewUri(uri);
-    const closePhotoPreview = () => setPhotoPreviewUri(null);
 
     const buildGroceryItems = () => {
         const counts = {};
@@ -153,33 +173,16 @@ export const useMealsViewModel = () => {
             Alert.alert('Bilgi', CONNECTION_REQUIRED_MESSAGE);
             return;
         }
-        const items = buildGroceryItems();
-        setGroceryItems(items);
+        setGroceryItems(buildGroceryItems());
         setGroceryModalVisible(true);
-    };
-
-    const toggleGroceryItem = (name) => {
-        setGroceryItems((prev) =>
-            prev.map((item) => (item.name === name ? { ...item, checked: !item.checked } : item)),
-        );
     };
 
     const getMealIconConfig = (type) => {
         const value = (type || '').toLowerCase();
-
-        if (value.includes('breakfast')) {
-            return { name: 'sunny-outline', background: '#FEF3C7', color: '#F59E0B' };
-        }
-        if (value.includes('lunch')) {
-            return { name: 'fast-food-outline', background: '#DBEAFE', color: '#1D4ED8' };
-        }
-        if (value.includes('dinner')) {
-            return { name: 'moon-outline', background: '#EDE9FE', color: '#6D28D9' };
-        }
-        if (value.includes('snack')) {
-            return { name: 'nutrition-outline', background: '#FFE4E6', color: '#DB2777' };
-        }
-
+        if (value.includes('breakfast')) return { name: 'sunny-outline', background: '#FEF3C7', color: '#F59E0B' };
+        if (value.includes('lunch')) return { name: 'fast-food-outline', background: '#DBEAFE', color: '#1D4ED8' };
+        if (value.includes('dinner')) return { name: 'moon-outline', background: '#EDE9FE', color: '#6D28D9' };
+        if (value.includes('snack')) return { name: 'nutrition-outline', background: '#FFE4E6', color: '#DB2777' };
         return { name: 'restaurant-outline', background: '#E6F4EC', color: '#15803D' };
     };
 
@@ -203,18 +206,23 @@ export const useMealsViewModel = () => {
         handleToggleRequestMeal,
         handleSendRequest,
         handleRequestDayChange,
-        openMealModal,
-        closeMealModal,
-        openPhotoPreview,
-        closePhotoPreview,
+        openMealModal: setSelectedMeal,
+        closeMealModal: () => setSelectedMeal(null),
+        openPhotoPreview: setPhotoPreviewUri,
+        closePhotoPreview: () => setPhotoPreviewUri(null),
         handleGenerateGroceryList,
-        toggleGroceryItem,
+        toggleGroceryItem: (name) => setGroceryItems((previous) => previous.map((item) => (
+            item.name === name ? { ...item, checked: !item.checked } : item
+        ))),
         getMealIconConfig,
-        meals: mealsList, // Returning fetched array as `meals` for backward compat in screen UI
-        isLoadingMeals,
+        meals: mealsList,
+        mealPlanStatus,
+        mealPlanError,
+        retryMeals,
+        isLoadingMeals: mealPlanStatus === 'loading' || mealPlanStatus === 'retrying',
         hasActiveDietitian,
         isLoadingConnection,
         connectionError,
-        connectionRequiredMessage: CONNECTION_REQUIRED_MESSAGE
+        connectionRequiredMessage: CONNECTION_REQUIRED_MESSAGE,
     };
 };

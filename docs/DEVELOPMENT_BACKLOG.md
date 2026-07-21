@@ -42,3 +42,10 @@ DietBridge bu çalışma alanında danışan tarafı mobil uygulama olarak ilerl
 - `apps/mobile/src/features/clients/viewmodels/useDashboardViewModel.js`
 - `apps/mobile/src/features/clients/screens/DashboardScreen.js`
 - `apps/mobile/src/features/meals/screens/MealsScreen.js`
+
+## WP5.3C1 — Canonical Mobil Meal Plan Read Model (Tamamlandı)
+
+- Canonical macro sözleşmesi: `protein`, `carbs`, `fat`; mobil eşleme `carbs → carbohydrate`.
+- PostgreSQL zaman değeri `HH:MM:SS` biçiminden canonical `HH:MM` biçimine normalize edilir.
+- WP5.3C2 kapsamında private meal photo path için signed-URL resolver hâlâ açıktır.
+- Cihaz/emülatör UI kabulü WP5.4 kapsamına ertelenmiştir.

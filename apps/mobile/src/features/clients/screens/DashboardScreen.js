@@ -40,6 +40,9 @@ const DashboardScreen = () => {
         dailyQuote,
         waterProgress,
         meals,
+        mealPlanStatus,
+        mealPlanError,
+        retryMealPlan,
         displayedMeal,
         isMealCompleted,
         addWater,
@@ -211,7 +214,9 @@ const DashboardScreen = () => {
     };
 
     const buttonLabel = displayedMeal ? (isMealCompleted ? 'Geri Al' : 'Öğünü Yedim') : 'Tamamlandı';
-    const emptyMealPlanMessage = hasActiveDietitian
+    const emptyMealPlanMessage = mealPlanStatus === 'unlinked'
+        ? connectionRequiredMessage
+        : hasActiveDietitian
         ? 'Bugün için henüz öğün planı bulunmuyor. Diyetisyeniniz plan eklediğinde burada görünecek.'
         : connectionRequiredMessage;
     const isButtonDisabled = !displayedMeal || !hasActiveDietitian;
@@ -321,7 +326,21 @@ const DashboardScreen = () => {
                             <Text style={styles.mealEmoji}>🍽️</Text>
                         </View>
                         <View>
-                            {displayedMeal ? (
+                            {mealPlanStatus === 'loading' || mealPlanStatus === 'retrying' ? (
+                                <View style={localStyles.mealPlanState}>
+                                    <ActivityIndicator size="small" color="#047857" />
+                                    <Text style={styles.mealDesc}>
+                                        {mealPlanStatus === 'retrying' ? 'Beslenme planı yeniden yükleniyor...' : 'Beslenme planı yükleniyor...'}
+                                    </Text>
+                                </View>
+                            ) : mealPlanStatus === 'error' ? (
+                                <View style={localStyles.mealPlanState}>
+                                    <Text style={localStyles.mealPlanError}>{mealPlanError}</Text>
+                                    <TouchableOpacity style={localStyles.mealPlanRetryButton} onPress={retryMealPlan}>
+                                        <Text style={localStyles.mealPlanRetryText}>Tekrar Dene</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ) : displayedMeal ? (
                                 <>
                                     <Text style={styles.mealTitle}>{displayedMeal.title || displayedMeal.type}</Text>
                                     <Text style={styles.mealDesc}>{displayedMeal.desc}</Text>
@@ -477,6 +496,26 @@ const DashboardScreen = () => {
 };
 
 const localStyles = StyleSheet.create({
+    mealPlanState: {
+        gap: 8,
+    },
+    mealPlanError: {
+        color: '#B91C1C',
+        fontSize: 14,
+        lineHeight: 20,
+    },
+    mealPlanRetryButton: {
+        alignSelf: 'flex-start',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        backgroundColor: '#047857',
+    },
+    mealPlanRetryText: {
+        color: '#FFFFFF',
+        fontSize: 13,
+        fontWeight: '700',
+    },
     connectionHeader: {
         flexDirection: 'row',
         alignItems: 'flex-start',

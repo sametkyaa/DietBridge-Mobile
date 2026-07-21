@@ -46,11 +46,13 @@ export const MealsProvider = ({ children }) => {
             meals.forEach((meal) => {
                 if (!meal?.id) return;
 
-                if (meal.is_eaten) {
+                if (meal.isEaten) {
                     const current = next[meal.id];
                     next[meal.id] = {
                         completed: true,
-                        photoUri: current?.photoUri || meal.photo_url || null,
+                        // Canonical photoPath is a private DB path. Only a device completion
+                        // photo may be rendered here until WP5.3C2 resolves signed URLs.
+                        completionPhotoUri: current?.completionPhotoUri || null,
                     };
                 } else {
                     delete next[meal.id];
@@ -68,7 +70,7 @@ export const MealsProvider = ({ children }) => {
 
         const normalizedOptions = typeof options === 'object' && options !== null
             ? options
-            : { photoUri: options };
+            : { completionPhotoUri: options };
         const previousCompletion = completedMealsRef.current[mealId];
         const wasCompleted = !!previousCompletion?.completed;
         const shouldComplete = normalizedOptions.completed ?? !wasCompleted;
@@ -78,7 +80,9 @@ export const MealsProvider = ({ children }) => {
         updateMealCompletionState(mealId, shouldComplete
             ? {
                 completed: true,
-                photoUri: normalizedOptions.photoUri ?? previousCompletion?.photoUri ?? null,
+                completionPhotoUri: normalizedOptions.completionPhotoUri
+                    ?? previousCompletion?.completionPhotoUri
+                    ?? null,
             }
             : null);
 

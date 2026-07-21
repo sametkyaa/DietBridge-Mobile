@@ -1,74 +1,131 @@
 import { supabase } from '../../../lib/supabaseClient';
-import { getActiveDietitianConnection } from '../../dietitianConnection/services/dietitianConnectionService';
+import {
+    MealPlanReadError,
+    MealPlanReadErrorCode,
+    normalizeCanonicalMeal,
+    sortCanonicalMeals,
+} from './mealReadModel';
 
 const INVALID_MEAL_ID_MESSAGE = 'Geçerli öğün ID bulunamadı.';
 const MEAL_COMPLETION_UPDATE_ERROR_MESSAGE = 'Öğün durumu güncellenemedi.';
-const MEAL_SELECT_COLUMNS = 'id, plan_id, type, title, calories, macros, photo_url, is_eaten';
+const ACTIVE_CONNECTION_SELECT_COLUMNS = 'id, client_id, dietitian_id, status';
+const MEAL_SELECT_COLUMNS = 'id, plan_id, type, title, calories, macros, time, sort_order, photo_url, source, recipe_id, is_eaten';
+const PLAN_SELECT_COLUMNS = `id, client_id, dietitian_id, plan_date, notes, meals (${MEAL_SELECT_COLUMNS})`;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export const getDailyMeals = async (planDate) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+const createReadError = (code, message) => new MealPlanReadError(code, message);
 
-    const activeConnection = await getActiveDietitianConnection(user.id);
-    if (!activeConnection) return [];
+const validatePlanDate = (planDate) => {
+    if (typeof planDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(planDate)) {
+        throw createReadError(MealPlanReadErrorCode.CONTRACT, 'Geçerli bir plan tarihi bulunamadı.');
+    }
+};
 
-    const { data: plan, error: planError } = await supabase
-        .from('meal_plans')
-        .select(`
-            id,
-            plan_date,
-            notes,
-            meals (${MEAL_SELECT_COLUMNS})
-        `)
-        .eq('client_id', user.id)
-        .eq('dietitian_id', activeConnection.dietitian_id)
-        .eq('plan_date', planDate)
-        .maybeSingle();
+const getAuthenticatedClient = async () => {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data?.user?.id) {
+        throw createReadError(MealPlanReadErrorCode.AUTHORIZATION, 'Oturumunuz doğrulanamadı. Lütfen tekrar giriş yapın.');
+    }
+    return data.user;
+};
 
-    if (planError) {
-        console.error('Error fetching meal plan:', {
-            userId: user.id,
-            planDate,
-            dietitianId: activeConnection.dietitian_id,
-            supabaseError: planError,
-        });
-        return [];
+const getSingleActiveConnection = async (clientId) => {
+    const { data, error } = await supabase
+        .from('dietitian_clients')
+        .select(ACTIVE_CONNECTION_SELECT_COLUMNS)
+        .eq('client_id', clientId)
+        .eq('status', 'active');
+
+    if (error) {
+        throw createReadError(MealPlanReadErrorCode.FETCH, 'Diyetisyen bağlantısı alınamadı. Lütfen tekrar deneyin.');
     }
 
-    if (!plan || !plan.meals) return [];
+    if (!Array.isArray(data)) {
+        throw createReadError(MealPlanReadErrorCode.CONTRACT, 'Diyetisyen bağlantısı için geçersiz bir yanıt alındı.');
+    }
 
-    return plan.meals.map((meal) => {
-        const titles = {
-            breakfast: 'Kahvaltı',
-            lunch: 'Öğle Yemeği',
-            dinner: 'Akşam Yemeği',
-            snack: 'Ara Öğün',
-        };
+    if (data.length === 0) return null;
+    if (data.length !== 1 || !data[0]?.dietitian_id) {
+        throw createReadError(MealPlanReadErrorCode.CONTRACT, 'Birden fazla veya geçersiz aktif diyetisyen bağlantısı bulundu.');
+    }
 
-        const times = {
-            breakfast: '08:00',
-            lunch: '13:00',
-            dinner: '19:00',
-            snack: '15:30',
-        };
+    return data[0];
+};
 
-        return {
-            id: meal.id,
-            plan_id: meal.plan_id,
-            type: meal.type,
-            title: meal.title || titles[meal.type] || 'Öğün',
-            time: times[meal.type] || '',
-            desc: meal.calories ? `${meal.calories} kcal` : '',
-            calories: meal.calories,
-            macros: meal.macros,
-            is_eaten: !!meal.is_eaten,
-            photo_url: meal.photo_url || null,
-            ingredients: [],
-            steps: [],
-            note: plan.notes || '',
-        };
+const getSingleDailyPlan = async ({ clientId, dietitianId, planDate }) => {
+    const { data, error } = await supabase
+        .from('meal_plans')
+        .select(PLAN_SELECT_COLUMNS)
+        .eq('client_id', clientId)
+        .eq('dietitian_id', dietitianId)
+        .eq('plan_date', planDate);
+
+    if (error) {
+        throw createReadError(MealPlanReadErrorCode.FETCH, 'Beslenme planı alınamadı. Lütfen tekrar deneyin.');
+    }
+
+    if (!Array.isArray(data)) {
+        throw createReadError(MealPlanReadErrorCode.CONTRACT, 'Beslenme planı için geçersiz bir yanıt alındı.');
+    }
+
+    if (data.length === 0) return null;
+    if (data.length !== 1) {
+        throw createReadError(MealPlanReadErrorCode.CONTRACT, 'Aynı gün için birden fazla beslenme planı bulundu.');
+    }
+
+    return data[0];
+};
+
+const normalizePlan = (plan, { clientId, dietitianId, planDate }) => {
+    if (!plan || plan.id === undefined || plan.client_id !== clientId
+        || plan.dietitian_id !== dietitianId || plan.plan_date !== planDate
+        || !Array.isArray(plan.meals)) {
+        throw createReadError(MealPlanReadErrorCode.CONTRACT, 'Beslenme planı sözleşmesi doğrulanamadı.');
+    }
+
+    const normalizedPlan = {
+        id: String(plan.id),
+        clientId: clientId,
+        dietitianId: dietitianId,
+        planDate: planDate,
+        notes: plan.notes || '',
+    };
+    const meals = sortCanonicalMeals(plan.meals.map((meal) => normalizeCanonicalMeal(meal, normalizedPlan)));
+
+    return { plan: normalizedPlan, meals };
+};
+
+// This is the canonical mobile read contract. It distinguishes empty and unlinked
+// states from fetch, authorization, and data-contract failures.
+export const getDailyMealPlan = async (planDate) => {
+    validatePlanDate(planDate);
+    const user = await getAuthenticatedClient();
+    const activeConnection = await getSingleActiveConnection(user.id);
+
+    if (!activeConnection) {
+        return { status: 'unlinked', plan: null, meals: [] };
+    }
+
+    const plan = await getSingleDailyPlan({
+        clientId: user.id,
+        dietitianId: activeConnection.dietitian_id,
+        planDate,
     });
+
+    if (!plan) {
+        return { status: 'empty', plan: null, meals: [] };
+    }
+
+    const normalized = normalizePlan(plan, {
+        clientId: user.id,
+        dietitianId: activeConnection.dietitian_id,
+        planDate,
+    });
+
+    return {
+        status: normalized.meals.length === 0 ? 'empty' : 'success',
+        ...normalized,
+    };
 };
 
 export const updateMealCompletion = async (mealId, isEaten) => {
@@ -90,14 +147,12 @@ export const updateMealCompletion = async (mealId, isEaten) => {
             throw new Error(MEAL_COMPLETION_UPDATE_ERROR_MESSAGE);
         }
 
-        // The RPC returns a boolean rather than a meal row; preserve callers' meal state by merging this minimal result.
-        return { id: mealId, is_eaten: isEaten };
+        return { id: mealId, isEaten };
     } catch (error) {
         if (__DEV__) {
             console.warn('Meal completion RPC failed.', { mealId });
         }
 
-        // Keep the rejection contract while preventing transport details from reaching the UI.
         throw new Error(MEAL_COMPLETION_UPDATE_ERROR_MESSAGE);
     }
 };
