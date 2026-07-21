@@ -638,7 +638,7 @@ export const getMedicalConditions = async () => [];
 export const getMedicationsCatalog = async () => [];
 
 export const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) throw error;
 };
 

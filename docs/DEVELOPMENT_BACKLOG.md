@@ -1,12 +1,12 @@
 # DietBridge Development Backlog
 
-## WP5.4A — Mobil Runtime Kabulü (Ertelendi)
+## WP5.4A — Mobil Runtime Kabulü (Deferred Verification)
 
-- Manuel Android kabulünde plan, makrolar, sıralama, private fotoğraf ve completion akışları doğrulandı.
-- Session restore ile daily-log empty/network-error ayrımı doğrulandı.
-- Tekrarlayan `Response status 0` ile `Invalid Refresh Token: Refresh Token Not Found` hatalarının kök nedeni kesinleştirilemedi.
-- WP5.4A tamamlanmadı; bu konu Stage 5 kapanışı ve yayın öncesi blocker olarak izlenecek.
-- Expo Go cold reload ve Android development-build kabulü ertelendi.
+- Auth refresh yarış durumu için hedefli mobil oturum yaşam döngüsü düzeltmesi hazırlandı.
+- Harness ve statik kalite kapıları geçti.
+- Kimlik doğrulanmış 8+ dakika Android runtime kabulü tamamlanmadı; staging fixture denemesi `MEALS_CREATE_FAILED` ile kesildi ve fixture kayıtları temizlendi.
+- `Invalid Refresh Token: Refresh Token Not Found` / `Response status 0` konusu Stage 5 sonrası release blocker olarak açık kalır.
+- Bu madde tamamlandı olarak işaretlenmeyecek; deferred verification durumunda izlenecek.
 
 ## Mevcut Durum
 
