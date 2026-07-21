@@ -14,7 +14,7 @@ import {
 } from '../../dietitianConnection/services/dietitianConnectionService';
 
 export const useDashboardViewModel = () => {
-    const { hydrateCompletedMeals, toggleMealCompletion } = useMeals();
+    const { completedMeals, hydrateCompletedMeals, toggleMealCompletion } = useMeals();
     const [water, setWater] = useState(0);
     const [waterInput, setWaterInput] = useState('200');
     const [weight, setWeight] = useState(null);
@@ -151,6 +151,9 @@ export const useDashboardViewModel = () => {
         || firstIncompleteMeal
     );
     const isMealCompleted = !!displayedMeal?.isEaten;
+    const displayedCompletionPhotoUri = displayedMeal?.id
+        ? completedMeals[displayedMeal.id]?.completionPhotoUri || null
+        : null;
 
     const addWater = async () => {
         const amount = parseInt(waterInput, 10) || 200;
@@ -282,6 +285,7 @@ export const useDashboardViewModel = () => {
         dailyQuote,
         waterProgress,
         displayedMeal,
+        displayedCompletionPhotoUri,
         isMealCompleted,
         addWater,
         removeWater,

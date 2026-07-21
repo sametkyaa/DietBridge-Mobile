@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, T
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from '../../../shared/theme/styles';
+import { MealPhotoThumbnail } from '../components/MealPhotoThumbnail';
 import { useMealsViewModel } from '../viewmodels/useMealsViewModel';
 
 const MealsScreen = () => {
@@ -123,7 +124,6 @@ const MealsScreen = () => {
                         meals.map((meal) => {
                             const completion = completedMeals[meal.id];
                             const isCompleted = !!completion?.completed;
-                            const photoUri = completion?.completionPhotoUri;
                             const iconConfig = getMealIconConfig(meal.type);
 
                             return (
@@ -134,19 +134,18 @@ const MealsScreen = () => {
                                     onPress={() => openMealModal(meal)}
                                 >
                                     <View style={styles.mealCardHeader}>
-                                        {photoUri ? (
-                                            <TouchableOpacity
-                                                activeOpacity={0.9}
-                                                onPress={() => openPhotoPreview(photoUri)}
-                                                style={styles.mealPhotoThumbWrapper}
-                                            >
-                                                <Image source={{ uri: photoUri }} style={styles.mealPhotoThumb} />
-                                            </TouchableOpacity>
-                                        ) : (
-                                            <View style={[styles.mealIconCircle, { backgroundColor: iconConfig.background }]}>
-                                                <Ionicons name={iconConfig.name} size={22} color={iconConfig.color} />
-                                            </View>
-                                        )}
+                                        <MealPhotoThumbnail
+                                            photoPath={meal.photoPath}
+                                            completionPhotoUri={completion?.completionPhotoUri}
+                                            imageStyle={styles.mealPhotoThumb}
+                                            wrapperStyle={styles.mealPhotoThumbWrapper}
+                                            onPress={openPhotoPreview}
+                                            fallback={(
+                                                <View style={[styles.mealIconCircle, { backgroundColor: iconConfig.background }]}>
+                                                    <Ionicons name={iconConfig.name} size={22} color={iconConfig.color} />
+                                                </View>
+                                            )}
+                                        />
                                         <View style={styles.mealInfo}>
                                             <Text style={styles.mealHeader}>
                                                 {meal.title || meal.type} {meal.time ? `• ${meal.time}` : ''}

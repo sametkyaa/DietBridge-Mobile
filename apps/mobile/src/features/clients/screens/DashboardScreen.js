@@ -20,6 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { macros } from '../../../config/dietData';
 import NutritionSummaryCard from '../../clients/components/NutritionSummaryCard';
 import { styles } from '../../../shared/theme/styles';
+import { MealPhotoThumbnail } from '../../meals/components/MealPhotoThumbnail';
 import { useDashboardViewModel } from '../viewmodels/useDashboardViewModel';
 
 const DashboardScreen = () => {
@@ -44,6 +45,7 @@ const DashboardScreen = () => {
         mealPlanError,
         retryMealPlan,
         displayedMeal,
+        displayedCompletionPhotoUri,
         isMealCompleted,
         addWater,
         removeWater,
@@ -322,9 +324,16 @@ const DashboardScreen = () => {
                         )}
                     </View>
                     <View style={styles.nextMeal}>
-                        <View style={styles.mealIconPlaceholder}>
-                            <Text style={styles.mealEmoji}>🍽️</Text>
-                        </View>
+                        <MealPhotoThumbnail
+                            photoPath={displayedMeal?.photoPath}
+                            completionPhotoUri={displayedCompletionPhotoUri}
+                            imageStyle={localStyles.nextMealPhoto}
+                            fallback={(
+                                <View style={styles.mealIconPlaceholder}>
+                                    <Text style={styles.mealEmoji}>🍽️</Text>
+                                </View>
+                            )}
+                        />
                         <View>
                             {mealPlanStatus === 'loading' || mealPlanStatus === 'retrying' ? (
                                 <View style={localStyles.mealPlanState}>
@@ -496,6 +505,12 @@ const DashboardScreen = () => {
 };
 
 const localStyles = StyleSheet.create({
+    nextMealPhoto: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        marginRight: 12,
+    },
     mealPlanState: {
         gap: 8,
     },
