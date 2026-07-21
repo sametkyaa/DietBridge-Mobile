@@ -1,5 +1,13 @@
 # DietBridge Development Backlog
 
+## WP5.4A — Mobil Runtime Kabulü (Ertelendi)
+
+- Manuel Android kabulünde plan, makrolar, sıralama, private fotoğraf ve completion akışları doğrulandı.
+- Session restore ile daily-log empty/network-error ayrımı doğrulandı.
+- Tekrarlayan `Response status 0` ile `Invalid Refresh Token: Refresh Token Not Found` hatalarının kök nedeni kesinleştirilemedi.
+- WP5.4A tamamlanmadı; bu konu Stage 5 kapanışı ve yayın öncesi blocker olarak izlenecek.
+- Expo Go cold reload ve Android development-build kabulü ertelendi.
+
 ## Mevcut Durum
 
 DietBridge bu çalışma alanında danışan tarafı mobil uygulama olarak ilerliyor. Proje React Native + Expo ve JavaScript ile yazılmış durumda; MVVM ayrımı genel olarak korunmuş. Supabase client `apps/mobile/src/lib/supabaseClient.js` içinde tanımlı, veritabanı çağrıları feature bazlı `services/` dosyalarında toplanmış.

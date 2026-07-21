@@ -31,6 +31,8 @@ const DashboardScreen = () => {
         water,
         waterInput,
         setWaterInput,
+        dailyLogStatus,
+        dailyLogError,
         userName,
         greeting,
         avatarUrl,
@@ -260,6 +262,12 @@ const DashboardScreen = () => {
                     <View style={styles.waterRow}>
                         <View style={{ flex: 1 }}>
                             <Text style={styles.waterAmount}>{water.toFixed(2)} L</Text>
+                            {dailyLogStatus === 'empty' && (
+                                <Text style={localStyles.dailyLogHint}>Bugün için su kaydı yok.</Text>
+                            )}
+                            {dailyLogStatus === 'error' && (
+                                <Text style={localStyles.dailyLogError}>{dailyLogError}</Text>
+                            )}
                             <View style={styles.progressBackground}>
                                 <View style={[styles.waterProgressFill, { width: `${waterProgress * 100}%` }]} />
                             </View>
@@ -701,6 +709,17 @@ const localStyles = StyleSheet.create({
         color: '#1F2937',
         textAlign: 'center',
         minWidth: 30,
+    },
+    dailyLogHint: {
+        marginTop: 2,
+        color: '#6B7280',
+        fontSize: 12,
+    },
+    dailyLogError: {
+        marginTop: 2,
+        color: '#B91C1C',
+        fontSize: 12,
+        lineHeight: 17,
     },
     waterUnit: {
         fontSize: 12,

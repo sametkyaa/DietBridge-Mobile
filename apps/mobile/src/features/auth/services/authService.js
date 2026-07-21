@@ -47,10 +47,7 @@ export const ensureClientSession = async (session) => {
         return createAuthState();
     }
 
-    const profile = await getUserProfile(session.user.id).catch(async (error) => {
-        await safeSignOut();
-        throw error;
-    });
+    const profile = await getUserProfile(session.user.id);
 
     if (profile.role !== 'client') {
         await safeSignOut();
@@ -68,8 +65,7 @@ export const getCurrentClientAuthState = async () => {
 
     if (error) {
         console.warn('Supabase session error:', error.message);
-        await safeSignOut();
-        return createAuthState();
+        throw error;
     }
 
     if (!session) {

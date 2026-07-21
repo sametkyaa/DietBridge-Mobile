@@ -17,6 +17,8 @@ export const useDashboardViewModel = () => {
     const { completedMeals, hydrateCompletedMeals, toggleMealCompletion } = useMeals();
     const [water, setWater] = useState(0);
     const [waterInput, setWaterInput] = useState('200');
+    const [dailyLogStatus, setDailyLogStatus] = useState('loading');
+    const [dailyLogError, setDailyLogError] = useState(null);
     const [weight, setWeight] = useState(null);
     const [weightInput, setWeightInput] = useState('');
     const [meals, setMeals] = useState([]);
@@ -123,13 +125,20 @@ export const useDashboardViewModel = () => {
             };
 
             const loadWaterIntake = async () => {
+                setDailyLogStatus('loading');
+                setDailyLogError(null);
                 try {
                     const log = await getDailyLog(toLocalDateKey());
                     if (log?.water_intake !== undefined && log?.water_intake !== null) {
                         setWater(log.water_intake);
+                        setDailyLogStatus('ready');
+                    } else {
+                        setDailyLogStatus('empty');
                     }
                 } catch (error) {
-                    console.error('Failed to load water intake:', error);
+                    console.warn('Daily log load failed:', error?.message || 'unknown error');
+                    setDailyLogStatus('error');
+                    setDailyLogError(error?.message || 'Günlük kayıt bilgileri yüklenemedi.');
                 }
             };
 
@@ -275,6 +284,8 @@ export const useDashboardViewModel = () => {
         water,
         waterInput,
         setWaterInput,
+        dailyLogStatus,
+        dailyLogError,
         userName,
         greeting,
         avatarUrl,
