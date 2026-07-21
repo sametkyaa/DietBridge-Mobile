@@ -17,6 +17,7 @@ const ICON_MAP = {
   alert: 'alert-circle-outline',
   info: 'information-outline',
   home: 'home-outline',
+  analytics: 'chart-line',
   search: 'magnify',
   chevronDown: 'chevron-down',
   chevronUp: 'chevron-up',
