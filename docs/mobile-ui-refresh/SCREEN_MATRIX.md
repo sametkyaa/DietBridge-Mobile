@@ -18,3 +18,5 @@
 - `RootNavigator`: `MainTabs`, `Profile`, `Settings`, `Support`.
 - `AuthNavigator`: `Login`, `ForgotPassword`.
 - `MainTabs`: `Ana Sayfa`, `Öğünler`, `Analiz`, `Sohbet`.
+
+P2 navigation shell status: PASS. The four tab routes and their screen bindings are unchanged; semantic icons, theme tokens, a single bottom-inset calculation and explicit Turkish accessibility labels are integrated.

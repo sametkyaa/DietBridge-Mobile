@@ -138,3 +138,31 @@ Resolved findings:
 - Repair review found no remaining P0/P1/P2 findings.
 
 Remaining risks: physical-device visual and screen-reader acceptance is pending.
+
+## P2 Navigation Shell — PASS
+
+Commit: `2e0f573` (`feat(ui): refresh mobile navigation shell`)
+
+Files: `MainTabs.js` and the shared semantic `Icon.js` adapter only.
+
+Commands:
+
+- Babel parse of both changed JavaScript files
+- `git diff --check`
+- protected navigator/package diff checks
+- `npx expo export --platform android --output-dir .tmp-ui-check/p2-android`
+
+Results:
+
+- Android export: PASS.
+- Routes and bindings preserved: `Ana Sayfa`/Dashboard, `Öğünler`/Meals, `Analiz`/Analysis, `Sohbet`/Chat.
+- Root routes, Profile push, auth navigator, providers and NavigationContainer: unchanged.
+- Dependency changes: none.
+- Bottom safe-area inset is applied through one calculation.
+- Tab targets are at least 48 px; active/inactive contrast and selected-state semantics passed review.
+
+Reviewer findings: contract/scope and UI/accessibility reviewers reported no P0, P1, P2 or P3 findings.
+
+Resolved findings: none required.
+
+Remaining risks: extreme Android font scaling and physical-device tab appearance remain manual acceptance items.

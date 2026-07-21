@@ -30,4 +30,4 @@ Recorded from `package.json` / `package-lock.json` at the pinned base: Expo `54.
 
 ## Current gate
 
-P0B repaired the authorized Expo SDK 54 patch drift without changing the SDK major/minor, protected dependencies, configuration or application source. P0, P0B and P1 are complete; the loop resumes at P2.
+P0B repaired the authorized Expo SDK 54 patch drift without changing the SDK major/minor, protected dependencies, configuration or application source. P0 through P2 are complete; the loop resumes at P3.
