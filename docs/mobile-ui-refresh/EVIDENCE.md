@@ -3,9 +3,9 @@
 ## Publication status
 
 - Local branch: `codex/mobile-ui-refresh`
-- Local commits ahead of main: 14
-- Worktree: clean at the P5 package boundary
-- Push: PASS; remote tracking branch updated through P5
+- Local commits ahead of main: 17
+- Worktree: clean at the P6 package boundary
+- Push: PASS; remote tracking branch updated through P6
 - Draft PR: pending
 - Reason: GitHub connector returned HTTP 403 (`Resource not accessible by integration`); GitHub CLI remains unavailable
 - Engineering impact: none
@@ -298,3 +298,50 @@ Resolved findings:
 - Final contract, scope and UI/accessibility re-reviews reported no P0, P1, P2 or P3 findings.
 
 Remaining risks: real authenticated Supabase query/write acceptance, TalkBack/VoiceOver chart navigation and Android measurement-sheet keyboard behavior remain manual checks. Data API grants/RLS remain Supabase Dashboard checks and were not changed in app code.
+
+## P6 Profile — PASS
+
+Commits:
+
+- `3dbd888` (`feat(ui): refresh profile overview and personal details`)
+- `1f71954` (`feat(ui): refresh profile health and lifestyle flows`)
+
+Files: Profile screen/ViewModel, seven profile presentation modules, generic profile current-weight fail-closed service boundary, and the two retained specialized health editors.
+
+Commands:
+
+- Babel parse of all 12 affected JavaScript modules
+- presentation Supabase/network/auth boundary scan
+- current-weight edit/fake-security/dead public API scans
+- `git diff --check` and frozen auth/navigation/package/reference checks
+- Android exports before and after review repairs
+
+Results:
+
+- Android export: PASS after final repairs.
+- P6.1–P6.8 are visible and wired: overview, dietitian, personal, goals/measurements, lifestyle, health/nutrition, notifications/avatar, dirty/error states.
+- Signed avatar select/preview/upload/remove and pending locks remain on the existing ImagePicker/ViewModel/service chain.
+- Current weight is read-only in Profile. It is absent from generic form/payload and the generic service escape; dedicated Dashboard `saveCurrentWeight` remains intact.
+- E-mail is read-only and no Auth e-mail-change affordance was added.
+- Chronic conditions, medications, food intolerances, water and sleep preserve their specialized callbacks; reference-backed rows preserve real IDs and boolean smoking values.
+- Generic and row saves use ref-backed duplicate guards; unsupported row fields fail closed.
+- Generic, field, multi-select and numeric editors protect dirty drafts and block close/save during pending work.
+- The active/inactive/error dietitian card, compliance score, validation, retry, back, temporary notification disclosure and local-scope logout are preserved.
+- Password, 2FA, sessions, export and account-deletion placeholders are absent.
+- No client service or Supabase call moved into presentation components.
+
+Reviewer findings:
+
+- P1: current-weight editor/payload ownership mismatch, missing compliance summary and incomplete dirty protection.
+- P2: unnamed inputs, inaccessible loading, stale/hidden dietitian errors, fragile retry, option-empty save, duplicate/dead ViewModel API and generic current-weight service escape.
+- P3: stale success banners and residual legacy ViewModel helpers.
+
+Resolved findings:
+
+- Current-weight ownership is fail-closed while its dedicated service remains available to Dashboard.
+- Every editor has pending/dirty protection, labeled input semantics and full numeric validation.
+- Loading, error, partial retry and dietitian states are explicit and Turkish; old success state clears when a new mutation starts.
+- Dead public helpers/aliases introduced by the rewrite were removed.
+- Final profile contract, scope and UI/accessibility re-reviews reported no P0, P1, P2 or P3 findings.
+
+Remaining risks: authenticated persistence/reload for each specialized field, gallery permission/upload/delete, Android keyboard, dirty confirmation focus and local logout require device acceptance. Notification toggles remain intentionally temporary because no persistence contract exists.

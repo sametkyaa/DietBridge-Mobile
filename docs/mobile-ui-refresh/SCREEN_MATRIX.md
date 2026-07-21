@@ -8,7 +8,7 @@
 | MainTabs / Öğünler | `MealsScreen` | `useMealsViewModel` | `MealsContext`, `DietitianConnectionContext`, `mealService`, `mealChangeRequestService` | `MealPlanView`, `MealDetailView` | Seven-day selection, canonical ordering, signed image, detail/grocery/request/photo flows | loading/retrying/success/empty/unlinked/error | Integrated / P4 PASS | Physical-device acceptance pending |
 | MainTabs / Analiz | `AnalysisScreen` | `useAnalyticsViewModel` | `DietitianConnectionContext`, `analyticsService` | `ProgressView` and progress components | Weight/measurement/water/badge data and measurement save | loading/retrying/ready/empty/locked/error | Integrated / P5 PASS | Physical-device acceptance pending |
 | MainTabs / Sohbet | `ChatScreen` | `DietitianConnectionContext` | connection service constants | `EmptyMessagesView` only | Active-dietitian guard; no fake messages/composer | loading/locked/coming-soon | Pending P8 | Pending |
-| Profile | `ProfileScreen` | `useProfileViewModel` | `clientService`, connection context, profile catalogs, image picker | `ProfileView` and edit views | Signed avatar/upload, specialized saves, validation, sign-out, back navigation | loading/error/edit pending/success | Pending P6 | Pending |
+| Profile | `ProfileScreen` | `useProfileViewModel` | `clientService`, connection context, profile catalogs, image picker | `ProfileView` and edit views | Signed avatar/upload, specialized saves, validation, sign-out, back navigation | loading/error/edit pending/success | Integrated / P6 PASS | Physical-device acceptance pending |
 | Settings | `SettingsScreen` | Local presentation only | None | Shared shell/status patterns | Existing content and back navigation; no fake security actions | ready | Pending P8 | Pending |
 | Support | `SupportScreen` | Local presentation only | None | Shared shell/status patterns | Existing content and back navigation | ready | Pending P8 | Pending |
 
@@ -26,3 +26,5 @@ P3 dashboard status: PASS. Real plan, completion, signed-photo, water, weight an
 P4 meal-plan status: PASS. A single vertical list preserves seven local dates, serialized real-plan loading, status distinctions, signed photos, detail, honest grocery output, change requests and resolved-photo preview without fabricating completion or recipe actions.
 
 P5 analytics status: PASS. Weight remains read-only, real weight/measurement/water records drive the presentation, measurement saves stay in the ViewModel/service chain, and unavailable badge data is represented honestly as empty.
+
+P6 profile status: PASS. Overview, dietitian, personal/goals, lifestyle, health/nutrition, temporary notification preferences, signed avatar, dirty/error/pending and logout flows are integrated through their existing specialized callbacks.

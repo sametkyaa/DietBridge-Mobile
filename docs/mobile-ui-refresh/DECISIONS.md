@@ -43,3 +43,7 @@ Dashboard and the meal-plan screen delegate to one `features/meals` meal-detail 
 ## D-011 — Keep Analysis read-only for weight and honest for unavailable data
 
 Current-weight entry stays on Dashboard; Analysis only reads persisted weight history. Missing weight records are not converted to 0 kg points, missing water days are not converted to persisted zeroes, and the unavailable MVP badge source is shown as empty rather than as demo achievements. Water totals do not claim a target that the analytics contract does not load.
+
+## D-012 — Make Profile field ownership explicit
+
+Profile shows current weight read-only and cannot write it through either the generic ViewModel payload or generic profile service. Dashboard retains the dedicated current-weight flow. E-mail remains read-only without an Auth change flow; unavailable security actions are omitted. Notification toggles are labeled as temporary device-session preferences until a persistence contract exists.
