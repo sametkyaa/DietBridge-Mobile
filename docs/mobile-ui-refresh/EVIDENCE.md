@@ -3,9 +3,9 @@
 ## Publication status
 
 - Local branch: `codex/mobile-ui-refresh`
-- Local commits ahead of main: 19
-- Worktree: clean at the P7 package boundary
-- Push: pending for the P7 evidence commit
+- Local commits ahead of main: 21
+- Worktree: clean at the P8 package boundary
+- Push: pending for the P8 evidence commit
 - Draft PR: pending
 - Reason: GitHub connector returned HTTP 403 (`Resource not accessible by integration`); GitHub CLI remains unavailable
 - Engineering impact: none
@@ -384,3 +384,36 @@ Resolved findings:
 - Final contract, UI/accessibility and scope re-reviews reported no P0, P1, P2 or P3 findings.
 
 Remaining risks: physical Android sign-in, registration/e-mail confirmation, invalid credentials/role, reset e-mail delivery, keyboard/small-screen layout and rapid same-render submission require manual acceptance. The authenticated 8+ minute background/reload/token-refresh release blocker remains open.
+
+## P8 Placeholder Screens — PASS
+
+Commit: `a2a0037` (`feat(ui): refresh mobile placeholder screens`)
+
+Files: Chat, Settings and Support screens plus a shared presentation-only stack placeholder shell.
+
+Commands:
+
+- Babel parse of all five affected JavaScript modules
+- direct data-access, fake message/action and frozen navigation/context/service/config scans
+- `git diff --check`
+- Android export
+
+Results:
+
+- Android export: PASS; bundle `AppEntry-fe6884a6652e004880860eb93e78711d.hbc`.
+- Chat state precedence is loading, real connection error/retry, locked without an active dietitian, then honest active-but-coming-soon.
+- No message list, composer, send/attachment callback, online status, mock conversation or fake connection action exists.
+- The previous duplicate bottom-inset calculation was removed; top/left/right safe-area edges protect the tab screen while MainTabs owns the bottom inset.
+- Settings and Support use one scroll-safe header/empty shell with their existing back callback and no fabricated settings, security, contact or FAQ affordance.
+- Navigation, connection context/service, App/session, Supabase and dependency/config files remain unchanged.
+
+Reviewer findings:
+
+- P2: Chat initially omitted left/right safe-area edges for landscape cutout devices.
+
+Resolved findings:
+
+- Chat now applies top/left/right safe-area protection and intentionally leaves bottom spacing to the tab bar.
+- Final contract/scope and UI/accessibility reviews reported no P0, P1, P2 or P3 findings.
+
+Remaining risks: physical Android state transitions, retry timing, TalkBack announcements, landscape cutout layout and stack back behavior remain manual checks. Messaging remains intentionally unavailable until a real service contract exists.

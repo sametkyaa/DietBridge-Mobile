@@ -51,3 +51,7 @@ Profile shows current weight read-only and cannot write it through either the ge
 ## D-013 — Keep legal acceptance and auth lifecycle outside the visual refresh
 
 Registration does not add terms/privacy links or a local acceptance checkbox because the app has no real legal route, URL or persisted acceptance contract (`DEFERRED_LEGAL_FLOW`). The existing single-screen sign-in/sign-up mode, auth service, role validation, navigator routes and App session lifecycle remain authoritative. Password and confirmation visibility are independent UI state only.
+
+## D-014 — Keep Chat and local utility routes honest
+
+Chat remains a status-only placeholder because no production message service, ViewModel or composer contract exists. It uses only the real dietitian-connection guard and retry callback; an active connection leads to an explicit coming-soon state, not a simulated conversation. Settings and Support expose no controls or links beyond their existing local content and back navigation.
