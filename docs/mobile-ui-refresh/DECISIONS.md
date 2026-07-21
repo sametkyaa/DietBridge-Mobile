@@ -55,3 +55,7 @@ Registration does not add terms/privacy links or a local acceptance checkbox bec
 ## D-014 — Keep Chat and local utility routes honest
 
 Chat remains a status-only placeholder because no production message service, ViewModel or composer contract exists. It uses only the real dietitian-connection guard and retry callback; an active connection leads to an explicit coming-soon state, not a simulated conversation. Settings and Support expose no controls or links beyond their existing local content and back navigation.
+
+## D-015 — Keep P9 cleanup evidence-driven
+
+P9 removes only the unreferenced legacy `shared/theme/styles.js` file and tokenizes the two retained Profile specialist editors. Functional repairs are limited to the verified Dashboard focus race, repeated Analysis authorization queries and unbounded signed-photo cache. The silent `App.js` startup loader remains documented accessibility debt because App auth/session lifecycle is frozen for this refresh; modal focus transfer remains a physical-device check.

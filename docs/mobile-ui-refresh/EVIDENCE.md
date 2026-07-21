@@ -3,9 +3,9 @@
 ## Publication status
 
 - Local branch: `codex/mobile-ui-refresh`
-- Local commits ahead of main: 21
-- Worktree: clean at the P8 package boundary
-- Push: pending for the P8 evidence commit
+- Local commits ahead of main: 23
+- Worktree: clean at the P9 package boundary
+- Push: pending for the P9 evidence commit
 - Draft PR: pending
 - Reason: GitHub connector returned HTTP 403 (`Resource not accessible by integration`); GitHub CLI remains unavailable
 - Engineering impact: none
@@ -417,3 +417,51 @@ Resolved findings:
 - Final contract/scope and UI/accessibility reviews reported no P0, P1, P2 or P3 findings.
 
 Remaining risks: physical Android state transitions, retry timing, TalkBack announcements, landscape cutout layout and stack back behavior remain manual checks. Messaging remains intentionally unavailable until a real service contract exists.
+
+## P9 Cross-Screen QA and Cleanup — PASS
+
+Commit: `bfbdbda` (`chore(ui): complete mobile UI regression cleanup`)
+
+Files: 13 narrowly repaired runtime modules and deletion of the unreferenced legacy theme stylesheet.
+
+Commands:
+
+- `npx expo-doctor` (18/18)
+- Babel parse of all 98 application JavaScript modules
+- `git diff --check`, route/import/package/dependency scans
+- presentation backend-boundary and production mock scans
+- VirtualizedList, skeleton animation and signed-photo hook/cache inspection
+- `adb devices`
+- final Android and iOS exports
+
+Results:
+
+- Expo Doctor: PASS, 18/18.
+- Android export: PASS; final bundle `AppEntry-74ad5729b37157563d31ddcb759bc08d.hbc`.
+- iOS export: PASS; final bundle `AppEntry-ff0cc8d8a74015407eadb27869432016.hbc`.
+- Presentation components contain no Supabase/network/storage access and no new preview/mock production data.
+- Meals retains one vertical FlatList; nested scrolling is horizontal or modal-local. AppSkeleton uses one shared animation loop.
+- Dashboard focus cleanup now invalidates and removes stale in-flight plan requests, preventing a permanent loading state after rapid blur/refocus.
+- Analysis performs one service-layer auth/active-connection authorization before its three parallel data queries.
+- Signed meal-photo cache removes expired entries and is capped at 100 without evicting on a valid cache hit.
+- Specialist Profile editors now use shared colors/radius/spacing/Inter tokens with their dirty/pending/callback behavior unchanged.
+- Bottom sheets, sidebar, specialist modals and Profile cover appropriate safe-area edges; Dashboard keyboard insets/dismissal are explicit.
+- Auth link typography uses the loaded semibold Inter family.
+- `shared/theme/styles.js` had no import/export references and was removed under the old-style cleanup rule.
+- `adb devices` returned no authorized device/emulator; status remains `DEVICE_UI_ACCEPTANCE_PENDING`.
+
+Reviewer findings:
+
+- P1: Dashboard plan request reuse could strand loading after blur/refocus.
+- P2: Analysis repeated auth and active-connection queries for every data getter.
+- P2: full-screen modal/sidebar surfaces omitted landscape left/right safe areas.
+- P3: meal-photo cache could grow without global expiry/capacity eviction.
+- P3: Profile bottom inset, Dashboard numeric-keyboard handling, raw auth link weights and retained specialist editor styles.
+- P3: initial cache cap placement evicted during a valid hit.
+
+Resolved findings:
+
+- All functional, performance, safe-area, keyboard, typography, token and cache findings above were repaired and independently re-reviewed.
+- Final functional/boundary and UI/accessibility P9 reviews reported no P0, P1, P2 or P3 findings in the cleanup diff.
+
+Remaining risks: the frozen `App.js` startup loader is not announced to screen readers; modal focus transfer/restore depends on native Modal behavior; both require device acceptance. Physical screen checks and the authenticated 8+ minute background/reload/token-refresh release blocker remain open.

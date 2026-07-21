@@ -2,7 +2,7 @@
 
 Status: `DEVICE_UI_ACCEPTANCE_PENDING`
 
-No device UI acceptance was attempted because P0 baseline validation failed before UI integration.
+`adb devices` was available during P9, but no authorized device or emulator was connected. Automated Android/iOS exports passed; physical UI acceptance remains pending.
 
 - [ ] Auth sign-in
 - [ ] Auth sign-up
