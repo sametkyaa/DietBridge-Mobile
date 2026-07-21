@@ -11,9 +11,9 @@ const hasActiveDietitianConnection = async (clientId) => {
 
 export const getWeightHistory = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [{ week: '1', dateLabel: 'Veri Yok', weight: 0 }];
+    if (!user) return [];
     if (!(await hasActiveDietitianConnection(user.id))) {
-        return [{ week: '1', dateLabel: 'Veri Yok', weight: 0 }];
+        return [];
     }
 
     const { data, error } = await supabase
@@ -24,9 +24,8 @@ export const getWeightHistory = async () => {
         .order('measured_at', { ascending: false })
         .limit(5);
 
-    if (error || !data || data.length === 0) {
-        return [{ week: '1', dateLabel: 'Veri Yok', weight: 0 }];
-    }
+    if (error) throw error;
+    if (!data || data.length === 0) return [];
 
     // Sort ascending to get chronological order
     data.reverse();
@@ -58,7 +57,7 @@ export const fetchMeasurements = async () => {
 
     if (error) {
         console.error("Error fetching measurements:", error);
-        return [];
+        throw error;
     }
 
     if (!data) return [];
@@ -149,41 +148,30 @@ export const getWaterHistory = async () => {
         .from('daily_logs')
         .select('date, water_intake')
         .eq('client_id', user.id)
+        .not('water_intake', 'is', null)
         .gte('date', startStr)
         .lte('date', endStr)
         .order('date', { ascending: true });
 
     if (error) {
         console.error("Error fetching water history:", error);
-        return [];
+        throw error;
     }
+    if (!data || data.length === 0) return [];
 
     const days = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
-    const map = {};
-    if (data) {
-        data.forEach(log => {
-            map[log.date] = log.water_intake || 0;
-        });
-    }
-
-    const result = [];
-    for (let i = 0; i < 7; i++) {
-        const d = new Date(sevenDaysAgo);
-        d.setDate(sevenDaysAgo.getDate() + i);
-        const dateStr = formatDate(d);
-        result.push({
-            day: days[d.getDay()],
-            amount: map[dateStr] || 0
-        });
-    }
-
-    return result;
+    return data.map((log) => {
+        const [year, month, day] = log.date.split('-').map(Number);
+        const localDate = new Date(year, month - 1, day);
+        return {
+            dateKey: log.date,
+            day: days[localDate.getDay()],
+            amount: Number(log.water_intake),
+        };
+    });
 };
 
 export const getBadges = async () => {
-    return [
-        { label: 'Su Şampiyonu', icon: '💧', accent: '#E0EDFF' },
-        { label: 'İlk 5 Kilo', icon: '🎯', accent: '#F9EFD3' },
-        { label: '7 Günlük Seri', icon: '🔥', accent: '#FFE1E2' },
-    ];
+    // Persisted badge data is not available in the current MVP contract.
+    return [];
 };
