@@ -429,10 +429,6 @@ export const updateCurrentUserProfile = async (payload = {}) => {
         if (!data) throw new Error(PROFILE_UNAVAILABLE_MESSAGE);
     }
 
-    if (payload.currentWeight !== undefined) {
-        await saveCurrentWeight(payload.currentWeight);
-    }
-
     return getCurrentUserProfile();
 };
 
