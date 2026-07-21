@@ -2,8 +2,8 @@
 
 | Route | Current screen | ViewModel / state owner | Existing services / contexts | Kimi UI counterpart | Contracts to preserve | State mapping | Integration | Manual test |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Login | `AuthScreen` | `useAuthViewModel` | `authService` | `LoginView`, `RegisterView` | Sign-in/up callbacks, role validation, forgot-password navigation | loading/error/mode | Pending P7 | Pending |
-| ForgotPassword | `ForgotPasswordScreen` | `useForgotPasswordViewModel` | `authService` | `ForgotPasswordView`, success view | Reset callback, back/login navigation | idle/loading/success/error | Pending P7 | Pending |
+| Login | `AuthScreen` | `useAuthViewModel` | `authService` | `LoginView`, `RegisterView` | Sign-in/up callbacks, role validation, forgot-password navigation | loading/error/mode | Integrated / P7 PASS | Physical-device acceptance pending |
+| ForgotPassword | `ForgotPasswordScreen` | `useForgotPasswordViewModel` | `authService` | `ForgotPasswordView`, success view | Reset callback, back/login navigation | idle/loading/success/error | Integrated / P7 PASS | Physical-device acceptance pending |
 | MainTabs / Ana Sayfa | `DashboardScreen` | `useDashboardViewModel` | `MealsContext`, `DietitianConnectionContext`, `clientService`, `dailyLogService`, `mealService`, read model | `HomeView` and home components | Daily log, water/weight, completion RPC, signed photos, connection approval/rejection, retries, Profile/Settings/Support navigation | daily-log plus plan loading/retrying/success/empty/unlinked/error | Integrated / P3 PASS | Physical-device acceptance pending |
 | MainTabs / Öğünler | `MealsScreen` | `useMealsViewModel` | `MealsContext`, `DietitianConnectionContext`, `mealService`, `mealChangeRequestService` | `MealPlanView`, `MealDetailView` | Seven-day selection, canonical ordering, signed image, detail/grocery/request/photo flows | loading/retrying/success/empty/unlinked/error | Integrated / P4 PASS | Physical-device acceptance pending |
 | MainTabs / Analiz | `AnalysisScreen` | `useAnalyticsViewModel` | `DietitianConnectionContext`, `analyticsService` | `ProgressView` and progress components | Weight/measurement/water/badge data and measurement save | loading/retrying/ready/empty/locked/error | Integrated / P5 PASS | Physical-device acceptance pending |
@@ -28,3 +28,5 @@ P4 meal-plan status: PASS. A single vertical list preserves seven local dates, s
 P5 analytics status: PASS. Weight remains read-only, real weight/measurement/water records drive the presentation, measurement saves stay in the ViewModel/service chain, and unavailable badge data is represented honestly as empty.
 
 P6 profile status: PASS. Overview, dietitian, personal/goals, lifestyle, health/nutrition, temporary notification preferences, signed avatar, dirty/error/pending and logout flows are integrated through their existing specialized callbacks.
+
+P7 auth status: PASS. Login, registration and password-reset presentations use the shared visual system while preserving the single-screen mode model, auth callbacks, safe error mapping, phone metadata, reset edit/resend behavior and frozen session/navigation lifecycle.

@@ -47,3 +47,7 @@ Current-weight entry stays on Dashboard; Analysis only reads persisted weight hi
 ## D-012 — Make Profile field ownership explicit
 
 Profile shows current weight read-only and cannot write it through either the generic ViewModel payload or generic profile service. Dashboard retains the dedicated current-weight flow. E-mail remains read-only without an Auth change flow; unavailable security actions are omitted. Notification toggles are labeled as temporary device-session preferences until a persistence contract exists.
+
+## D-013 — Keep legal acceptance and auth lifecycle outside the visual refresh
+
+Registration does not add terms/privacy links or a local acceptance checkbox because the app has no real legal route, URL or persisted acceptance contract (`DEFERRED_LEGAL_FLOW`). The existing single-screen sign-in/sign-up mode, auth service, role validation, navigator routes and App session lifecycle remain authoritative. Password and confirmation visibility are independent UI state only.

@@ -5,10 +5,10 @@ publication_status: BRANCH_PUSHED_PR_PENDING
 base_commit: d5c869c183117c3b3bc6944a580f15daa0b26196
 reference_ui_commit: 8b3f1159bf41a0e7b97084da29f7ce58d2373470
 branch: codex/mobile-ui-refresh
-current_package: P7
+current_package: P8
 current_iteration: 1
 consecutive_failures: 0
-last_verified_commit: 1f71954
+last_verified_commit: 033a2e1
 draft_pr: null
 open_release_blocker: authenticated Android token-refresh acceptance pending
 ---
@@ -26,7 +26,7 @@ Authenticated Android background/reload/token-refresh acceptance pending
 | P4 Meals and Meal Detail | PASS |
 | P5 Analysis / Progress | PASS |
 | P6 Profile | PASS |
-| P7 Auth Visual Refresh | PENDING |
+| P7 Auth Visual Refresh | PASS |
 | P8 Placeholder Screens | PENDING |
 | P9 Cross-Screen QA and Cleanup | PENDING |
 | P10 Final Review | PENDING |
@@ -34,4 +34,4 @@ Authenticated Android background/reload/token-refresh acceptance pending
 
 ## Resume point
 
-P6 Profile passed all eight subpackage, mechanical, contract, scope and UI/accessibility review gates. The next ready package is P7 Auth Visual Refresh.
+P7 Auth Visual Refresh passed mechanical, contract, scope and UI/accessibility review gates. The next ready package is P8 Placeholder Screens.

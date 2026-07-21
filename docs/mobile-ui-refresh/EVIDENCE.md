@@ -3,9 +3,9 @@
 ## Publication status
 
 - Local branch: `codex/mobile-ui-refresh`
-- Local commits ahead of main: 17
-- Worktree: clean at the P6 package boundary
-- Push: PASS; remote tracking branch updated through P6
+- Local commits ahead of main: 19
+- Worktree: clean at the P7 package boundary
+- Push: pending for the P7 evidence commit
 - Draft PR: pending
 - Reason: GitHub connector returned HTTP 403 (`Resource not accessible by integration`); GitHub CLI remains unavailable
 - Engineering impact: none
@@ -345,3 +345,42 @@ Resolved findings:
 - Final profile contract, scope and UI/accessibility re-reviews reported no P0, P1, P2 or P3 findings.
 
 Remaining risks: authenticated persistence/reload for each specialized field, gallery permission/upload/delete, Android keyboard, dirty confirmation focus and local logout require device acceptance. Notification toggles remain intentionally temporary because no persistence contract exists.
+
+## P7 Auth Visual Refresh — PASS
+
+Commit: `033a2e1` (`feat(ui): refresh authentication screens`)
+
+Files: Auth and forgot-password screens, five auth presentation modules, and an independent confirmation-password visibility UI state in the existing auth ViewModel.
+
+Commands:
+
+- Babel parse of all eight affected JavaScript modules
+- frozen App/session/navigation/service/config diff checks
+- direct data-access and fake legal/social/mock flow scans
+- `git diff --check`
+- two Android exports, including the final reviewed implementation
+
+Results:
+
+- Android export: PASS; final bundle `AppEntry-cea087eae2d4f6a875b79ec1572ebaa8.hbc`.
+- Sign-in and sign-up retain the existing single-screen mode, field values, phone metadata, callbacks, validation, safe Alert error mapping and loading behavior.
+- Password and confirmation controls have independent accessible visibility state without changing password equality or auth payload logic.
+- Forgot-password keeps validation, reset callback, back/login navigation, inline error, accessible success alert, e-mail editing and real resend behavior.
+- Safe area, keyboard avoidance, scroll behavior, compact spacing, wrapped footers and 44/52 px controls cover small-screen interaction.
+- `App.js`, auth service, forgot-password ViewModel, navigator route names, Supabase client and package/config files remain unchanged.
+- Terms/privacy checkbox or links were not fabricated; legal acceptance remains `DEFERRED_LEGAL_FLOW`.
+
+Reviewer findings:
+
+- P1: terminal forgot-password success view removed the existing edit/resend path.
+- P1: shared visibility state made both password fields reveal together.
+- P2: the terminal success result lacked a live announcement.
+- P2 observation: rapid same-render submit remains a pre-existing ViewModel risk outside this visual package.
+
+Resolved findings:
+
+- Success now renders as an accessible inline alert while retaining input and submit callbacks.
+- Confirmation visibility has a dedicated UI-only state and labeled 44 px control.
+- Final contract, UI/accessibility and scope re-reviews reported no P0, P1, P2 or P3 findings.
+
+Remaining risks: physical Android sign-in, registration/e-mail confirmation, invalid credentials/role, reset e-mail delivery, keyboard/small-screen layout and rapid same-render submission require manual acceptance. The authenticated 8+ minute background/reload/token-refresh release blocker remains open.
