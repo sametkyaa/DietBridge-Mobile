@@ -31,3 +31,7 @@ The reference theme/component filenames were retained under `shared/theme` and `
 ## D-008 — Publication gate separation
 
 GitHub CLI unavailability is not a hard blocker for the engineering loop. Local implementation, build verification, independent review and package commits continue while push, draft PR and remote CI are tracked as a separate publication loop. Completed packages will not be reapplied because a publication tool is unavailable.
+
+## D-009 — Derive dashboard nutrition from canonical completed meals
+
+Dashboard nutrition values are presentation-only totals derived from real completed meals and the canonical `calories`, `protein`, `carbohydrate` and `fat` fields. Reference preview goals and static totals are not product data and are therefore omitted. Current-weight write ownership remains on Dashboard as established in D-003.

@@ -3,9 +3,9 @@
 ## Publication status
 
 - Local branch: `codex/mobile-ui-refresh`
-- Local commits ahead of main: 4
-- Worktree: clean before publication-state documentation
-- Push: PASS; remote tracking branch created
+- Local commits ahead of main: 10
+- Worktree: clean at the P3 package boundary
+- Push: PASS; remote tracking branch updated through P3
 - Draft PR: pending
 - Reason: GitHub connector returned HTTP 403 (`Resource not accessible by integration`); GitHub CLI remains unavailable
 - Engineering impact: none
@@ -166,3 +166,47 @@ Reviewer findings: contract/scope and UI/accessibility reviewers reported no P0,
 Resolved findings: none required.
 
 Remaining risks: extreme Android font scaling and physical-device tab appearance remain manual acceptance items.
+
+## P3 Dashboard — PASS
+
+Commit: `6345eec` (`feat(ui): integrate refreshed dashboard`)
+
+Files: Dashboard screen/ViewModel, dashboard presentation components, one dashboard UI mapper, semantic icon/progress accessibility adapters, and removal of the superseded `NutritionSummaryCard`.
+
+Commands:
+
+- Babel parse of all 15 changed/new JavaScript modules
+- UI Supabase/network/storage/auth boundary `rg` scan
+- dead `NutritionSummaryCard` reference scan
+- `git diff --check` and staged allowlist inspection
+- `npx expo export --platform android --output-dir .tmp-ui-check/p3-android`
+
+Results:
+
+- Babel parse: PASS (15/15 files).
+- UI boundary scan: PASS; Supabase access remains in service files.
+- Android export: PASS after final repairs.
+- Daily meal plan states remain distinct: loading, retrying, success, empty, unlinked and error.
+- Meal completion uses the real meal ID through `MealsContext` and the unchanged `set_my_meal_completion` RPC chain, with pending guards and optimistic rollback.
+- Plan and completion photos use the existing signed-photo resolver; local completion photo URIs are not represented as persisted uploads.
+- Water and weight writes retain the existing service/RPC chains. Turkish comma decimals are normalized and fully validated before weight save.
+- Nutrition values are derived only from completed canonical meals; static preview totals were removed.
+- Connection approval/rejection, retries and Profile/Settings/Support navigation remain wired.
+- Package/dependency, auth/session, navigator, service and canonical read-model files were unchanged.
+
+Reviewer findings:
+
+- P1: Turkish comma weight input could be truncated by `parseFloat`; successful water writes could leave stale empty/error status.
+- P2: Today-meal rows lacked a real completion toggle; loading/error accessibility semantics were incomplete; the replaced nutrition component became dead code.
+- P3: water progress context and section heading semantics needed labels/roles.
+
+Resolved findings:
+
+- Weight input now normalizes comma to dot and rejects partial/non-finite values.
+- Water success moves to ready and clears errors; failures restore water, status and error, while error-state edits are blocked.
+- Every today-meal row has a sibling 44 px checkbox action routed through the guarded meal-ID completion flow.
+- Loading groups expose busy progress semantics, water errors use `InlineAlert`, progress has a contextual label and major headings expose header roles.
+- The orphaned `NutritionSummaryCard` was removed with no remaining references.
+- Final contract and UI/accessibility re-reviews reported no P0, P1 or P2 findings.
+
+Remaining risks: physical-device visual, camera/gallery permission, screen-reader and authenticated backend acceptance remain manual checks. The existing authenticated Android background/reload/token-refresh release blocker is unchanged.

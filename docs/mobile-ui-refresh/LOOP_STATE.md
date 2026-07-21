@@ -5,10 +5,10 @@ publication_status: BRANCH_PUSHED_PR_PENDING
 base_commit: d5c869c183117c3b3bc6944a580f15daa0b26196
 reference_ui_commit: 8b3f1159bf41a0e7b97084da29f7ce58d2373470
 branch: codex/mobile-ui-refresh
-current_package: P3
+current_package: P4
 current_iteration: 1
 consecutive_failures: 0
-last_verified_commit: 2e0f573
+last_verified_commit: 6345eec
 draft_pr: null
 open_release_blocker: authenticated Android token-refresh acceptance pending
 ---
@@ -22,7 +22,7 @@ Authenticated Android background/reload/token-refresh acceptance pending
 | P0B Dependency Remediation | PASS |
 | P1 UI Foundation | PASS |
 | P2 Navigation Shell | PASS |
-| P3 Dashboard | PENDING |
+| P3 Dashboard | PASS |
 | P4 Meals and Meal Detail | PENDING |
 | P5 Analysis / Progress | PENDING |
 | P6 Profile | PENDING |
@@ -34,4 +34,4 @@ Authenticated Android background/reload/token-refresh acceptance pending
 
 ## Resume point
 
-P2 Navigation Shell passed its mechanical and independent review gates. The next ready package is P3 Dashboard.
+P3 Dashboard passed its mechanical, contract, scope and UI/accessibility review gates. The next ready package is P4 Meals and Meal Detail.
