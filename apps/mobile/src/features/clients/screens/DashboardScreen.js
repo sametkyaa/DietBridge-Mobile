@@ -16,7 +16,7 @@ import {
     WaterTrackerCard,
     WeightCard,
 } from '../components/dashboard';
-import { buildDashboardNutrition, mapDashboardMeal } from '../mappers/dashboardUiMapper';
+import { mapDashboardMeal } from '../mappers/dashboardUiMapper';
 import { useDashboardViewModel } from '../viewmodels/useDashboardViewModel';
 
 const DashboardScreen = () => {
@@ -40,6 +40,7 @@ const DashboardScreen = () => {
         setSelectedMeal,
         dailyQuote,
         waterProgress,
+        nutrition,
         completedMeals,
         meals,
         mealPlanStatus,
@@ -89,7 +90,6 @@ const DashboardScreen = () => {
             ? mapDashboardMeal(selectedMeal, completedMeals[selectedMeal.id]?.completionPhotoUri || null)
             : null
     ), [completedMeals, selectedMeal]);
-    const nutrition = useMemo(() => buildDashboardNutrition(meals), [meals]);
     const isDisplayedMealUpdating = !!displayedMeal?.id && updatingMealId === displayedMeal.id;
 
     const handleAddPhoto = async (source) => {
@@ -201,7 +201,7 @@ const DashboardScreen = () => {
                 />
 
                 {hasActiveDietitian && mealPlanStatus === 'success' ? (
-                    <NutritionOverviewCard rows={nutrition.rows} completedCount={nutrition.completedCount} />
+                    <NutritionOverviewCard nutrition={nutrition} />
                 ) : null}
 
                 <WaterTrackerCard

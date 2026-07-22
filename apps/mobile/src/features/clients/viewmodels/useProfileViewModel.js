@@ -131,6 +131,14 @@ const mapProfileToClientData = (profile) => {
 
 const normalizeListInput = (value) => normalizeMultiValue(value);
 
+const normalizeAvatarAsset = (asset) => ({
+    uri: asset?.uri || null,
+    mimeType: asset?.mimeType || null,
+    fileName: asset?.fileName || null,
+    fileSize: asset?.fileSize || null,
+    base64: asset?.base64 || null,
+});
+
 export const useProfileViewModel = () => {
     const [profile, setProfile] = useState(null);
     const [referenceData, setReferenceData] = useState(INITIAL_REFERENCE_DATA);
@@ -414,7 +422,7 @@ export const useProfileViewModel = () => {
         }
     };
 
-    const selectAvatar = async () => {
+    const selectAvatarFromSource = async (source) => {
         if (avatarSelectionLockRef.current || isUploadingAvatar) return;
 
         try {
@@ -423,21 +431,32 @@ export const useProfileViewModel = () => {
             setError(null);
             setSuccessMessage(null);
 
-            const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            const permission = source === 'camera'
+                ? await ImagePicker.requestCameraPermissionsAsync()
+                : await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (!permission.granted) {
-                Alert.alert('İzin Gerekli', 'Profil fotoğrafı seçmek için galeri izni vermelisiniz.');
+                Alert.alert(
+                    'İzin Gerekli',
+                    source === 'camera'
+                        ? 'Profil fotoğrafı çekmek için kamera izni vermelisiniz.'
+                        : 'Profil fotoğrafı seçmek için galeri izni vermelisiniz.',
+                );
                 return;
             }
 
-            const result = await ImagePicker.launchImageLibraryAsync({
+            const picker = source === 'camera'
+                ? ImagePicker.launchCameraAsync
+                : ImagePicker.launchImageLibraryAsync;
+            const result = await picker({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
                 aspect: [1, 1],
                 quality: 0.85,
+                base64: true,
             });
 
             if (result.canceled || !result.assets?.[0]) return;
-            setPendingAvatarAsset(result.assets[0]);
+            setPendingAvatarAsset(normalizeAvatarAsset(result.assets[0]));
         } catch (selectionError) {
             if (typeof __DEV__ !== 'undefined' && __DEV__) {
                 console.error('Profile avatar selection failed', selectionError);
@@ -447,6 +466,15 @@ export const useProfileViewModel = () => {
             avatarSelectionLockRef.current = false;
             setIsSelectingAvatar(false);
         }
+    };
+
+    const selectAvatar = () => {
+        if (avatarSelectionLockRef.current || isUploadingAvatar) return;
+        Alert.alert('Profil fotoğrafı', 'Fotoğraf kaynağını seçin.', [
+            { text: 'Fotoğraf çek', onPress: () => selectAvatarFromSource('camera') },
+            { text: 'Galeriden seç', onPress: () => selectAvatarFromSource('gallery') },
+            { text: 'İptal', style: 'cancel' },
+        ]);
     };
 
     const cancelSelectedAvatar = () => {

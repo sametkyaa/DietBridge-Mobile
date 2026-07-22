@@ -519,3 +519,36 @@ Remaining risks:
 - The authenticated Android 8+ minute background/reload/token-refresh release blocker remains open.
 
 Final engineering decision: `READY_FOR_DEVICE_ACCEPTANCE`.
+
+## Android acceptance regression repair — verified build checks
+
+Files: canonical meal read model, Dashboard ViewModel/presentation, and Profile avatar ViewModel/service.
+
+Root causes:
+
+- The canonical meal mapper rejected every record whose `source` was not exactly `manual` or whose `recipe_id` was non-null, unlike the earlier mobile read path which did not gate plans on either metadata field.
+- The Dashboard macro card was hidden by the failed plan read and its calculation lived in a screen-side mapper rather than the Dashboard ViewModel.
+- Android avatar upload tried to read ImagePicker local/content URIs with `XMLHttpRequest`; its empty/failed ArrayBuffer branch produced `Avatar file could not be read.`
+
+Changes:
+
+- Unknown, missing, and legacy sources normalize to the canonical `legacy` category; `manual` and `recipe` are preserved, while malformed recipe IDs and the existing core meal contract checks remain errors.
+- The Dashboard ViewModel derives planned and completed calorie/protein/carbohydrate/fat totals from canonical meals; the card renders only real plan data.
+- ImagePicker now requests base64 for gallery and camera assets, normalizes the required asset metadata in the ViewModel, and the service decodes that payload for Storage. A new path is uploaded before `profiles.avatar_url` is changed; a failed profile update removes the new upload and retains the old avatar. Avatar removal restores the prior profile path if Storage deletion fails.
+
+Commands and results:
+
+- `npm ci`: PASS (663 packages installed; existing audit reports 19 advisories, unchanged).
+- `npx expo-doctor`: PASS (18/18).
+- Babel parser over six changed JavaScript modules: PASS.
+- `npx expo export --platform android --output-dir .tmp-regression/android`: PASS (`AppEntry-133bace0e13a439650138acbf830bac6.hbc`).
+- `npx expo export --platform ios --output-dir .tmp-regression/ios`: PASS (`AppEntry-541d25ec3ea504264a2200d6d0ca95ef.hbc`).
+- `adb devices`: authorized `emulator-5554` detected.
+- `npm run android`: BLOCKED by Java 11 and an interactive port prompt. Retried with JDK 21 and port 8082; Gradle version passed, but the non-interactive launch exceeded five minutes while Metro rebuilt its cache. No device UI results claimed.
+- `android/gradlew.bat -version` with JDK 21: PASS (Gradle 8.14.3, Launcher JVM 21.0.1).
+
+Production/Supabase data, migrations, RLS, and Storage policies were not changed.
+
+Review A — architecture and data contract: PASS. The only changed Supabase access remains in `clientService`; Dashboard and Meals both call `getDailyMealPlan`; no parallel meal model, mock plan, or changed signed-photo/recipe contract was introduced. Unknown source values normalize only to the display-neutral `legacy` category, while missing core fields and malformed recipe IDs still fail the canonical contract.
+
+Review B — UI and regression: PASS for static/export review. The macro card receives real ViewModel totals and uses a two-column grid suitable for narrow widths; loading/error/empty/unlinked rendering remains controlled by the existing meal-plan status. Avatar selection, upload, cancel, pending lock, rollback, and removal paths retain visible Turkish user messages. Authenticated emulator interaction remains unverified.

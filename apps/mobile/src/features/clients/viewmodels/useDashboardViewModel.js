@@ -13,6 +13,27 @@ import {
     CONNECTION_REQUIRED_MESSAGE,
 } from '../../dietitianConnection/services/dietitianConnectionService';
 
+const toFiniteNumber = (value) => {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : 0;
+};
+
+const buildNutritionSummary = (meals) => {
+    const completedMeals = meals.filter((meal) => meal.isEaten);
+    const sumMeals = (items) => items.reduce((totals, meal) => ({
+        calories: totals.calories + toFiniteNumber(meal.calories),
+        protein: totals.protein + toFiniteNumber(meal.protein),
+        carbohydrate: totals.carbohydrate + toFiniteNumber(meal.carbohydrate),
+        fat: totals.fat + toFiniteNumber(meal.fat),
+    }), { calories: 0, protein: 0, carbohydrate: 0, fat: 0 });
+
+    return {
+        planned: sumMeals(meals),
+        consumed: sumMeals(completedMeals),
+        completedCount: completedMeals.length,
+    };
+};
+
 export const useDashboardViewModel = () => {
     const { completedMeals, hydrateCompletedMeals, toggleMealCompletion } = useMeals();
     const [water, setWater] = useState(0);
@@ -169,6 +190,7 @@ export const useDashboardViewModel = () => {
 
     const waterProgress = Math.min(water / 3, 1);
     const firstIncompleteMeal = useMemo(() => getNextIncompleteMeal(meals), [meals]);
+    const nutrition = useMemo(() => buildNutritionSummary(meals), [meals]);
     const displayedMeal = (
         (focusedMealId && meals.find((meal) => meal.id === focusedMealId))
         || firstIncompleteMeal
@@ -365,6 +387,7 @@ export const useDashboardViewModel = () => {
         setSelectedMeal,
         dailyQuote,
         waterProgress,
+        nutrition,
         displayedMeal,
         displayedCompletionPhotoUri,
         isMealCompleted,

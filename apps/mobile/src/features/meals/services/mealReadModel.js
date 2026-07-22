@@ -82,6 +82,20 @@ const validateSortOrder = (value) => {
     return value;
 };
 
+const normalizeMealSource = (source) => {
+    if (typeof source !== 'string' || !source.trim()) return 'legacy';
+
+    const normalizedSource = source.trim().toLowerCase();
+    return normalizedSource === 'manual' || normalizedSource === 'recipe'
+        ? normalizedSource
+        : 'legacy';
+};
+
+const normalizeRecipeId = (value) => {
+    if (value === null || value === undefined) return null;
+    return requireString(value, 'meal.recipe_id');
+};
+
 export const normalizeCanonicalMeal = (meal, plan) => {
     if (!meal || typeof meal !== 'object') {
         throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz öğün bulundu.');
@@ -93,10 +107,6 @@ export const normalizeCanonicalMeal = (meal, plan) => {
         throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Öğün planı beklenen planla eşleşmiyor.');
     }
 
-    if (meal.source !== 'manual' || meal.recipe_id !== null) {
-        throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisi desteklenmeyen öğün kaynağı içeriyor.');
-    }
-
     if (typeof meal.is_eaten !== 'boolean') {
         throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz öğün tamamlanma durumu bulundu.');
     }
@@ -106,6 +116,8 @@ export const normalizeCanonicalMeal = (meal, plan) => {
     }
 
     const macros = normalizeCanonicalMacros(meal.macros);
+    const source = normalizeMealSource(meal.source);
+    const recipeId = normalizeRecipeId(meal.recipe_id);
 
     return {
         id,
@@ -120,8 +132,8 @@ export const normalizeCanonicalMeal = (meal, plan) => {
         time: normalizeCanonicalMealTime(meal.time),
         sortOrder: validateSortOrder(meal.sort_order),
         photoPath: meal.photo_url,
-        source: meal.source,
-        recipeId: meal.recipe_id,
+        source,
+        recipeId,
         isEaten: meal.is_eaten,
         desc: meal.calories === null ? '' : `${meal.calories} kcal`,
         note: plan.notes || '',

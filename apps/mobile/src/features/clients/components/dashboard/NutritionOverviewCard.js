@@ -3,13 +3,22 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppCard, Icon } from '../../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../../shared/theme';
 
-export function NutritionOverviewCard({ rows, completedCount }) {
+export function NutritionOverviewCard({ nutrition }) {
+    const rows = [
+        { key: 'calories', label: 'Kalori', icon: 'meal', value: `${Math.round(nutrition.planned.calories)} kcal` },
+        { key: 'protein', label: 'Protein', icon: 'drumstick', value: `${Math.round(nutrition.planned.protein)} g` },
+        { key: 'carbohydrate', label: 'Karbonhidrat', icon: 'wheat', value: `${Math.round(nutrition.planned.carbohydrate)} g` },
+        { key: 'fat', label: 'Yağ', icon: 'leaf', value: `${Math.round(nutrition.planned.fat)} g` },
+    ];
+
     return (
         <AppCard>
             <View style={styles.header}>
                 <Text style={styles.title} accessibilityRole="header">Günlük beslenme özeti</Text>
                 <Text style={styles.note}>
-                    {completedCount > 0 ? `${completedCount} tamamlanan öğün` : 'Öğün tamamladıkça hesaplanır'}
+                    {nutrition.completedCount > 0
+                        ? `${Math.round(nutrition.consumed.calories)} / ${Math.round(nutrition.planned.calories)} kcal tüketildi`
+                        : 'Planlanan günlük değerler'}
                 </Text>
             </View>
             <View style={styles.grid}>
