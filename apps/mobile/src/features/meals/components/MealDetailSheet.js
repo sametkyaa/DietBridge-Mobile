@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { BottomSheetView, Icon, StatusBadge } from '../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 import { MealPhotoThumbnail } from './MealPhotoThumbnail';
+import { formatMealType } from '../../../shared/utils/mealType';
 
 const formatMacro = (value, unit) => {
     if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) return '—';
@@ -25,10 +26,10 @@ export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPre
     return (
         <BottomSheetView visible={visible} onClose={onClose} title="Öğün detayı" scrollable bottomInset={bottomInset}>
             <View style={styles.metaRow}>
-                <Text style={styles.meta}>{meal.time} · {meal.type}</Text>
+                <Text style={styles.meta}>{meal.time} · {formatMealType(meal.type)}</Text>
                 <StatusBadge status={completed ? 'completed' : 'upcoming'} label={completed ? 'Tamamlandı' : 'Planlandı'} />
             </View>
-            <Text style={styles.title}>{meal.title || meal.type}</Text>
+            <Text style={styles.title}>{meal.title || formatMealType(meal.type)}</Text>
             {meal.desc ? <Text style={styles.description}>{meal.desc}</Text> : null}
             <MealPhotoThumbnail
                 photoPath={meal.photoPath}
@@ -36,7 +37,7 @@ export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPre
                 imageStyle={styles.photo}
                 wrapperStyle={styles.photoButton}
                 onPress={onPhotoPress}
-                accessibilityLabel={`${meal.title || meal.type} fotoğrafını büyüt`}
+                accessibilityLabel={`${meal.title || formatMealType(meal.type)} fotoğrafını büyüt`}
                 fallback={(
                     <View style={styles.photoFallback}>
                         <Icon name="meal" size={36} color={colors.primaryDark} />

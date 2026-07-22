@@ -470,11 +470,13 @@ export const useProfileViewModel = () => {
 
     const selectAvatar = () => {
         if (avatarSelectionLockRef.current || isUploadingAvatar) return;
-        Alert.alert('Profil fotoğrafı', 'Fotoğraf kaynağını seçin.', [
+        const actions = [
             { text: 'Fotoğraf çek', onPress: () => selectAvatarFromSource('camera') },
             { text: 'Galeriden seç', onPress: () => selectAvatarFromSource('gallery') },
-            { text: 'İptal', style: 'cancel' },
-        ]);
+        ];
+        if (profile?.avatarPath) actions.push({ text: 'Fotoğrafı kaldır', style: 'destructive', onPress: removeAvatar });
+        actions.push({ text: 'İptal', style: 'cancel' });
+        Alert.alert('Profil fotoğrafı', 'Yapmak istediğiniz işlemi seçin.', actions);
     };
 
     const cancelSelectedAvatar = () => {

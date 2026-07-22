@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppCard, Icon, StatusBadge } from '../../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../../shared/theme';
 import { MealPhotoThumbnail } from '../../../meals/components/MealPhotoThumbnail';
+import { formatMealType } from '../../../../shared/utils/mealType';
 
 export function TodayMealsCard({ meals, updatingMealId, onMealPress, onToggle }) {
     if (!Array.isArray(meals) || meals.length === 0) return null;
@@ -32,7 +33,7 @@ export function TodayMealsCard({ meals, updatingMealId, onMealPress, onToggle })
                                     )}
                                 />
                                 <View style={styles.textWrap}>
-                                    <Text style={styles.time}>{meal.time} · {meal.type}</Text>
+                                    <Text style={styles.time}>{meal.time} · {formatMealType(meal.type)}</Text>
                                     <Text style={styles.title} numberOfLines={1}>{meal.title}</Text>
                                     <StatusBadge status={meal.status} label={meal.badgeLabel} />
                                 </View>

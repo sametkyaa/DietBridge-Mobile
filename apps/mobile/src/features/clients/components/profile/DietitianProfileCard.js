@@ -9,7 +9,7 @@ export function DietitianProfileCard({ loading, dietitian, hasActive, error, exp
         ? <InlineAlert variant="error" title="Diyetisyen bilgisi alınamadı" message="Diyetisyen bağlantı bilgisi alınamadı. Lütfen tekrar deneyin." />
         : <InlineAlert variant="info" title="Diyetisyen" message="Henüz aktif bir diyetisyen bağlantınız yok." />;
     const avatar = dietitian.avatarSignedUrl || dietitian.avatarUrl;
-    const name = String(dietitian.fullName || dietitian.name || '').trim();
+    const name = String(dietitian.fullName || dietitian.name || '').trim() || 'Diyetisyen adı henüz bulunmuyor';
     const details = [
         ['E-posta', dietitian.email], ['Uzmanlık', dietitian.specialization], ['Okul', dietitian.university],
         ['Deneyim', dietitian.experienceYears == null ? null : `${dietitian.experienceYears} yıl`], ['Hakkında', dietitian.bio],

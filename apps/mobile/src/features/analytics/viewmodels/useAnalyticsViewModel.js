@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { getAnalyticsOverview, saveBodyMeasurements } from '../services/analyticsService';
+import { getAnalyticsOverview, getMeasurementHistory, saveAnalyticsWeight, saveBodyMeasurements } from '../services/analyticsService';
 import { useDietitianConnection } from '../../dietitianConnection/context/DietitianConnectionContext';
 import { CONNECTION_REQUIRED_MESSAGE } from '../../dietitianConnection/services/dietitianConnectionService';
 
@@ -39,6 +39,13 @@ const parseMeasurement = (value) => {
     return Number.isFinite(number) && number > 0 && number <= 500 ? number : Number.NaN;
 };
 
+const parseWeight = (value) => {
+    const normalized = String(value || '').trim().replace(',', '.');
+    if (!/^\d+(?:\.\d+)?$/.test(normalized)) return Number.NaN;
+    const number = Number(normalized);
+    return Number.isFinite(number) && number >= 20 && number <= 500 ? number : Number.NaN;
+};
+
 export const useAnalyticsViewModel = () => {
     const [monthlyWeightTrend, setMonthlyWeightTrend] = useState([]);
     const [measurements, setMeasurements] = useState([]);
@@ -50,9 +57,17 @@ export const useAnalyticsViewModel = () => {
     const [isEditingMeasurements, setIsEditingMeasurements] = useState(false);
     const [measurementForm, setMeasurementForm] = useState(EMPTY_FORM);
     const [isSavingMeasurements, setIsSavingMeasurements] = useState(false);
+    const [measurementHistory, setMeasurementHistory] = useState([]);
+    const [measurementHistoryStatus, setMeasurementHistoryStatus] = useState('idle');
+    const [isMeasurementHistoryVisible, setIsMeasurementHistoryVisible] = useState(false);
+    const [isAddingWeight, setIsAddingWeight] = useState(false);
+    const [weightInput, setWeightInput] = useState('');
+    const [isSavingWeight, setIsSavingWeight] = useState(false);
     const isMountedRef = useRef(true);
     const loadSequenceRef = useRef(0);
     const saveMutationRef = useRef(false);
+    const historyRequestRef = useRef(false);
+    const weightSaveRef = useRef(false);
     const {
         hasActiveDietitian,
         isLoadingConnection,
@@ -72,6 +87,11 @@ export const useAnalyticsViewModel = () => {
         setBadges([]);
         setSelectedWeekIndex(0);
         setMeasurementForm({ ...EMPTY_FORM });
+        setMeasurementHistory([]);
+        setMeasurementHistoryStatus('idle');
+        setIsMeasurementHistoryVisible(false);
+        setIsAddingWeight(false);
+        setWeightInput('');
         setIsEditingMeasurements(false);
     }, []);
 
@@ -209,6 +229,67 @@ export const useAnalyticsViewModel = () => {
         }
     };
 
+    const handleOpenMeasurementHistory = async () => {
+        if (historyRequestRef.current) return;
+        setIsMeasurementHistoryVisible(true);
+        setMeasurementHistoryStatus('loading');
+        try {
+            historyRequestRef.current = true;
+            const history = await getMeasurementHistory();
+            if (!isMountedRef.current) return;
+            setMeasurementHistory(history);
+            setMeasurementHistoryStatus(history.length > 0 ? 'ready' : 'empty');
+        } catch (error) {
+            console.error('Ölçüm geçmişi yükleme hatası', error);
+            if (isMountedRef.current) setMeasurementHistoryStatus('error');
+        } finally {
+            historyRequestRef.current = false;
+        }
+    };
+
+    const handleCloseMeasurementHistory = () => {
+        setIsMeasurementHistoryVisible(false);
+    };
+
+    const handleOpenWeightEntry = () => {
+        if (weightSaveRef.current) return;
+        setWeightInput(currentWeight === null ? '' : String(currentWeight));
+        setIsAddingWeight(true);
+    };
+
+    const handleCloseWeightEntry = () => {
+        if (!weightSaveRef.current) setIsAddingWeight(false);
+    };
+
+    const handleSaveWeight = async () => {
+        if (weightSaveRef.current) return;
+        const weight = parseWeight(weightInput);
+        if (!Number.isFinite(weight)) {
+            Alert.alert('Hata', 'Lütfen 20 ile 500 kg arasında geçerli bir kilo giriniz.');
+            return;
+        }
+
+        weightSaveRef.current = true;
+        setIsSavingWeight(true);
+        try {
+            await saveAnalyticsWeight(weight);
+            const refreshed = await loadData({ showLoading: false });
+            if (!isMountedRef.current) return;
+            if (!refreshed) {
+                Alert.alert('Bilgi', 'Kilo kaydedildi ancak analiz verileri yenilenemedi. Lütfen tekrar deneyin.');
+                return;
+            }
+            setIsAddingWeight(false);
+            Alert.alert('Başarılı', 'Kilonuz kaydedildi.');
+        } catch (error) {
+            console.error('Kilo kaydetme hatası', error);
+            Alert.alert('Hata', 'Kilonuz kaydedilemedi. Lütfen tekrar deneyin.');
+        } finally {
+            weightSaveRef.current = false;
+            if (isMountedRef.current) setIsSavingWeight(false);
+        }
+    };
+
     const weeklyWeightData = monthlyWeightTrend.map((item, index) => {
         const previousWeight = index === 0 ? item.weight : monthlyWeightTrend[index - 1].weight;
         const change = index === 0 ? 0 : item.weight - previousWeight;
@@ -243,6 +324,18 @@ export const useAnalyticsViewModel = () => {
         setMeasurementForm,
         handleSaveMeasurements,
         isSavingMeasurements,
+        measurementHistory,
+        measurementHistoryStatus,
+        isMeasurementHistoryVisible,
+        handleOpenMeasurementHistory,
+        handleCloseMeasurementHistory,
+        isAddingWeight,
+        weightInput,
+        setWeightInput,
+        isSavingWeight,
+        handleOpenWeightEntry,
+        handleCloseWeightEntry,
+        handleSaveWeight,
         hasActiveDietitian,
         isLoadingConnection,
         connectionError,

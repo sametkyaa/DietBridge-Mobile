@@ -1,15 +1,18 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { AppCard, EmptyState, Icon } from '../../../shared/components/ui';
+import { AppButton, AppCard, EmptyState, Icon } from '../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 
 const formatChange = (value) => `${value > 0 ? '+' : ''}${value.toFixed(1)} kg`;
 
-export function WeightProgressCard({ data, selectedIndex, onSelect, maxChangeMagnitude, currentWeight, startWeight, weightChange, monthLabel }) {
+export function WeightProgressCard({ data, selectedIndex, onSelect, maxChangeMagnitude, currentWeight, startWeight, weightChange, monthLabel, onAddWeight }) {
     if (data.length === 0) {
         return (
             <AppCard>
-                <Text style={styles.heading} accessibilityRole="header">Kilo ilerlemesi</Text>
+                <View style={styles.emptyHeader}>
+                    <Text style={styles.heading} accessibilityRole="header">Kilo ilerlemesi</Text>
+                    <AppButton variant="text" label="Kilo ekle" onPress={onAddWeight} />
+                </View>
                 <EmptyState icon="analytics" title="Kilo geçmişi bulunmuyor" description="Kilo kaydı Dashboard üzerinden eklendiğinde burada görünür." />
             </AppCard>
         );
@@ -26,6 +29,7 @@ export function WeightProgressCard({ data, selectedIndex, onSelect, maxChangeMag
                 <View style={styles.currentBlock}>
                     <Text style={styles.current}>{Number(currentWeight).toFixed(1)} kg</Text>
                     <Text style={[styles.change, weightChange > 0 && styles.gain]}>{formatChange(weightChange)}</Text>
+                    <AppButton variant="text" label="Kilo ekle" onPress={onAddWeight} style={styles.addButton} />
                 </View>
             </View>
             <View style={styles.selectedSummary} accessibilityLiveRegion="polite">
@@ -69,8 +73,10 @@ export function WeightProgressCard({ data, selectedIndex, onSelect, maxChangeMag
 const styles = StyleSheet.create({
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.x3 },
     heading: { ...typography.sectionTitle, color: colors.textPrimary },
+    emptyHeader: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.x2 },
     supporting: { ...typography.supporting, color: colors.textSecondary, marginTop: spacing.x1 },
     currentBlock: { alignItems: 'flex-end' },
+    addButton: { marginTop: spacing.x1 },
     current: { ...typography.cardTitle, color: colors.textPrimary },
     change: { ...typography.supporting, color: colors.primaryDark, marginTop: 2 },
     gain: { color: colors.errorDark },

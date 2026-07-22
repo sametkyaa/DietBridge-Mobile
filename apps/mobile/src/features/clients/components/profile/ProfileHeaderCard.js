@@ -5,7 +5,7 @@ import { colors, radius, spacing, typography } from '../../../../shared/theme';
 
 const initials = (name) => String(name || 'K').trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toLocaleUpperCase('tr-TR');
 
-export function ProfileHeaderCard({ name, avatarUrl, isSelecting, isUploading, onAvatarPress, onRemoveAvatar, onEdit }) {
+export function ProfileHeaderCard({ name, avatarUrl, isSelecting, isUploading, onAvatarPress, onEdit }) {
     return (
         <AppCard>
             <View style={styles.row}>
@@ -29,7 +29,6 @@ export function ProfileHeaderCard({ name, avatarUrl, isSelecting, isUploading, o
             </View>
             <View style={styles.actions}>
                 <AppButton variant="secondary" label="Kişisel bilgileri düzenle" onPress={onEdit} style={styles.edit} />
-                {avatarUrl ? <AppButton variant="text" label="Fotoğrafı kaldır" onPress={onRemoveAvatar} disabled={isUploading} /> : null}
             </View>
         </AppCard>
     );

@@ -6,9 +6,11 @@ import { colors, spacing, typography } from '../../../shared/theme';
 import {
     BadgesCard,
     BodyMeasurementsCard,
+    MeasurementHistorySheet,
     MeasurementSheet,
     WaterHistoryCard,
     WeightProgressCard,
+    WeightEntrySheet,
 } from '../components';
 import { useAnalyticsViewModel } from '../viewmodels/useAnalyticsViewModel';
 
@@ -53,6 +55,18 @@ const AnalysisScreen = () => {
         setMeasurementForm,
         handleSaveMeasurements,
         isSavingMeasurements,
+        measurementHistory,
+        measurementHistoryStatus,
+        isMeasurementHistoryVisible,
+        handleOpenMeasurementHistory,
+        handleCloseMeasurementHistory,
+        isAddingWeight,
+        weightInput,
+        setWeightInput,
+        isSavingWeight,
+        handleOpenWeightEntry,
+        handleCloseWeightEntry,
+        handleSaveWeight,
         hasActiveDietitian,
         isLoadingConnection,
         connectionError,
@@ -111,8 +125,9 @@ const AnalysisScreen = () => {
                     startWeight={startWeight}
                     weightChange={weightChange}
                     monthLabel={monthLabel}
+                    onAddWeight={handleOpenWeightEntry}
                 />
-                <BodyMeasurementsCard measurements={measurements} onEdit={handleEditMeasurementsToggle} />
+                <BodyMeasurementsCard measurements={measurements} onEdit={handleEditMeasurementsToggle} onHistory={handleOpenMeasurementHistory} />
                 <WaterHistoryCard history={waterHistory} total={totalWater} />
                 <BadgesCard badges={badges} />
             </ScrollView>
@@ -123,6 +138,22 @@ const AnalysisScreen = () => {
                 onSave={handleSaveMeasurements}
                 onClose={handleEditMeasurementsToggle}
                 isSaving={isSavingMeasurements}
+                bottomInset={insets.bottom}
+            />
+            <MeasurementHistorySheet
+                visible={isMeasurementHistoryVisible && hasActiveDietitian}
+                history={measurementHistory}
+                status={measurementHistoryStatus}
+                onClose={handleCloseMeasurementHistory}
+                bottomInset={insets.bottom}
+            />
+            <WeightEntrySheet
+                visible={isAddingWeight && hasActiveDietitian}
+                value={weightInput}
+                onChange={setWeightInput}
+                onSave={handleSaveWeight}
+                onClose={handleCloseWeightEntry}
+                isSaving={isSavingWeight}
                 bottomInset={insets.bottom}
             />
         </SafeAreaView>

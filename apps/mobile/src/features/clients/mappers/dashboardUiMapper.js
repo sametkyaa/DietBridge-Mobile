@@ -1,3 +1,5 @@
+import { formatMealType } from '../../../shared/utils/mealType';
+
 const toFiniteNumber = (value) => {
     if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) return null;
     const number = Number(value);
@@ -6,7 +8,7 @@ const toFiniteNumber = (value) => {
 
 export const mapDashboardMeal = (meal, completionPhotoUri = null) => ({
     id: meal.id,
-    title: meal.title || meal.type,
+    title: meal.title || formatMealType(meal.type),
     type: meal.type,
     time: meal.time,
     status: meal.isEaten ? 'completed' : 'upcoming',

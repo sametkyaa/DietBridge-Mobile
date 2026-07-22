@@ -76,7 +76,6 @@ export function NextMealCard({
                                 <StatusBadge status={meal.status} label={meal.badgeLabel} />
                             </View>
                             <Text style={styles.title}>{meal.title}</Text>
-                            {meal.description ? <Text style={styles.description}>{meal.description}</Text> : null}
                         </View>
                     </View>
                     <AppButton
@@ -111,7 +110,6 @@ const styles = StyleSheet.create({
     metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.x2 },
     time: { ...typography.caption, color: colors.textSecondary },
     title: { ...typography.cardTitle, color: colors.textPrimary, marginTop: spacing.x1 },
-    description: { ...typography.supporting, color: colors.textSecondary, marginTop: 2 },
     primaryAction: { marginTop: spacing.x4 },
     nextAction: { alignSelf: 'center', marginTop: spacing.x1 },
 });

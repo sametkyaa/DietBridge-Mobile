@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppCard, EmptyState, Icon } from '../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 
-export function BodyMeasurementsCard({ measurements, onEdit }) {
+export function BodyMeasurementsCard({ measurements, onEdit, onHistory }) {
     return (
         <AppCard>
             <View style={styles.header}>
@@ -25,6 +25,7 @@ export function BodyMeasurementsCard({ measurements, onEdit }) {
                     ))}
                 </View>
             )}
+            <AppButton variant="text" label="Ölçüm geçmişi" onPress={onHistory} style={styles.historyButton} />
         </AppCard>
     );
 }
@@ -38,6 +39,7 @@ const styles = StyleSheet.create({
     label: { ...typography.caption, color: colors.textSecondary },
     value: { ...typography.cardTitle, color: colors.textPrimary, marginTop: spacing.x1 },
     unit: { ...typography.supporting, color: colors.textSecondary },
+    historyButton: { marginTop: spacing.x2, alignSelf: 'flex-end' },
 });
 
 export default BodyMeasurementsCard;

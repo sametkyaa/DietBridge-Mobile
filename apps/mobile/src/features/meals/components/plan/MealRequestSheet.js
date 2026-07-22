@@ -2,6 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppInput, BottomSheetView, ChoiceChip } from '../../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../../shared/theme';
+import { formatMealType } from '../../../../shared/utils/mealType';
 
 export function MealRequestSheet({
     visible,
@@ -49,7 +50,7 @@ export function MealRequestSheet({
                 {meals.map((meal) => (
                     <ChoiceChip
                         key={`request-meal-${meal.type}`}
-                        label={meal.title || meal.type}
+                        label={meal.title || formatMealType(meal.type)}
                         selected={selectedMeals.includes(meal.type)}
                         onPress={() => onToggleMeal(meal.type)}
                         disabled={isSending}

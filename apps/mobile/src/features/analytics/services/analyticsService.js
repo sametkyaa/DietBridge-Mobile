@@ -3,6 +3,7 @@ import {
     CONNECTION_REQUIRED_MESSAGE,
     getActiveDietitianConnection,
 } from '../../dietitianConnection/services/dietitianConnectionService';
+import { saveCurrentWeight } from '../../clients/services/clientService';
 
 const getAuthorizedAnalyticsClientId = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -76,6 +77,42 @@ const fetchMeasurements = async (clientId) => {
         detail: m.detail,
     }));
 };
+
+const MEASUREMENT_HISTORY_MAPPING = [
+    { key: 'waist', label: 'Bel' },
+    { key: 'hip', label: 'Kalça' },
+    { key: 'right_arm', label: 'Sağ kol' },
+    { key: 'left_arm', label: 'Sol kol' },
+    { key: 'chest', label: 'Göğüs' },
+    { key: 'right_calf', label: 'Sağ baldır' },
+    { key: 'left_calf', label: 'Sol baldır' },
+    { key: 'neck', label: 'Boyun' },
+    { key: 'arm', label: 'Önceki kol ölçümü' },
+    { key: 'calf', label: 'Önceki baldır ölçümü' },
+];
+
+export const getMeasurementHistory = async () => {
+    const clientId = await getAuthorizedAnalyticsClientId();
+    if (!clientId) return [];
+
+    const { data, error } = await supabase
+        .from('measurements')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('measured_at', { ascending: false })
+        .limit(100);
+    if (error) throw error;
+
+    return (data || []).map((record) => ({
+        id: record.id,
+        measuredAt: record.measured_at,
+        values: MEASUREMENT_HISTORY_MAPPING
+            .filter((measurement) => record[measurement.key] !== null && record[measurement.key] !== undefined)
+            .map((measurement) => ({ label: measurement.label, value: record[measurement.key] })),
+    })).filter((record) => record.values.length > 0);
+};
+
+export const saveAnalyticsWeight = async (weight) => saveCurrentWeight(weight);
 
 const validateMeasurementData = (data) => {
     for (const [key, value] of Object.entries(data)) {

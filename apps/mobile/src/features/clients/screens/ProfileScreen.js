@@ -42,7 +42,7 @@ const ProfileScreen = ({ navigation }) => {
         startEditing, editForm, updateField, handleSaveProfile, editingField, setEditingField, editingValue,
         setEditingValue, editingInitialValue, handleRowEdit, handleRowSave, waterGoalLiters, sleepHours, saveChronicConditions,
         saveMedications, saveFoodIntolerances, saveWaterGoalLiters, saveAverageSleepHours, handleAvatarUpload,
-        pendingAvatarUri, cancelSelectedAvatar, saveSelectedAvatar, removeAvatar, catalogs, profileOptions,
+        pendingAvatarUri, cancelSelectedAvatar, saveSelectedAvatar, catalogs, profileOptions,
         isSaving, isSelectingAvatar, isUploadingAvatar, error, successMessage, validationErrors, hasUnsavedChanges,
         activeDietitian, hasActiveDietitian, isLoadingConnection, connectionError, isDietitianCardExpanded,
         handleDietitianCardToggle, retry,
@@ -59,11 +59,6 @@ const ProfileScreen = ({ navigation }) => {
             { text: 'Kaydetmeden çık', style: 'destructive', onPress: cancelEditing },
         ]);
     };
-
-    const confirmRemoveAvatar = () => Alert.alert('Profil fotoğrafını kaldır', 'Profil fotoğrafınızı kaldırmak istiyor musunuz?', [
-        { text: 'İptal', style: 'cancel' },
-        { text: 'Kaldır', style: 'destructive', onPress: removeAvatar },
-    ]);
 
     const closeFieldEditor = () => {
         if (isSaving) return;
@@ -120,7 +115,7 @@ const ProfileScreen = ({ navigation }) => {
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 {error ? <InlineAlert variant="error" message="Bazı profil bilgileri yüklenemedi. Lütfen tekrar deneyin." /> : null}
                 {successMessage ? <InlineAlert variant="success" message={successMessage} /> : null}
-                <ProfileHeaderCard name={userName} avatarUrl={avatarUrl} isSelecting={isSelectingAvatar} isUploading={isUploadingAvatar} onAvatarPress={handleAvatarUpload} onRemoveAvatar={confirmRemoveAvatar} onEdit={startEditing} />
+                <ProfileHeaderCard name={userName} avatarUrl={avatarUrl} isSelecting={isSelectingAvatar} isUploading={isUploadingAvatar} onAvatarPress={handleAvatarUpload} onEdit={startEditing} />
                 <AppCard>
                     <Text style={styles.sectionTitle} accessibilityRole="header">Özet</Text>
                     <View style={styles.stats}>

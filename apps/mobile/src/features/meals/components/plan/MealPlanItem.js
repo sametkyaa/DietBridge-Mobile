@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppCard, Icon, StatusBadge } from '../../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../../shared/theme';
 import { MealPhotoThumbnail } from '../MealPhotoThumbnail';
+import { formatMealType } from '../../../../shared/utils/mealType';
 
 export function MealPlanItem({ meal, completion, onPress }) {
     const completed = !!completion?.completed;
@@ -11,7 +12,7 @@ export function MealPlanItem({ meal, completion, onPress }) {
             <Pressable
                 onPress={() => onPress(meal)}
                 accessibilityRole="button"
-                accessibilityLabel={`${meal.time}, ${meal.title || meal.type}, ${completed ? 'tamamlandı' : 'planlandı'}, ayrıntıları aç`}
+                accessibilityLabel={`${meal.time}, ${meal.title || formatMealType(meal.type)}, ${completed ? 'tamamlandı' : 'planlandı'}, ayrıntıları aç`}
                 style={({ pressed }) => [styles.row, pressed && styles.pressed]}
             >
                 <MealPhotoThumbnail
@@ -25,9 +26,8 @@ export function MealPlanItem({ meal, completion, onPress }) {
                     )}
                 />
                 <View style={styles.textWrap}>
-                    <Text style={styles.meta}>{meal.time} · {meal.type}</Text>
-                    <Text style={styles.title} numberOfLines={2}>{meal.title || meal.type}</Text>
-                    {meal.desc ? <Text style={styles.description} numberOfLines={2}>{meal.desc}</Text> : null}
+                    <Text style={styles.meta}>{meal.time} · {formatMealType(meal.type)}</Text>
+                    <Text style={styles.title} numberOfLines={2}>{meal.title || formatMealType(meal.type)}</Text>
                 </View>
                 <View style={styles.trailing}>
                     <StatusBadge status={completed ? 'completed' : 'upcoming'} label={completed ? 'Tamamlandı' : 'Planlandı'} />
@@ -47,7 +47,6 @@ const styles = StyleSheet.create({
     textWrap: { flex: 1, minWidth: 0 },
     meta: { ...typography.caption, color: colors.textSecondary },
     title: { ...typography.bodyMedium, color: colors.textPrimary, marginTop: 2 },
-    description: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
     trailing: { alignItems: 'flex-end', gap: spacing.x2 },
     note: { ...typography.supporting, color: colors.textSecondary, backgroundColor: colors.primarySurface, paddingHorizontal: spacing.x4, paddingVertical: spacing.x3 },
     pressed: { opacity: 0.82 },
