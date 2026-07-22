@@ -41,13 +41,14 @@ const getDietitianProfilesById = async (dietitianIds = []) => {
     }
 
     const profileMap = {};
-    (profilesError ? [] : profiles || []).forEach((profile) => {
+    (profiles || []).forEach((profile) => {
         const fullName = normalizeFullName(profile.full_name);
         profileMap[profile.id] = {
             id: profile.id,
             fullName,
             name: fullName,
             email: profile.email || '',
+            nameLoadError: false,
         };
     });
 
@@ -57,6 +58,7 @@ const getDietitianProfilesById = async (dietitianIds = []) => {
             fullName: '',
             name: '',
             email: '',
+            nameLoadError: !!profilesError,
         };
         profileMap[detail.user_id] = {
             ...existing,
@@ -65,6 +67,18 @@ const getDietitianProfilesById = async (dietitianIds = []) => {
             experienceYears: detail.experience_years ?? null,
             bio: detail.bio || '',
         };
+    });
+
+    uniqueIds.forEach((id) => {
+        if (!profileMap[id]) {
+            profileMap[id] = {
+                id,
+                fullName: '',
+                name: '',
+                email: '',
+                nameLoadError: !!profilesError,
+            };
+        }
     });
 
     return profileMap;
@@ -78,6 +92,7 @@ const mapConnection = (connection, profileMap = {}) => {
         fullName: '',
         name: '',
         email: '',
+        nameLoadError: false,
     };
 
     return {

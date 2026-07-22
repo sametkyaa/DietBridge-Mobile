@@ -147,6 +147,7 @@ export const useProfileViewModel = () => {
     const [isSelectingAvatar, setIsSelectingAvatar] = useState(false);
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const [pendingAvatarAsset, setPendingAvatarAsset] = useState(null);
+    const [isAvatarActionMenuVisible, setIsAvatarActionMenuVisible] = useState(false);
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
     const [validationErrors, setValidationErrors] = useState({});
@@ -470,13 +471,7 @@ export const useProfileViewModel = () => {
 
     const selectAvatar = () => {
         if (avatarSelectionLockRef.current || isUploadingAvatar) return;
-        const actions = [
-            { text: 'Fotoğraf çek', onPress: () => selectAvatarFromSource('camera') },
-            { text: 'Galeriden seç', onPress: () => selectAvatarFromSource('gallery') },
-        ];
-        if (profile?.avatarPath) actions.push({ text: 'Fotoğrafı kaldır', style: 'destructive', onPress: removeAvatar });
-        actions.push({ text: 'İptal', style: 'cancel' });
-        Alert.alert('Profil fotoğrafı', 'Yapmak istediğiniz işlemi seçin.', actions);
+        setIsAvatarActionMenuVisible(true);
     };
 
     const cancelSelectedAvatar = () => {
@@ -522,6 +517,20 @@ export const useProfileViewModel = () => {
         }
     };
 
+    const closeAvatarActionMenu = () => {
+        if (!isSelectingAvatar && !isUploadingAvatar) setIsAvatarActionMenuVisible(false);
+    };
+
+    const handleAvatarSource = async (source) => {
+        closeAvatarActionMenu();
+        await selectAvatarFromSource(source);
+    };
+
+    const handleAvatarRemoval = async () => {
+        closeAvatarActionMenu();
+        await removeAvatar();
+    };
+
     const retry = async () => {
         const results = await Promise.allSettled([loadReferenceData(), loadProfile()]);
         if (results[1].status === 'rejected' || results[1].value === null) {
@@ -547,6 +556,8 @@ export const useProfileViewModel = () => {
         isSaving,
         isSelectingAvatar,
         isUploadingAvatar,
+        isAvatarActionMenuVisible,
+        hasAvatar: !!profile?.avatarPath,
         pendingAvatarUri: pendingAvatarAsset?.uri || null,
         error,
         successMessage,
@@ -583,6 +594,9 @@ export const useProfileViewModel = () => {
         saveAverageSleepHours,
         handleAvatarUpload: selectAvatar,
         selectAvatar,
+        closeAvatarActionMenu,
+        handleAvatarSource,
+        handleAvatarRemoval,
         cancelSelectedAvatar,
         saveSelectedAvatar,
         removeAvatar,

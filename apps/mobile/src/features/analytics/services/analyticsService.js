@@ -87,8 +87,6 @@ const MEASUREMENT_HISTORY_MAPPING = [
     { key: 'right_calf', label: 'Sağ baldır' },
     { key: 'left_calf', label: 'Sol baldır' },
     { key: 'neck', label: 'Boyun' },
-    { key: 'arm', label: 'Önceki kol ölçümü' },
-    { key: 'calf', label: 'Önceki baldır ölçümü' },
 ];
 
 export const getMeasurementHistory = async () => {

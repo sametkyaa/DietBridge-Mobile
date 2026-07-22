@@ -9,7 +9,8 @@ export function DietitianProfileCard({ loading, dietitian, hasActive, error, exp
         ? <InlineAlert variant="error" title="Diyetisyen bilgisi alınamadı" message="Diyetisyen bağlantı bilgisi alınamadı. Lütfen tekrar deneyin." />
         : <InlineAlert variant="info" title="Diyetisyen" message="Henüz aktif bir diyetisyen bağlantınız yok." />;
     const avatar = dietitian.avatarSignedUrl || dietitian.avatarUrl;
-    const name = String(dietitian.fullName || dietitian.name || '').trim() || 'Diyetisyen adı henüz bulunmuyor';
+    const name = String(dietitian.fullName || dietitian.name || '').trim()
+        || (dietitian.nameLoadError ? 'Diyetisyen adı yüklenemedi' : 'Diyetisyen adı henüz bulunmuyor');
     const details = [
         ['E-posta', dietitian.email], ['Uzmanlık', dietitian.specialization], ['Okul', dietitian.university],
         ['Deneyim', dietitian.experienceYears == null ? null : `${dietitian.experienceYears} yıl`], ['Hakkında', dietitian.bio],
@@ -23,6 +24,7 @@ export function DietitianProfileCard({ loading, dietitian, hasActive, error, exp
                 <Icon name={expanded ? 'chevronUp' : 'chevronDown'} color={colors.textTertiary} />
             </Pressable>
             {error ? <InlineAlert variant="error" message="Diyetisyen bağlantı bilgisi yenilenemedi. Lütfen tekrar deneyin." style={styles.error} /> : null}
+            {dietitian.nameLoadError ? <InlineAlert variant="error" message="Diyetisyen adı yüklenemedi. Lütfen daha sonra tekrar deneyin." style={styles.error} /> : null}
             {expanded ? <View style={styles.details}>{details.length ? details.map(([label, value]) => <View key={label} style={styles.detailRow}><Text style={styles.detailLabel}>{label}</Text><Text style={styles.detailValue}>{value}</Text></View>) : <Text style={styles.detailValue}>Ek profil bilgisi bulunmuyor.</Text>}</View> : null}
         </AppCard>
     );

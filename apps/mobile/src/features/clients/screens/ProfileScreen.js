@@ -5,6 +5,7 @@ import { AppButton, AppCard, AppSkeleton, ErrorState, Icon, InlineAlert } from '
 import { colors, spacing, typography } from '../../../shared/theme';
 import {
     AvatarPreviewSheet,
+    AvatarActionModal,
     DietitianProfileCard,
     ProfileEditSheet,
     ProfileFieldSheet,
@@ -42,6 +43,7 @@ const ProfileScreen = ({ navigation }) => {
         startEditing, editForm, updateField, handleSaveProfile, editingField, setEditingField, editingValue,
         setEditingValue, editingInitialValue, handleRowEdit, handleRowSave, waterGoalLiters, sleepHours, saveChronicConditions,
         saveMedications, saveFoodIntolerances, saveWaterGoalLiters, saveAverageSleepHours, handleAvatarUpload,
+        isAvatarActionMenuVisible, hasAvatar, closeAvatarActionMenu, handleAvatarSource, handleAvatarRemoval,
         pendingAvatarUri, cancelSelectedAvatar, saveSelectedAvatar, catalogs, profileOptions,
         isSaving, isSelectingAvatar, isUploadingAvatar, error, successMessage, validationErrors, hasUnsavedChanges,
         activeDietitian, hasActiveDietitian, isLoadingConnection, connectionError, isDietitianCardExpanded,
@@ -145,6 +147,14 @@ const ProfileScreen = ({ navigation }) => {
             <ProfileEditSheet visible={isEditing} form={editForm} onChange={updateField} onSave={handleSaveProfile} onClose={closeGenericEditor} isSaving={isSaving} error={validationErrors.form} bottomInset={insets.bottom} />
             <ProfileFieldSheet visible={!!genericField} title={genericField?.title} value={editingValue} options={genericOptions} multiline={genericField?.multiline} placeholder={genericField?.placeholder} onChange={setEditingValue} onSave={handleRowSave} onClose={closeFieldEditor} isSaving={isSaving} error={validationErrors[editingField]} bottomInset={insets.bottom} />
             <AvatarPreviewSheet uri={pendingAvatarUri} onSave={saveSelectedAvatar} onClose={cancelSelectedAvatar} isUploading={isUploadingAvatar} bottomInset={insets.bottom} />
+            <AvatarActionModal
+                visible={isAvatarActionMenuVisible}
+                hasAvatar={hasAvatar}
+                onClose={closeAvatarActionMenu}
+                onSelectSource={handleAvatarSource}
+                onRemove={handleAvatarRemoval}
+                disabled={isSelectingAvatar || isUploadingAvatar}
+            />
             <MultiSelectProfileModal visible={editingField === 'chronicConditions'} title="Kronik rahatsızlıkları düzenle" options={COMMON_CHRONIC_CONDITIONS} selectedValues={profile?.chronicConditions || []} customInputLabel="Listede olmayan rahatsızlığı ekle" customInputPlaceholder="Rahatsızlık adı girin" loading={isSaving} onClose={() => setEditingField(null)} onSave={saveChronicConditions} />
             <MultiSelectProfileModal visible={editingField === 'medications'} title="Kullanılan ilaçları düzenle" options={COMMON_MEDICATIONS} selectedValues={profile?.medications || []} customInputLabel="Listede olmayan ilacı ekle" customInputPlaceholder="İlaç adı girin" loading={isSaving} onClose={() => setEditingField(null)} onSave={saveMedications} />
             <MultiSelectProfileModal visible={editingField === 'foodIntolerances'} title="Besin intoleranslarını düzenle" options={COMMON_FOOD_INTOLERANCES} selectedValues={profile?.foodIntolerances || []} customInputLabel="Listede olmayan intoleransı ekle" customInputPlaceholder="İntolerans adı girin" loading={isSaving} onClose={() => setEditingField(null)} onSave={saveFoodIntolerances} />

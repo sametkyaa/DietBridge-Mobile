@@ -34,7 +34,6 @@ export function MealPlanItem({ meal, completion, onPress }) {
                     <Icon name="chevronRight" color={colors.textTertiary} />
                 </View>
             </Pressable>
-            {meal.note ? <Text style={styles.note} numberOfLines={2}>{meal.note}</Text> : null}
         </AppCard>
     );
 }
@@ -48,7 +47,6 @@ const styles = StyleSheet.create({
     meta: { ...typography.caption, color: colors.textSecondary },
     title: { ...typography.bodyMedium, color: colors.textPrimary, marginTop: 2 },
     trailing: { alignItems: 'flex-end', gap: spacing.x2 },
-    note: { ...typography.supporting, color: colors.textSecondary, backgroundColor: colors.primarySurface, paddingHorizontal: spacing.x4, paddingVertical: spacing.x3 },
     pressed: { opacity: 0.82 },
 });
 
