@@ -15,6 +15,7 @@ export function NextMealCard({
     onRetry,
     onNextMeal,
     hasNextMeal,
+    completionButtonRef,
 }) {
     const loading = status === 'loading' || status === 'retrying';
 
@@ -79,6 +80,7 @@ export function NextMealCard({
                         </View>
                     </View>
                     <AppButton
+                        ref={completionButtonRef}
                         label={meal.isEaten ? 'Geri al' : 'Öğünü yedim'}
                         variant={meal.isEaten ? 'secondary' : 'primary'}
                         onPress={onToggle}

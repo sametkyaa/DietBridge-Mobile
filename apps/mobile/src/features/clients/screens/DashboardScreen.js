@@ -1,16 +1,16 @@
-import React, { useMemo } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, Text } from 'react-native';
+import React, { useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, Alert, findNodeHandle, Platform, ScrollView, StyleSheet, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { AppCard } from '../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../shared/theme';
 import {
-    ConnectionCard,
     DashboardHeader,
     DashboardMealDetailSheet,
     DashboardSidebar,
     NextMealCard,
+    MealPhotoPromptModal,
     NutritionOverviewCard,
     TodayMealsCard,
     WaterTrackerCard,
@@ -61,16 +61,12 @@ const DashboardScreen = () => {
         setWeightInput,
         handleSaveWeight,
         isSavingWeight,
-        activeDietitian,
-        pendingRequest,
         hasActiveDietitian,
-        isLoadingConnection,
-        connectionAction,
-        connectionError,
         connectionRequiredMessage,
-        handleApproveDietitianRequest,
-        handleRejectDietitianRequest,
     } = useDashboardViewModel();
+    const [isPhotoPromptVisible, setIsPhotoPromptVisible] = useState(false);
+    const [isPhotoPickerActive, setIsPhotoPickerActive] = useState(false);
+    const completionButtonRef = useRef(null);
 
     const dateLabel = useMemo(() => new Date().toLocaleDateString('tr-TR', {
         weekday: 'long',
@@ -91,6 +87,19 @@ const DashboardScreen = () => {
             : null
     ), [completedMeals, selectedMeal]);
     const isDisplayedMealUpdating = !!displayedMeal?.id && updatingMealId === displayedMeal.id;
+
+    const restoreCompletionFocus = () => {
+        setTimeout(() => {
+            const node = findNodeHandle(completionButtonRef.current);
+            if (node) AccessibilityInfo.setAccessibilityFocus(node);
+        }, 250);
+    };
+
+    const closePhotoPrompt = () => {
+        if (isPhotoPickerActive || isDisplayedMealUpdating) return;
+        setIsPhotoPromptVisible(false);
+        restoreCompletionFocus();
+    };
 
     const handleAddPhoto = async (source) => {
         if (!displayedMeal || !hasActiveDietitian || isDisplayedMealUpdating) return;
@@ -134,12 +143,25 @@ const DashboardScreen = () => {
     };
 
     const promptForPhoto = () => {
-        if (!displayedMeal || !hasActiveDietitian || isDisplayedMealUpdating) return;
-        Alert.alert('Fotoğraf eklemek ister misiniz?', 'Öğün fotoğrafını ekleyebilirsiniz.', [
-            { text: 'Fotoğraf çek', onPress: () => handleAddPhoto('camera') },
-            { text: 'Galeriden seç', onPress: () => handleAddPhoto('gallery') },
-            { text: 'Hayır, sadece işaretle', style: 'cancel', onPress: () => completeMeal() },
-        ]);
+        if (!displayedMeal || !hasActiveDietitian || isDisplayedMealUpdating || isPhotoPickerActive) return;
+        setIsPhotoPromptVisible(true);
+    };
+
+    const handlePhotoSource = async (source) => {
+        if (isPhotoPickerActive || isDisplayedMealUpdating) return;
+        setIsPhotoPromptVisible(false);
+        setIsPhotoPickerActive(true);
+        try {
+            await handleAddPhoto(source);
+        } finally {
+            setIsPhotoPickerActive(false);
+        }
+    };
+
+    const handleCompleteWithoutPhoto = async () => {
+        if (isDisplayedMealUpdating) return;
+        setIsPhotoPromptVisible(false);
+        await completeMeal();
     };
 
     const handleToggleMealCompletion = async () => {
@@ -190,19 +212,23 @@ const DashboardScreen = () => {
                     onAvatarPress={() => setIsSidebarVisible(true)}
                 />
 
-                <ConnectionCard
-                    isLoading={isLoadingConnection}
-                    activeDietitian={activeDietitian}
-                    pendingRequest={pendingRequest}
-                    action={connectionAction}
-                    error={connectionError}
-                    onApprove={handleApproveDietitianRequest}
-                    onReject={handleRejectDietitianRequest}
-                />
-
                 {hasActiveDietitian && mealPlanStatus === 'success' ? (
                     <NutritionOverviewCard nutrition={nutrition} />
                 ) : null}
+
+                <NextMealCard
+                    meal={displayedUiMeal}
+                    status={mealPlanStatus}
+                    error={mealPlanError}
+                    unlinkedMessage={connectionRequiredMessage}
+                    isUpdating={isDisplayedMealUpdating}
+                    onToggle={handleToggleMealCompletion}
+                    onDetail={() => setSelectedMeal(displayedMeal)}
+                    onRetry={retryMealPlan}
+                    onNextMeal={handleGoToNextMeal}
+                    hasNextMeal={!!firstIncompleteMeal && firstIncompleteMeal.id !== displayedMeal?.id}
+                    completionButtonRef={completionButtonRef}
+                />
 
                 <WaterTrackerCard
                     water={water}
@@ -216,19 +242,6 @@ const DashboardScreen = () => {
                     onAdd={addWater}
                     onRemove={removeWater}
                     onRetry={retryDailyLog}
-                />
-
-                <NextMealCard
-                    meal={displayedUiMeal}
-                    status={mealPlanStatus}
-                    error={mealPlanError}
-                    unlinkedMessage={connectionRequiredMessage}
-                    isUpdating={isDisplayedMealUpdating}
-                    onToggle={handleToggleMealCompletion}
-                    onDetail={() => setSelectedMeal(displayedMeal)}
-                    onRetry={retryMealPlan}
-                    onNextMeal={handleGoToNextMeal}
-                    hasNextMeal={!!firstIncompleteMeal && firstIncompleteMeal.id !== displayedMeal?.id}
                 />
 
                 {mealPlanStatus === 'success' ? (
@@ -268,13 +281,20 @@ const DashboardScreen = () => {
                 bottomInset={insets.bottom}
                 onClose={() => setSelectedMeal(null)}
             />
+            <MealPhotoPromptModal
+                visible={isPhotoPromptVisible}
+                disabled={isPhotoPickerActive || isDisplayedMealUpdating}
+                onClose={closePhotoPrompt}
+                onCompleteWithoutPhoto={handleCompleteWithoutPhoto}
+                onSelectSource={handlePhotoSource}
+            />
         </SafeAreaView>
     );
 };
 
 const screenStyles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: colors.background },
-    content: { paddingHorizontal: spacing.x5, paddingTop: spacing.x3, paddingBottom: spacing.x8, gap: spacing.x4 },
+    content: { paddingHorizontal: spacing.x5, paddingTop: spacing.x3, paddingBottom: spacing.x8, gap: spacing.x3 },
     quoteTitle: { ...typography.bodyMedium, color: colors.textPrimary },
     quote: { ...typography.body, color: colors.textSecondary, textAlign: 'center', fontStyle: 'italic', marginTop: spacing.x2 },
 });

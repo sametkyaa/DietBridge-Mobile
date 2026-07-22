@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, typography } from '../../theme';
 
-export function AppButton({
+export const AppButton = forwardRef(function AppButton({
   variant = 'primary',
   label,
   onPress,
@@ -12,12 +12,13 @@ export function AppButton({
   accessibilityLabel,
   style,
   textStyle,
-}) {
+}, ref) {
   const unavailable = disabled || loading;
   const isText = variant === 'text';
 
   return (
     <Pressable
+      ref={ref}
       onPress={unavailable ? undefined : onPress}
       disabled={unavailable}
       accessibilityRole="button"
@@ -58,7 +59,7 @@ export function AppButton({
       )}
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   base: {

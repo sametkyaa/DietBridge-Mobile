@@ -5,16 +5,16 @@ publication_status: BRANCH_PUSHED_PR_PENDING
 base_commit: d5c869c183117c3b3bc6944a580f15daa0b26196
 reference_ui_commit: 8b3f1159bf41a0e7b97084da29f7ce58d2373470
 branch: codex/mobile-ui-refresh
-current_package: P11
+current_package: UX_ACCEPTANCE_CORRECTIONS
 current_iteration: 1
 consecutive_failures: 0
-last_verified_commit: a365035
+last_verified_commit: a9a008d
 draft_pr: null
 open_release_blocker: authenticated Android token-refresh acceptance pending
 ---
 
 OPEN_RELEASE_BLOCKER:
-Authenticated Android background/reload/token-refresh acceptance pending
+Authenticated Android background/reload/token-refresh and UX acceptance pending
 
 | Package | Status |
 | --- | --- |

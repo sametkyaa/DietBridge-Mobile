@@ -1,6 +1,7 @@
 export { DashboardHeader } from './DashboardHeader';
 export { ConnectionCard } from './ConnectionCard';
 export { NutritionOverviewCard } from './NutritionOverviewCard';
+export { MealPhotoPromptModal } from './MealPhotoPromptModal';
 export { WaterTrackerCard } from './WaterTrackerCard';
 export { WeightCard } from './WeightCard';
 export { NextMealCard } from './NextMealCard';

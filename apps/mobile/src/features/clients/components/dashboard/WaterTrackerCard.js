@@ -71,8 +71,8 @@ export function WaterTrackerCard({
                     style={styles.inputRoot}
                     inputStyle={styles.input}
                     editable={!disabled}
+                    rightAccessory={<Text style={styles.unit}>ml</Text>}
                 />
-                <Text style={styles.unit}>ml</Text>
                 <Pressable
                     onPress={disabled ? undefined : onAdd}
                     disabled={disabled}
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     roundButton: { width: 44, height: 44, borderRadius: radius.round, backgroundColor: colors.tealSoft, alignItems: 'center', justifyContent: 'center' },
     inputRoot: { flex: 1 },
     input: { textAlign: 'center', paddingVertical: spacing.x2 },
-    unit: { ...typography.supporting, color: colors.textSecondary, marginLeft: -spacing.x5 },
+    unit: { ...typography.supporting, color: colors.textSecondary, marginLeft: spacing.x2 },
     disabled: { opacity: 0.55 },
     pressed: { opacity: 0.8 },
 });

@@ -1,5 +1,17 @@
 # Manual Android Acceptance Checklist
 
+## Android acceptance UX corrections — pending device checks
+
+Status: `NOT_RUN`
+
+- [ ] Dashboard: dietitian connection card is absent and Profile still presents connection information.
+- [ ] Dashboard: macros, next meal, and water tracking appear in that order in the first viewport at 320×568, 360×640, 360×800, 390×844, and 412×915.
+- [ ] Dashboard: macro rows do not overlap and show canonical consumed/planned values.
+- [ ] Dashboard: water `ml` remains inside its input control and plus/minus actions work.
+- [ ] Meal completion: the photo prompt X and Android back close without changing completion; TalkBack reads `Fotoğraf ekleme penceresini kapat` and focus returns to the completion control.
+- [ ] Meal completion: skip, gallery, and camera flows remain functional without duplicate submission.
+- [ ] Analysis: arm input and save/cancel are reachable while the numeric keyboard is open; the sheet scrolls as necessary.
+
 Status: `DEVICE_UI_ACCEPTANCE_PENDING`
 
 An authorized Android emulator (`emulator-5554`) was detected during the regression package. The application could not be launched within the five-minute non-interactive build limit after switching the terminal from Java 11 to the required Java 21; no authenticated UI scenario was claimed as passed. Automated Android/iOS exports passed; physical UI acceptance remains pending.

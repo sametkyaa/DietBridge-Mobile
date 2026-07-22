@@ -19,6 +19,11 @@ const toFiniteNumber = (value) => {
     return Number.isFinite(number) ? number : null;
 };
 
+const toNonNegativeFiniteNumber = (value) => {
+    const number = toFiniteNumber(value);
+    return number !== null && number >= 0 ? number : null;
+};
+
 export const buildNutritionSummary = (meals) => {
     const completedMeals = meals.filter((meal) => meal.isEaten);
     const sumMeals = (items) => {
@@ -36,7 +41,7 @@ export const buildNutritionSummary = (meals) => {
                 carbohydrate: meal.carbohydrate,
                 fat: meal.fat,
             }).forEach(([key, value]) => {
-                const numberValue = toFiniteNumber(value);
+                const numberValue = toNonNegativeFiniteNumber(value);
                 if (numberValue === null) return;
                 totals[key].value += numberValue;
                 totals[key].count += 1;
@@ -54,9 +59,10 @@ export const buildNutritionSummary = (meals) => {
         consumed: sumMeals(completedMeals),
         completedCount: completedMeals.length,
         hasMacroData: meals.some((meal) => (
-            toFiniteNumber(meal.protein) !== null
-            || toFiniteNumber(meal.carbohydrate) !== null
-            || toFiniteNumber(meal.fat) !== null
+            toNonNegativeFiniteNumber(meal.calories) !== null
+            || toNonNegativeFiniteNumber(meal.protein) !== null
+            || toNonNegativeFiniteNumber(meal.carbohydrate) !== null
+            || toNonNegativeFiniteNumber(meal.fat) !== null
         )),
     };
 };

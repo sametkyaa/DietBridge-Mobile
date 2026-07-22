@@ -1,5 +1,30 @@
 # UI Refresh Evidence
 
+## Android acceptance UX corrections — automated evidence
+
+Worktree branch: `codex/mobile-ui-refresh`.
+
+Implemented changes:
+
+- Dashboard no longer renders the dietitian connection card; the connection data contract and Profile presentation remain unchanged.
+- Dashboard order is now daily macros, next meal, water tracking, current weight, then the existing remaining cards.
+- The macro card now presents four compact rows using the Dashboard ViewModel's canonical `nutrition.consumed` and `nutrition.planned` totals. Completed meals are counted from canonical `meal.isEaten`; unavailable values render `—`; progress is clamped before presentation.
+- The meal photo choice is a controlled modal with an Android-back-compatible close action, a 44×44 accessible X target, duplicate-action guard, and focus restoration to the meal completion action when dismissed.
+- Water's `ml` label is an `AppInput` right accessory instead of a negative-margin sibling.
+- The measurements form has its own keyboard-aware scroll container; focusing the arm field scrolls it into view while the existing footer actions remain part of the sheet.
+
+Commands and results:
+
+- `npm ci`: PASS — 663 packages installed. npm reported 19 pre-existing audit findings; no audit remediation was run.
+- `npx expo-doctor`: PASS — 18/18 checks.
+- `npx expo export --platform android --output-dir .tmp-ui-acceptance/android`: PASS.
+- `npx expo export --platform ios --output-dir .tmp-ui-acceptance/ios`: PASS.
+- Babel parse of all modified JavaScript modules: PASS.
+- `git diff --check`: PASS.
+- Changed UI boundary scan for `supabase`, `createClient`, and `.from(`: PASS — no presentation-layer access found.
+
+Manual Android acceptance, TalkBack verification, camera/gallery permission verification, and viewport observations remain unverified and are not marked as passed.
+
 ## Publication status
 
 - Local branch: `codex/mobile-ui-refresh`
