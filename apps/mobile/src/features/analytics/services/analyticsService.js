@@ -57,10 +57,18 @@ const fetchMeasurements = async (clientId) => {
     const mapping = [
         { key: 'waist', label: 'Bel', detail: '' },
         { key: 'hip', label: 'Kalça', detail: '' },
-        { key: 'arm', label: 'Kol', detail: 'Sağ / Sol' },
+        { key: 'right_arm', label: 'Sağ kol', detail: '' },
+        { key: 'left_arm', label: 'Sol kol', detail: '' },
+        { key: 'chest', label: 'Göğüs', detail: '' },
+        { key: 'right_calf', label: 'Sağ baldır', detail: '' },
+        { key: 'left_calf', label: 'Sol baldır', detail: '' },
+        { key: 'neck', label: 'Boyun', detail: '' },
+        { key: 'arm', label: 'Önceki kol ölçümü', detail: '' },
+        { key: 'calf', label: 'Önceki baldır ölçümü', detail: '' },
     ];
 
     return mapping.filter(m => data[m.key] != null).map(m => ({
+        key: m.key,
         label: m.label,
         value: data[m.key]?.toString(),
         unit: 'cm',
@@ -70,10 +78,9 @@ const fetchMeasurements = async (clientId) => {
 };
 
 const validateMeasurementData = (data) => {
-    const keysToCheck = ['waist', 'hip', 'arm'];
-    for (const key of keysToCheck) {
-        if (data[key] !== undefined && data[key] !== null && data[key] < 0) {
-            throw new Error(`Ölçüm değerleri negatif olamaz: ${key}`);
+    for (const [key, value] of Object.entries(data)) {
+        if (value !== undefined && value !== null && (!Number.isFinite(value) || value < 0)) {
+            throw new Error(`Geçersiz ölçüm değeri: ${key}`);
         }
     }
 };

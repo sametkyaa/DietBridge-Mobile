@@ -1,5 +1,30 @@
 # UI Refresh Evidence
 
+## Expanded body measurement tracking
+
+Data-model review: the active mobile analytics flow reads and writes the column-based `public.measurements` table. Existing columns are `waist`, `hip`, legacy single-value `arm`, `chest`, legacy single-value `calf`, and `neck`. Separate right/left arm and calf columns were absent.
+
+Implementation:
+
+- Added a forward-only repository migration, `20260722_expand_measurement_side_columns.sql`, which adds nullable `right_arm`, `left_arm`, `right_calf`, and `left_calf` numeric columns. It was not applied to any remote Supabase project.
+- The ViewModel owns eight optional form fields and parses comma/dot decimals safely. Empty fields are omitted from the partial update; invalid, non-finite, non-positive, or out-of-range values do not reach the service.
+- The service maps the eight canonical column keys and reads the expanded values into the summary. Legacy `arm` and `calf` values remain visible as distinct previous measurements and are never copied into the new right/left fields.
+- The measurement form now exposes Bel, Kalça, Sağ/Sol kol, Göğüs, Sağ/Sol baldır, and Boyun in one responsive vertical flow. Focusing Boyun scrolls the form into view while the existing keyboard-aware sheet footer remains available.
+- The summary card uses a two-column responsive grid and does not synthesize `0 cm` for missing values.
+
+Verification:
+
+- `git diff --check`: PASS.
+- Babel parse for the changed analytics modules and type declarations: PASS.
+- `npm ci`: PASS — 663 packages installed; 19 pre-existing audit advisories reported and untouched.
+- `npx expo-doctor`: PASS — 18/18 checks.
+- `npx expo export --platform android --output-dir .tmp-measurements/android`: PASS.
+- `npx expo export --platform ios --output-dir .tmp-measurements/ios`: PASS.
+- Review A (architecture/data contract): PASS for source review. Supabase calls remain in `analyticsService`; no UI-only persistence, mock values, or legacy-data copying was added.
+- Review B (responsive/keyboard): PASS for source/export review. The single-column form avoids 320 px side-by-side overflow; the card has a two-column responsive layout and the final field retains scroll-to-visible behavior.
+
+`BLOCKED_BY_SCHEMA_APPLICATION`: the new migration must be applied through the approved Supabase migration process before authenticated writes to the four side-specific columns can be accepted. Android/TalkBack/manual persistence checks were not run and are not claimed as passed.
+
 ## Android modal accessibility crash repair
 
 Root cause: `MealPhotoPromptModal` assigned `accessibilityRole="dialog"` to a React Native `View`. Android rejects `dialog` for `RCTView`, causing the modal to crash before its content can be displayed.

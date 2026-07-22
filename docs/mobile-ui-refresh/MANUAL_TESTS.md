@@ -1,5 +1,16 @@
 # Manual Android Acceptance Checklist
 
+## Expanded body measurement tracking — pending device/schema checks
+
+Status: `BLOCKED_BY_SCHEMA_APPLICATION`
+
+- [ ] Apply `20260722_expand_measurement_side_columns.sql` through the approved migration process; do not run it directly against production from the app.
+- [ ] On an authenticated Android device, open Analiz → Vücut ölçüleri → Ölçüleri düzenle without a crash.
+- [ ] Enter and separately persist each of Bel, Kalça, Sağ/Sol kol, Göğüs, Sağ/Sol baldır, and Boyun; confirm blank fields do not appear as `0 cm`.
+- [ ] Confirm old single `arm` and `calf` records remain separate previous measurements and are not copied into right/left fields.
+- [ ] With the numeric keyboard open, reach Boyun plus Kaydet and İptal; verify scrolling, safe-area spacing, and Android back behavior.
+- [ ] Confirm the refreshed summary card, Dashboard, photo modal, water tracker, Profile, and navigation remain functional at 320 px and normal Android viewport widths.
+
 ## Android modal accessibility crash repair — pending device checks
 
 Status: `NOT_RUN`

@@ -3,6 +3,17 @@ import { Platform, ScrollView, StyleSheet, Text } from 'react-native';
 import { AppButton, AppInput, BottomSheetView } from '../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../shared/theme';
 
+const FIELDS = [
+    { key: 'waistCm', label: 'Bel çevresi (cm)' },
+    { key: 'hipCm', label: 'Kalça çevresi (cm)' },
+    { key: 'rightArmCm', label: 'Sağ kol çevresi (cm)' },
+    { key: 'leftArmCm', label: 'Sol kol çevresi (cm)' },
+    { key: 'chestCm', label: 'Göğüs çevresi (cm)' },
+    { key: 'rightCalfCm', label: 'Sağ baldır çevresi (cm)' },
+    { key: 'leftCalfCm', label: 'Sol baldır çevresi (cm)' },
+    { key: 'neckCm', label: 'Boyun çevresi (cm)' },
+];
+
 export function MeasurementSheet({ visible, form, onChange, onSave, onClose, isSaving, bottomInset }) {
     const scrollRef = useRef(null);
     const handleClose = () => {
@@ -32,17 +43,18 @@ export function MeasurementSheet({ visible, form, onChange, onSave, onClose, isS
                 showsVerticalScrollIndicator={false}
             >
                 <Text style={styles.supporting}>Doldurmak istemediğiniz alanları boş bırakabilirsiniz.</Text>
-                <AppInput label="Bel (cm)" value={form.waistCm} onChangeText={(value) => update('waistCm', value)} keyboardType="decimal-pad" placeholder="0,0" editable={!isSaving} />
-                <AppInput label="Kalça (cm)" value={form.hipCm} onChangeText={(value) => update('hipCm', value)} keyboardType="decimal-pad" placeholder="0,0" editable={!isSaving} />
-                <AppInput
-                    label="Kol (cm) · Sağ / Sol"
-                    value={form.armCm}
-                    onChangeText={(value) => update('armCm', value)}
-                    onFocus={() => scrollRef.current?.scrollToEnd({ animated: true })}
-                    keyboardType="decimal-pad"
-                    placeholder="0,0"
-                    editable={!isSaving}
-                />
+                {FIELDS.map((field) => (
+                    <AppInput
+                        key={field.key}
+                        label={field.label}
+                        value={form[field.key]}
+                        onChangeText={(value) => update(field.key, value)}
+                        onFocus={field.key === 'neckCm' ? () => scrollRef.current?.scrollToEnd({ animated: true }) : undefined}
+                        keyboardType="decimal-pad"
+                        placeholder="0,0"
+                        editable={!isSaving}
+                    />
+                ))}
             </ScrollView>
         </BottomSheetView>
     );

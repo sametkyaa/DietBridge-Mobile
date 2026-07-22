@@ -5,14 +5,28 @@ import { getAnalyticsOverview, saveBodyMeasurements } from '../services/analytic
 import { useDietitianConnection } from '../../dietitianConnection/context/DietitianConnectionContext';
 import { CONNECTION_REQUIRED_MESSAGE } from '../../dietitianConnection/services/dietitianConnectionService';
 
-const EMPTY_FORM = { waistCm: '', hipCm: '', armCm: '' };
+const EMPTY_FORM = {
+    waistCm: '',
+    hipCm: '',
+    rightArmCm: '',
+    leftArmCm: '',
+    chestCm: '',
+    rightCalfCm: '',
+    leftCalfCm: '',
+    neckCm: '',
+};
 
 const buildMeasurementForm = (measurements) => {
     const form = { ...EMPTY_FORM };
     measurements.forEach((measurement) => {
-        if (measurement.label === 'Bel') form.waistCm = measurement.value || '';
-        if (measurement.label === 'Kalça') form.hipCm = measurement.value || '';
-        if (measurement.label === 'Kol') form.armCm = measurement.value || '';
+        if (measurement.key === 'waist') form.waistCm = measurement.value || '';
+        if (measurement.key === 'hip') form.hipCm = measurement.value || '';
+        if (measurement.key === 'right_arm') form.rightArmCm = measurement.value || '';
+        if (measurement.key === 'left_arm') form.leftArmCm = measurement.value || '';
+        if (measurement.key === 'chest') form.chestCm = measurement.value || '';
+        if (measurement.key === 'right_calf') form.rightCalfCm = measurement.value || '';
+        if (measurement.key === 'left_calf') form.leftCalfCm = measurement.value || '';
+        if (measurement.key === 'neck') form.neckCm = measurement.value || '';
     });
     return form;
 };
@@ -157,7 +171,12 @@ export const useAnalyticsViewModel = () => {
         const parsed = {
             waist: parseMeasurement(measurementForm.waistCm),
             hip: parseMeasurement(measurementForm.hipCm),
-            arm: parseMeasurement(measurementForm.armCm),
+            right_arm: parseMeasurement(measurementForm.rightArmCm),
+            left_arm: parseMeasurement(measurementForm.leftArmCm),
+            chest: parseMeasurement(measurementForm.chestCm),
+            right_calf: parseMeasurement(measurementForm.rightCalfCm),
+            left_calf: parseMeasurement(measurementForm.leftCalfCm),
+            neck: parseMeasurement(measurementForm.neckCm),
         };
         const updates = Object.fromEntries(Object.entries(parsed).filter(([, value]) => value !== null));
         if (Object.keys(updates).length === 0) {

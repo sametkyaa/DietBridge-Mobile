@@ -14,7 +14,7 @@ export function BodyMeasurementsCard({ measurements, onEdit }) {
                 <AppButton variant="text" label="Ölçüleri düzenle" onPress={onEdit} />
             </View>
             {measurements.length === 0 ? (
-                <EmptyState icon="target" title="Ölçüm bulunmuyor" description="Bel, kalça veya kol ölçünüzü ekleyebilirsiniz." />
+                <EmptyState icon="target" title="Ölçüm bulunmuyor" description="Vücut çevresi ölçülerinizi ekleyebilirsiniz." />
             ) : (
                 <View style={styles.grid}>
                     {measurements.map((measurement) => (
@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
     titleRow: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.x2 },
     heading: { ...typography.sectionTitle, color: colors.textPrimary },
     grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.x2, marginTop: spacing.x3 },
-    item: { minWidth: 112, flexGrow: 1, flexBasis: '30%', borderRadius: radius.control, backgroundColor: colors.surfaceMuted, padding: spacing.x3 },
+    item: { minWidth: 0, flexGrow: 1, flexBasis: '46%', borderRadius: radius.control, backgroundColor: colors.surfaceMuted, padding: spacing.x3 },
     label: { ...typography.caption, color: colors.textSecondary },
     value: { ...typography.cardTitle, color: colors.textPrimary, marginTop: spacing.x1 },
     unit: { ...typography.supporting, color: colors.textSecondary },
