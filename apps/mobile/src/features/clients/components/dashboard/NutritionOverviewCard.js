@@ -4,11 +4,14 @@ import { AppCard, Icon } from '../../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../../shared/theme';
 
 export function NutritionOverviewCard({ nutrition }) {
+    const formatValue = (value, unit) => (
+        value === null || value === undefined ? '—' : `${Math.round(value)} ${unit}`
+    );
     const rows = [
-        { key: 'calories', label: 'Kalori', icon: 'meal', value: `${Math.round(nutrition.planned.calories)} kcal` },
-        { key: 'protein', label: 'Protein', icon: 'drumstick', value: `${Math.round(nutrition.planned.protein)} g` },
-        { key: 'carbohydrate', label: 'Karbonhidrat', icon: 'wheat', value: `${Math.round(nutrition.planned.carbohydrate)} g` },
-        { key: 'fat', label: 'Yağ', icon: 'leaf', value: `${Math.round(nutrition.planned.fat)} g` },
+        { key: 'calories', label: 'Kalori', icon: 'meal', value: formatValue(nutrition.planned.calories, 'kcal') },
+        { key: 'protein', label: 'Protein', icon: 'drumstick', value: formatValue(nutrition.planned.protein, 'g') },
+        { key: 'carbohydrate', label: 'Karbonhidrat', icon: 'wheat', value: formatValue(nutrition.planned.carbohydrate, 'g') },
+        { key: 'fat', label: 'Yağ', icon: 'leaf', value: formatValue(nutrition.planned.fat, 'g') },
     ];
 
     return (
@@ -16,7 +19,11 @@ export function NutritionOverviewCard({ nutrition }) {
             <View style={styles.header}>
                 <Text style={styles.title} accessibilityRole="header">Günlük beslenme özeti</Text>
                 <Text style={styles.note}>
-                    {nutrition.completedCount > 0
+                    {!nutrition.hasMacroData
+                        ? 'Makro bilgisi planlarda bulunmuyor'
+                        : nutrition.completedCount > 0
+                            && nutrition.consumed.calories !== null
+                            && nutrition.planned.calories !== null
                         ? `${Math.round(nutrition.consumed.calories)} / ${Math.round(nutrition.planned.calories)} kcal tüketildi`
                         : 'Planlanan günlük değerler'}
                 </Text>

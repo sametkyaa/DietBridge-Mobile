@@ -1,6 +1,7 @@
 const toFiniteNumber = (value) => {
+    if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) return null;
     const number = Number(value);
-    return Number.isFinite(number) ? number : 0;
+    return Number.isFinite(number) ? number : null;
 };
 
 export const mapDashboardMeal = (meal, completionPhotoUri = null) => ({

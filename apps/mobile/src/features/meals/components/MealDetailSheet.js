@@ -4,16 +4,20 @@ import { BottomSheetView, Icon, StatusBadge } from '../../../shared/components/u
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 import { MealPhotoThumbnail } from './MealPhotoThumbnail';
 
-const valueOrZero = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
+const formatMacro = (value, unit) => {
+    if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) return '—';
+    const number = Number(value);
+    return Number.isFinite(number) ? `${Math.round(number)} ${unit}` : '—';
+};
 
 export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPress, bottomInset = 0 }) {
     if (!meal) return null;
     const completed = !!completion?.completed || !!meal.isEaten;
     const macros = [
-        { label: 'Kalori', value: meal.calories === null || meal.calories === undefined ? '—' : `${Math.round(valueOrZero(meal.calories))} kcal` },
-        { label: 'Protein', value: `${Math.round(valueOrZero(meal.protein))} g` },
-        { label: 'Karbonhidrat', value: `${Math.round(valueOrZero(meal.carbohydrate))} g` },
-        { label: 'Yağ', value: `${Math.round(valueOrZero(meal.fat))} g` },
+        { label: 'Kalori', value: formatMacro(meal.calories, 'kcal') },
+        { label: 'Protein', value: formatMacro(meal.protein, 'g') },
+        { label: 'Karbonhidrat', value: formatMacro(meal.carbohydrate, 'g') },
+        { label: 'Yağ', value: formatMacro(meal.fat, 'g') },
     ];
     const ingredients = Array.isArray(meal.ingredients) ? meal.ingredients : [];
     const steps = Array.isArray(meal.steps) ? meal.steps : [];

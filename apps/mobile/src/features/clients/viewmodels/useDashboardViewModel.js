@@ -14,23 +14,50 @@ import {
 } from '../../dietitianConnection/services/dietitianConnectionService';
 
 const toFiniteNumber = (value) => {
+    if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) return null;
     const number = Number(value);
-    return Number.isFinite(number) ? number : 0;
+    return Number.isFinite(number) ? number : null;
 };
 
-const buildNutritionSummary = (meals) => {
+export const buildNutritionSummary = (meals) => {
     const completedMeals = meals.filter((meal) => meal.isEaten);
-    const sumMeals = (items) => items.reduce((totals, meal) => ({
-        calories: totals.calories + toFiniteNumber(meal.calories),
-        protein: totals.protein + toFiniteNumber(meal.protein),
-        carbohydrate: totals.carbohydrate + toFiniteNumber(meal.carbohydrate),
-        fat: totals.fat + toFiniteNumber(meal.fat),
-    }), { calories: 0, protein: 0, carbohydrate: 0, fat: 0 });
+    const sumMeals = (items) => {
+        const totals = {
+            calories: { value: 0, count: 0 },
+            protein: { value: 0, count: 0 },
+            carbohydrate: { value: 0, count: 0 },
+            fat: { value: 0, count: 0 },
+        };
+
+        items.forEach((meal) => {
+            Object.entries({
+                calories: meal.calories,
+                protein: meal.protein,
+                carbohydrate: meal.carbohydrate,
+                fat: meal.fat,
+            }).forEach(([key, value]) => {
+                const numberValue = toFiniteNumber(value);
+                if (numberValue === null) return;
+                totals[key].value += numberValue;
+                totals[key].count += 1;
+            });
+        });
+
+        return Object.fromEntries(Object.entries(totals).map(([key, total]) => [
+            key,
+            total.count > 0 ? total.value : null,
+        ]));
+    };
 
     return {
         planned: sumMeals(meals),
         consumed: sumMeals(completedMeals),
         completedCount: completedMeals.length,
+        hasMacroData: meals.some((meal) => (
+            toFiniteNumber(meal.protein) !== null
+            || toFiniteNumber(meal.carbohydrate) !== null
+            || toFiniteNumber(meal.fat) !== null
+        )),
     };
 };
 

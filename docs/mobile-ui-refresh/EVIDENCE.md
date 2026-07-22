@@ -552,3 +552,29 @@ Production/Supabase data, migrations, RLS, and Storage policies were not changed
 Review A — architecture and data contract: PASS. The only changed Supabase access remains in `clientService`; Dashboard and Meals both call `getDailyMealPlan`; no parallel meal model, mock plan, or changed signed-photo/recipe contract was introduced. Unknown source values normalize only to the display-neutral `legacy` category, while missing core fields and malformed recipe IDs still fail the canonical contract.
 
 Review B — UI and regression: PASS for static/export review. The macro card receives real ViewModel totals and uses a two-column grid suitable for narrow widths; loading/error/empty/unlinked rendering remains controlled by the existing meal-plan status. Avatar selection, upload, cancel, pending lock, rollback, and removal paths retain visible Turkish user messages. Authenticated emulator interaction remains unverified.
+
+## Meal macro compatibility regression repair
+
+The production runtime payload itself was not copied or logged: the repository contains only the `jsonb` schema type, and the supplied Android acceptance result establishes that at least one real plan uses macro keys outside the former exact `protein`/`carbs`/`fat` contract. No user, token, URL, or health data was inspected or recorded.
+
+Root cause: `normalizeCanonicalMacros` required exactly three object keys, each as a numeric value. It rejected JSON strings, numeric strings, partial data, and every valid legacy alias before Dashboard and Meals could receive the shared canonical plan.
+
+Changes:
+
+- The canonical internal model remains `protein`, `carbs`, `fat`; the mobile fields remain `protein`, `carbohydrate`, `fat`.
+- Explicit allowlisted aliases are `protein`, `protein_g`, `proteinGrams`; `carbs`, `carbohydrate`, `carbohydrates`, `carbs_g`; and `fat`, `fats`, `fat_g`.
+- JSON strings and finite non-negative numeric strings normalize safely. Missing/null/empty objects and partial values become `null`, not fabricated zeroes. A payload without any recognized macro key, malformed JSON, negative values, `NaN`, or infinity remains a controlled contract error. Recognized macro payloads may carry unrelated extra fields without invalidating the meal.
+- Dashboard totals include only actual finite values and report unavailable macros honestly. Dashboard adapters and Meal Detail show absent values as `—` rather than `0`.
+
+Verification:
+
+- Anonymous fixture regression checks covered canonical keys, aliases, JSON strings, null/missing/empty/partial data, unknown keys, invalid numeric values, source compatibility, and Dashboard totals/unavailable semantics: PASS.
+- `npm ci`: PASS (existing 19 audit advisories unchanged).
+- `npx expo-doctor`: PASS (18/18).
+- Android export: PASS (`AppEntry-988721c102b38179163eeff9da95075d.hbc`).
+- iOS export: PASS (`AppEntry-fd99074b2ecd1c41c627a87884ae43ac.hbc`).
+- `adb devices`: authorized `emulator-5554` detected. Authenticated in-app macro acceptance was not rerun in this non-interactive session and remains pending.
+
+Review A — architecture/data contract: PASS. Supabase access remains service-only, Dashboard and Meals both use `getDailyMealPlan`, and no parallel meal model, mock data, RPC, signed-photo, or avatar contract changed.
+
+Review B — UI/regression: PASS for static/export review. Macro values use an existing two-column layout, no absent macro is presented as `0 g`, and existing plan loading/error state ownership is unchanged. Authenticated emulator interaction remains pending.

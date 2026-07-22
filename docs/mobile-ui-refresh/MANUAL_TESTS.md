@@ -18,3 +18,4 @@ An authorized Android emulator (`emulator-5554`) was detected during the regress
 - [ ] Support
 - [ ] Authenticated Android 8+ minute background/reload/token-refresh release acceptance
 - [ ] Regression: authenticated Dashboard plan/macro display, Meals day selection, and avatar gallery/camera upload, rollback, removal, and reload persistence
+- [ ] Regression: authenticated legacy/partial `meal.macros` plan loading, Dashboard macro availability, and Meal Detail absent-macro display

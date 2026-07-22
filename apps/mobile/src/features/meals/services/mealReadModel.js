@@ -1,6 +1,11 @@
 const CANONICAL_TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 const POSTGRES_TIME_PATTERN = /^(([01]\d|2[0-3]):[0-5]\d)(?::00(?:\.0+)?)?$/;
 const CANONICAL_MACRO_KEYS = ['protein', 'carbs', 'fat'];
+const MACRO_KEY_ALIASES = {
+    protein: ['protein', 'protein_g', 'proteinGrams'],
+    carbs: ['carbs', 'carbohydrate', 'carbohydrates', 'carbs_g'],
+    fat: ['fat', 'fats', 'fat_g'],
+};
 
 export const MealPlanReadErrorCode = {
     AUTHORIZATION: 'authorization',
@@ -31,25 +36,60 @@ const optionalNumber = (value, fieldName) => {
     return value;
 };
 
+const parseMacroPayload = (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz meal.macros alanı bulundu.');
+        }
+        try {
+            return JSON.parse(trimmed);
+        } catch {
+            throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz meal.macros alanı bulundu.');
+        }
+    }
+    return value;
+};
+
+const normalizeMacroValue = (value, key) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'string' && !value.trim()) return null;
+
+    const numberValue = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numberValue) || numberValue < 0) {
+        throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, `Plan verisinde geçersiz meal.macros.${key} alanı bulundu.`);
+    }
+    return numberValue;
+};
+
 const normalizeCanonicalMacros = (value) => {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    const payload = parseMacroPayload(value);
+    if (payload === null) return { protein: null, carbs: null, fat: null };
+    if (typeof payload !== 'object' || Array.isArray(payload)) {
         throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz meal.macros alanı bulundu.');
     }
 
-    const keys = Object.keys(value);
-    if (keys.length !== CANONICAL_MACRO_KEYS.length
-        || keys.some((key) => !CANONICAL_MACRO_KEYS.includes(key))) {
-        throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz meal.macros anahtarları bulundu.');
-    }
+    const keys = Object.keys(payload);
+    if (keys.length === 0) return { protein: null, carbs: null, fat: null };
 
     const macros = {};
+    let recognizedKeyCount = 0;
     CANONICAL_MACRO_KEYS.forEach((key) => {
-        const macroValue = value[key];
-        if (typeof macroValue !== 'number' || !Number.isFinite(macroValue) || macroValue < 0) {
-            throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, `Plan verisinde geçersiz meal.macros.${key} alanı bulundu.`);
+        const aliases = MACRO_KEY_ALIASES[key];
+        const presentAlias = aliases.find((alias) => Object.prototype.hasOwnProperty.call(payload, alias));
+        if (!presentAlias) {
+            macros[key] = null;
+            return;
         }
-        macros[key] = macroValue;
+
+        recognizedKeyCount += 1;
+        macros[key] = normalizeMacroValue(payload[presentAlias], key);
     });
+
+    if (recognizedKeyCount === 0) {
+        throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz meal.macros anahtarları bulundu.');
+    }
 
     return macros;
 };
