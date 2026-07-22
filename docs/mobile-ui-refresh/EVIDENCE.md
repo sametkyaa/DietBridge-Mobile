@@ -1,5 +1,24 @@
 # UI Refresh Evidence
 
+## Android modal accessibility crash repair
+
+Root cause: `MealPhotoPromptModal` assigned `accessibilityRole="dialog"` to a React Native `View`. Android rejects `dialog` for `RCTView`, causing the modal to crash before its content can be displayed.
+
+Change: removed only the unsupported `dialog` role and its redundant container label from `MealPhotoPromptModal`. The modal overlay retains `accessibilityViewIsModal`; the title remains a `header`; the X control retains its Turkish label and 44×44 target; Android back and the backdrop still use the existing close callback; focus restoration, photo selection, pending guards, and the existing meal completion chain are unchanged.
+
+Verification:
+
+- `git diff --check`: PASS.
+- Babel parse for `MealPhotoPromptModal.js`: PASS.
+- `npm ci`: PASS — 663 packages installed; 19 pre-existing audit advisories reported and untouched.
+- `npx expo-doctor`: PASS — 18/18 checks.
+- `npx expo export --platform android --output-dir .tmp-modal-role/android`: PASS.
+- `npx expo export --platform ios --output-dir .tmp-modal-role/ios`: PASS.
+- Static accessibility review: PASS — no `accessibilityRole="dialog"` remains in the modal; supported header, modal isolation, close label, and 44×44 close target remain.
+- Static regression review: PASS — Dashboard photo-action callbacks and meal completion RPC/ViewModel flow were not changed.
+
+Authenticated Android emulator and TalkBack checks were not run in this session and are not claimed as passed.
+
 ## Android acceptance UX corrections — automated evidence
 
 Worktree branch: `codex/mobile-ui-refresh`.

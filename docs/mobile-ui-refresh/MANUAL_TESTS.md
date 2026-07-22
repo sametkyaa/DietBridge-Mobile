@@ -1,5 +1,14 @@
 # Manual Android Acceptance Checklist
 
+## Android modal accessibility crash repair — pending device checks
+
+Status: `NOT_RUN`
+
+- [ ] A real Dashboard meal's `Öğünümü yedim` action opens the photo modal without an Android accessibility-role crash.
+- [ ] Title, description, X, Android back, and backdrop close behavior work without changing meal completion.
+- [ ] Gallery, camera, and no-photo completion actions retain their existing behavior and duplicate-submit guard.
+- [ ] TalkBack reads the X as `Fotoğraf ekleme penceresini kapat` and focus returns to the meal completion action after dismissal.
+
 ## Android acceptance UX corrections — pending device checks
 
 Status: `NOT_RUN`

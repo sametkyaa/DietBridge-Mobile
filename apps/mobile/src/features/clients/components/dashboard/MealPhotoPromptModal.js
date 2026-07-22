@@ -8,7 +8,7 @@ export function MealPhotoPromptModal({ visible, onClose, onCompleteWithoutPhoto,
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
             <View style={styles.overlay} accessibilityViewIsModal>
                 <Pressable style={styles.backdrop} onPress={disabled ? undefined : onClose} accessibilityRole="button" accessibilityLabel="Fotoğraf ekleme penceresini kapat" />
-                <View style={styles.dialog} accessibilityRole="dialog" accessibilityLabel="Fotoğraf eklemek ister misiniz?">
+                <View style={styles.dialog}>
                     <Pressable
                         onPress={onClose}
                         disabled={disabled}
