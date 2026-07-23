@@ -48,7 +48,7 @@ const getDietitianProfilesById = async (dietitianIds = []) => {
             fullName,
             name: fullName,
             email: profile.email || '',
-            nameLoadError: false,
+            nameLoadError: !fullName && !profilesError,
         };
     });
 
@@ -76,7 +76,7 @@ const getDietitianProfilesById = async (dietitianIds = []) => {
                 fullName: '',
                 name: '',
                 email: '',
-                nameLoadError: !!profilesError,
+                nameLoadError: true,
             };
         }
     });

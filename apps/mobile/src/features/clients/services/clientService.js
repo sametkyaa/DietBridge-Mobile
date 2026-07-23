@@ -525,7 +525,16 @@ export const saveCurrentWeight = async (weight) => {
     });
 
     if (error) throw error;
-    return getCurrentUserProfile();
+    try {
+        return await getCurrentUserProfile();
+    } catch (reloadError) {
+        // Kilo başarıyla kaydedildi.
+        // Profil yeniden yükleme hatası kaydetmeyi geçersiz kılmaz.
+        if (typeof __DEV__ !== 'undefined' && __DEV__) {
+            console.warn('Kilo kaydedildi ancak profil yenilenemedi:', reloadError?.message);
+        }
+        return true;
+    }
 };
 
 const getAvatarMimeType = (asset) => {

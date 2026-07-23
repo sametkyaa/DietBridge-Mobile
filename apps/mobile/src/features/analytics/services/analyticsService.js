@@ -64,8 +64,6 @@ const fetchMeasurements = async (clientId) => {
         { key: 'right_calf', label: 'Sağ baldır', detail: '' },
         { key: 'left_calf', label: 'Sol baldır', detail: '' },
         { key: 'neck', label: 'Boyun', detail: '' },
-        { key: 'arm', label: 'Önceki kol ölçümü', detail: '' },
-        { key: 'calf', label: 'Önceki baldır ölçümü', detail: '' },
     ];
 
     return mapping.filter(m => data[m.key] != null).map(m => ({
