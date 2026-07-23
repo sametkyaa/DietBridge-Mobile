@@ -48,7 +48,7 @@ const getDietitianProfilesById = async (dietitianIds = []) => {
             fullName,
             name: fullName,
             email: profile.email || '',
-            nameLoadError: !fullName && !profilesError,
+            nameLoadError: false,
         };
     });
 
@@ -58,7 +58,7 @@ const getDietitianProfilesById = async (dietitianIds = []) => {
             fullName: '',
             name: '',
             email: '',
-            nameLoadError: !!profilesError,
+            nameLoadError: false,
         };
         profileMap[detail.user_id] = {
             ...existing,
@@ -76,10 +76,49 @@ const getDietitianProfilesById = async (dietitianIds = []) => {
                 fullName: '',
                 name: '',
                 email: '',
-                nameLoadError: true,
+                nameLoadError: false,
             };
         }
     });
+
+    // For dietitians whose profiles.full_name is empty, try the secure RPC fallback.
+    // The RPC reads auth.users.raw_user_meta_data via SECURITY DEFINER.
+    const idsNeedingFallback = uniqueIds.filter((id) => {
+        const entry = profileMap[id];
+        return entry && !entry.fullName && !entry.nameLoadError;
+    });
+
+    if (idsNeedingFallback.length > 0 && !profilesError) {
+        const fallbackResults = await Promise.all(
+            idsNeedingFallback.map(async (id) => {
+                const { data, error } = await supabase.rpc('get_dietitian_display_name', {
+                    p_dietitian_id: id,
+                });
+                return { id, name: data, error };
+            }),
+        );
+
+        fallbackResults.forEach(({ id, name, error }) => {
+            if (error) {
+                if (typeof __DEV__ !== 'undefined' && __DEV__) {
+                    console.warn('Dietitian display name RPC failed for', id, error.message);
+                }
+                if (profileMap[id]) profileMap[id].nameLoadError = true;
+                return;
+            }
+            const resolvedName = normalizeFullName(name);
+            if (profileMap[id]) {
+                profileMap[id].fullName = resolvedName;
+                profileMap[id].name = resolvedName;
+                if (!resolvedName) profileMap[id].nameLoadError = true;
+            }
+        });
+    } else if (profilesError) {
+        // If the profiles query itself failed, mark all as load-error.
+        uniqueIds.forEach((id) => {
+            if (profileMap[id]) profileMap[id].nameLoadError = true;
+        });
+    }
 
     return profileMap;
 };
