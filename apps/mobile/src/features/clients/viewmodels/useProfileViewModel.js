@@ -9,6 +9,7 @@ import {
     signOut,
     updateChronicConditions,
     updateCurrentUserProfile,
+    updateDislikedFoods,
     updateFoodIntolerances,
     updateMedications,
     updateSleepHours,
@@ -128,8 +129,6 @@ const mapProfileToClientData = (profile) => {
         },
     };
 };
-
-const normalizeListInput = (value) => normalizeMultiValue(value);
 
 const normalizeAvatarAsset = (asset) => ({
     uri: asset?.uri || null,
@@ -291,7 +290,6 @@ export const useProfileViewModel = () => {
             nutritionTypeId: () => profile?.nutritionTypeId ?? '',
             goalId: () => profile?.goalId ?? '',
             foodIntolerances: () => (profile?.foodIntolerances || []).join(', '),
-            dislikedFoods: () => (profile?.dislikedFoods || []).join(', '),
             dailyWaterGoalMl: () => numberToText(waterGoalLiters),
         };
 
@@ -311,7 +309,6 @@ export const useProfileViewModel = () => {
             alcoholStatusId: () => ({ alcoholStatusId: editingValue }),
             nutritionTypeId: () => ({ nutritionTypeId: editingValue }),
             goalId: () => ({ goalId: editingValue }),
-            dislikedFoods: () => ({ dislikedFoods: normalizeListInput(editingValue) }),
         };
 
         const buildUpdates = updatesByField[editingField];
@@ -378,6 +375,11 @@ export const useProfileViewModel = () => {
 
     const saveFoodIntolerances = useCallback(
         (values) => saveHealthField('foodIntolerances', updateFoodIntolerances, values),
+        [saveHealthField],
+    );
+
+    const saveDislikedFoods = useCallback(
+        (values) => saveHealthField('dislikedFoods', updateDislikedFoods, values),
         [saveHealthField],
     );
 
@@ -590,6 +592,7 @@ export const useProfileViewModel = () => {
         saveChronicConditions,
         saveMedications,
         saveFoodIntolerances,
+        saveDislikedFoods,
         saveWaterGoalLiters,
         saveAverageSleepHours,
         handleAvatarUpload: selectAvatar,

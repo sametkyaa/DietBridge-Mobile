@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { AppButton, AppInput, BottomSheetView, ChoiceChip } from '../../../../shared/components/ui';
+import { AppButton, AppInput, BottomSheetView, ChoiceChip, InlineAlert } from '../../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../../shared/theme';
 import { formatMealType } from '../../../../shared/utils/mealType';
 
@@ -10,6 +10,9 @@ export function MealRequestSheet({
     selectedDay,
     selectedMeals,
     meals,
+    mealsStatus = 'success',
+    mealsError = null,
+    onRetryMeals,
     message,
     onDayChange,
     onToggleMeal,
@@ -46,18 +49,38 @@ export function MealRequestSheet({
                 ))}
             </ScrollView>
             <Text style={styles.label} accessibilityRole="header">Öğün seçimi</Text>
-            <View style={styles.chips}>
-                {meals.map((meal) => (
-                    <ChoiceChip
-                        key={`request-meal-${meal.type}`}
-                        label={meal.title || formatMealType(meal.type)}
-                        selected={selectedMeals.includes(meal.type)}
-                        onPress={() => onToggleMeal(meal.type)}
-                        disabled={isSending}
-                    />
-                ))}
-            </View>
-            {meals.length === 0 ? <Text style={styles.supporting}>Seçilebilecek öğün bulunmuyor.</Text> : null}
+            {mealsStatus === 'loading' || mealsStatus === 'retrying' ? (
+                <Text style={styles.supporting} accessibilityState={{ busy: true }}>
+                    Seçilen günün öğünleri yükleniyor...
+                </Text>
+            ) : mealsStatus === 'error' ? (
+                <View style={styles.errorWrap}>
+                    <InlineAlert variant="error" message={mealsError || 'Öğünler yüklenemedi. Lütfen tekrar deneyin.'} />
+                    {onRetryMeals ? (
+                        <AppButton
+                            variant="secondary"
+                            label="Tekrar dene"
+                            onPress={onRetryMeals}
+                            disabled={isSending}
+                        />
+                    ) : null}
+                </View>
+            ) : (
+                <View style={styles.chips}>
+                    {meals.map((meal) => (
+                        <ChoiceChip
+                            key={`request-meal-${meal.type}`}
+                            label={meal.title || formatMealType(meal.type)}
+                            selected={selectedMeals.includes(meal.type)}
+                            onPress={() => onToggleMeal(meal.type)}
+                            disabled={isSending}
+                        />
+                    ))}
+                </View>
+            )}
+            {mealsStatus !== 'loading' && mealsStatus !== 'retrying' && mealsStatus !== 'error' && meals.length === 0
+                ? <Text style={styles.supporting}>Seçilen gün için değiştirilebilecek öğün bulunmuyor.</Text>
+                : null}
             <Text style={styles.label} accessibilityRole="header">Mesajınız</Text>
             <AppInput
                 value={message}
@@ -77,6 +100,7 @@ const styles = StyleSheet.create({
     supporting: { ...typography.supporting, color: colors.textSecondary },
     label: { ...typography.bodyMedium, color: colors.textPrimary },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.x2 },
+    errorWrap: { gap: spacing.x2 },
     input: { minHeight: 104, textAlignVertical: 'top' },
 });
 

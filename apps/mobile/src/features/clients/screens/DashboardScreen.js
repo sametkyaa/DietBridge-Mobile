@@ -244,6 +244,14 @@ const DashboardScreen = () => {
                     onRetry={retryDailyLog}
                 />
 
+                <WeightCard
+                    weight={weight}
+                    value={weightInput}
+                    onChange={setWeightInput}
+                    onSave={handleSaveWeight}
+                    isSaving={isSavingWeight}
+                />
+
                 {mealPlanStatus === 'success' ? (
                     <TodayMealsCard
                         meals={uiMeals}
@@ -252,14 +260,6 @@ const DashboardScreen = () => {
                         onToggle={handleTodayMealToggle}
                     />
                 ) : null}
-
-                <WeightCard
-                    weight={weight}
-                    value={weightInput}
-                    onChange={setWeightInput}
-                    onSave={handleSaveWeight}
-                    isSaving={isSavingWeight}
-                />
 
                 <AppCard>
                     <Text style={screenStyles.quoteTitle}>Günün motivasyonu</Text>

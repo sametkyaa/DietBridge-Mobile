@@ -484,6 +484,12 @@ export const updateFoodIntolerances = async (values) => updateProfileHealthField
     value: getUniqueCaseInsensitiveValues(normalizeMultiValue(values)),
 });
 
+export const updateDislikedFoods = async (values) => updateProfileHealthField({
+    payloadField: 'dislikedFoods',
+    databaseField: 'disliked_foods',
+    value: getUniqueCaseInsensitiveValues(normalizeMultiValue(values)),
+});
+
 export const updateWaterGoal = async (liters) => {
     const normalizedLiters = normalizeDecimal(liters, 'Su hedefi', { min: 0.5, max: 10 });
     if (normalizedLiters !== null && normalizedLiters !== undefined && !matchesStep(normalizedLiters, 0.5, 0.1)) {
