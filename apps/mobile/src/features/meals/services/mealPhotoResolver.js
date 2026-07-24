@@ -1,11 +1,14 @@
 import { supabase } from '../../../lib/supabaseClient';
 
 export const MEAL_PHOTO_BUCKET = 'meal-photos';
+export const RECIPE_PHOTO_BUCKET = 'recipe-images';
 export const MEAL_PHOTO_SIGNED_URL_SECONDS = 5 * 60;
 export const MEAL_PHOTO_CACHE_MS = 4 * 60 * 1000;
 export const MEAL_PHOTO_CACHE_MAX_ENTRIES = 100;
 
-const CANONICAL_MEAL_PHOTO_PATH = /^meal-plans\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(?:jpe?g|png|webp)$/i;
+const RECIPE_PHOTO_PATH_PREFIX = 'recipes/';
+const MEAL_PHOTO_PATH_PREFIX = 'meal-plans/';
+const EXTERNAL_URL_PATTERN = /^https?:\/\/\S+$/i;
 
 export const MealPhotoResolveStatus = {
     READY: 'ready',
@@ -13,9 +16,22 @@ export const MealPhotoResolveStatus = {
     ERROR: 'error',
 };
 
-export const isCanonicalMealPhotoPath = (value) => (
-    typeof value === 'string' && CANONICAL_MEAL_PHOTO_PATH.test(value)
-);
+export const getMealPhotoSource = (value) => {
+    if (typeof value !== 'string') return null;
+
+    const photoPath = value.trim();
+    if (!photoPath) return null;
+    if (EXTERNAL_URL_PATTERN.test(photoPath)) return { kind: 'external', photoPath };
+    if (photoPath.startsWith(RECIPE_PHOTO_PATH_PREFIX)) {
+        return { kind: 'storage', bucket: RECIPE_PHOTO_BUCKET, photoPath };
+    }
+    if (photoPath.startsWith(MEAL_PHOTO_PATH_PREFIX)) {
+        return { kind: 'storage', bucket: MEAL_PHOTO_BUCKET, photoPath };
+    }
+    return null;
+};
+
+export const isCanonicalMealPhotoPath = (value) => getMealPhotoSource(value)?.kind === 'storage';
 
 export const createMealPhotoRequestGate = () => {
     let activePath = null;
@@ -52,7 +68,11 @@ const placeholderResult = (status = MealPhotoResolveStatus.PLACEHOLDER) => ({
     status,
 });
 
-export const createMealPhotoResolver = ({ storage = supabase.storage, now = () => Date.now() } = {}) => {
+export const createMealPhotoResolver = ({
+    storage = supabase.storage,
+    getSession = () => supabase.auth.getSession(),
+    now = () => Date.now(),
+} = {}) => {
     const cache = new Map();
     const inFlight = new Map();
 
@@ -69,23 +89,30 @@ export const createMealPhotoResolver = ({ storage = supabase.storage, now = () =
     };
 
     const resolve = async (photoPath, { forceRefresh = false } = {}) => {
-        if (!isCanonicalMealPhotoPath(photoPath)) return placeholderResult();
+        const source = getMealPhotoSource(photoPath);
+        if (!source) return placeholderResult();
+        if (source.kind === 'external') {
+            return { photoUri: source.photoPath, status: MealPhotoResolveStatus.READY };
+        }
 
-        if (forceRefresh) cache.delete(photoPath);
+        if (forceRefresh) cache.delete(source.photoPath);
 
         const currentTime = now();
         pruneCache(currentTime);
-        const cached = cache.get(photoPath);
+        const cached = cache.get(source.photoPath);
         if (cached && cached.refreshAfter > currentTime) return cached.result;
 
-        const existingRequest = inFlight.get(photoPath);
+        const existingRequest = inFlight.get(source.photoPath);
         if (existingRequest) return existingRequest;
 
         const request = (async () => {
             try {
+                const { data: sessionData, error: sessionError } = await getSession();
+                if (sessionError || !sessionData?.session) return placeholderResult(MealPhotoResolveStatus.ERROR);
+
                 const { data, error } = await storage
-                    .from(MEAL_PHOTO_BUCKET)
-                    .createSignedUrl(photoPath, MEAL_PHOTO_SIGNED_URL_SECONDS);
+                    .from(source.bucket)
+                    .createSignedUrl(source.photoPath, MEAL_PHOTO_SIGNED_URL_SECONDS);
                 if (error || !data?.signedUrl) return placeholderResult(MealPhotoResolveStatus.ERROR);
 
                 const result = {
@@ -93,7 +120,7 @@ export const createMealPhotoResolver = ({ storage = supabase.storage, now = () =
                     status: MealPhotoResolveStatus.READY,
                 };
                 makeCacheRoom();
-                cache.set(photoPath, {
+                cache.set(source.photoPath, {
                     result,
                     refreshAfter: now() + MEAL_PHOTO_CACHE_MS,
                 });
@@ -101,11 +128,11 @@ export const createMealPhotoResolver = ({ storage = supabase.storage, now = () =
             } catch {
                 return placeholderResult(MealPhotoResolveStatus.ERROR);
             } finally {
-                inFlight.delete(photoPath);
+                inFlight.delete(source.photoPath);
             }
         })();
 
-        inFlight.set(photoPath, request);
+        inFlight.set(source.photoPath, request);
         return request;
     };
 
@@ -113,7 +140,8 @@ export const createMealPhotoResolver = ({ storage = supabase.storage, now = () =
         resolve,
         refresh: (photoPath) => resolve(photoPath, { forceRefresh: true }),
         clear: (photoPath) => {
-            if (photoPath) cache.delete(photoPath);
+            const source = getMealPhotoSource(photoPath);
+            if (source?.kind === 'storage') cache.delete(source.photoPath);
             else cache.clear();
         },
     };

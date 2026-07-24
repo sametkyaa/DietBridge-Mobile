@@ -20,6 +20,7 @@ export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPre
         { label: 'Karbonhidrat', value: formatMacro(meal.carbohydrate, 'g') },
         { label: 'Yağ', value: formatMacro(meal.fat, 'g') },
     ];
+    const description = typeof meal.description === 'string' ? meal.description.trim() : '';
     const ingredients = Array.isArray(meal.ingredients) ? meal.ingredients : [];
     const steps = Array.isArray(meal.steps) ? meal.steps : [];
 
@@ -30,7 +31,6 @@ export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPre
                 <StatusBadge status={completed ? 'completed' : 'upcoming'} label={completed ? 'Tamamlandı' : 'Planlandı'} />
             </View>
             <Text style={styles.title}>{meal.title || formatMealType(meal.type)}</Text>
-            {meal.desc ? <Text style={styles.description}>{meal.desc}</Text> : null}
             <MealPhotoThumbnail
                 photoPath={meal.photoPath}
                 completionPhotoUri={completion?.completionPhotoUri || meal.completionPhotoUri}
@@ -52,6 +52,12 @@ export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPre
                     </View>
                 ))}
             </View>
+            {description ? (
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle} accessibilityRole="header">İçerik</Text>
+                    <Text style={styles.body}>{description}</Text>
+                </View>
+            ) : null}
             {meal.note ? (
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle} accessibilityRole="header">Diyetisyen notu</Text>
@@ -78,7 +84,6 @@ const styles = StyleSheet.create({
     metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.x2 },
     meta: { ...typography.supporting, color: colors.textSecondary },
     title: { ...typography.sectionTitle, color: colors.textPrimary },
-    description: { ...typography.body, color: colors.textSecondary },
     photoButton: { width: '100%' },
     photo: { width: '100%', height: 180, borderRadius: radius.card },
     photoFallback: { width: '100%', height: 140, borderRadius: radius.card, backgroundColor: colors.primarySurface, alignItems: 'center', justifyContent: 'center' },

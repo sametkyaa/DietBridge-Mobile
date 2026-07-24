@@ -134,6 +134,11 @@ export const useDashboardViewModel = () => {
 
                 hydrateCompletedMeals(result.meals);
                 setMeals(result.meals);
+                setSelectedMeal((currentMeal) => (
+                    currentMeal
+                        ? result.meals.find((meal) => meal.id === currentMeal.id) || null
+                        : null
+                ));
                 setMealPlanStatus(result.status);
                 return result;
             })

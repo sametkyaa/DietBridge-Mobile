@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     createMealPhotoImageRetryGate,
     createMealPhotoRequestGate,
-    isCanonicalMealPhotoPath,
+    getMealPhotoSource,
     MealPhotoResolveStatus,
     refreshMealPhotoUri,
     resolveMealPhotoUri,
@@ -27,7 +27,7 @@ export const useMealPhotoUri = (photoPath) => {
         const requestedPath = photoPath;
         const request = requestGateRef.current.begin(requestedPath);
 
-        if (!isCanonicalMealPhotoPath(requestedPath)) {
+        if (!getMealPhotoSource(requestedPath)) {
             if (isMountedRef.current) setState(placeholderState(requestedPath));
             return Promise.resolve(placeholderState(requestedPath));
         }

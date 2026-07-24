@@ -123,17 +123,27 @@ const validateSortOrder = (value) => {
 };
 
 const normalizeMealSource = (source) => {
-    if (typeof source !== 'string' || !source.trim()) return 'legacy';
+    if (typeof source !== 'string' || !source.trim()) return 'manual';
 
     const normalizedSource = source.trim().toLowerCase();
     return normalizedSource === 'manual' || normalizedSource === 'recipe'
         ? normalizedSource
-        : 'legacy';
+        : 'manual';
 };
 
 const normalizeRecipeId = (value) => {
     if (value === null || value === undefined) return null;
     return requireString(value, 'meal.recipe_id');
+};
+
+const normalizeDescription = (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value !== 'string') {
+        throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz meal.description alanı bulundu.');
+    }
+
+    const normalized = value.trim();
+    return normalized || null;
 };
 
 export const normalizeCanonicalMeal = (meal, plan) => {
@@ -158,6 +168,7 @@ export const normalizeCanonicalMeal = (meal, plan) => {
     const macros = normalizeCanonicalMacros(meal.macros);
     const source = normalizeMealSource(meal.source);
     const recipeId = normalizeRecipeId(meal.recipe_id);
+    const description = normalizeDescription(meal.description);
 
     return {
         id,
@@ -172,6 +183,7 @@ export const normalizeCanonicalMeal = (meal, plan) => {
         time: normalizeCanonicalMealTime(meal.time),
         sortOrder: validateSortOrder(meal.sort_order),
         photoPath: meal.photo_url,
+        description,
         source,
         recipeId,
         isEaten: meal.is_eaten,
