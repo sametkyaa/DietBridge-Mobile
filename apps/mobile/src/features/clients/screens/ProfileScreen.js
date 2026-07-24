@@ -14,6 +14,7 @@ import {
 } from '../components/profile';
 import MultiSelectProfileModal from '../components/MultiSelectProfileModal';
 import NumericProfileInputModal from '../components/NumericProfileInputModal';
+import DislikedFoodsModal from '../components/DislikedFoodsModal';
 import {
     COMMON_CHRONIC_CONDITIONS,
     COMMON_FOOD_INTOLERANCES,
@@ -29,7 +30,6 @@ const FIELD_META = {
     alcoholStatusId: { title: 'Alkol kullanımını düzenle', optionKey: 'alcoholStatus' },
     nutritionTypeId: { title: 'Beslenme tipini düzenle', optionKey: 'nutritionType' },
     goalId: { title: 'Beslenme hedefini düzenle', optionKey: 'clientGoals' },
-    dislikedFoods: { title: 'Sevilmeyen besinleri düzenle', placeholder: 'Virgülle ayırarak girin', multiline: true },
 };
 
 const display = (value, unit = '') => (value === null || value === undefined || value === '' ? '' : `${value}${unit ? ` ${unit}` : ''}`);
@@ -42,7 +42,7 @@ const ProfileScreen = ({ navigation }) => {
         waterRemindersEnabled, setWaterRemindersEnabled, handleLogout, isEditing, cancelEditing,
         startEditing, editForm, updateField, handleSaveProfile, editingField, setEditingField, editingValue,
         setEditingValue, editingInitialValue, handleRowEdit, handleRowSave, waterGoalLiters, sleepHours, saveChronicConditions,
-        saveMedications, saveFoodIntolerances, saveWaterGoalLiters, saveAverageSleepHours, handleAvatarUpload,
+        saveMedications, saveFoodIntolerances, saveDislikedFoods, saveWaterGoalLiters, saveAverageSleepHours, handleAvatarUpload,
         isAvatarActionMenuVisible, hasAvatar, closeAvatarActionMenu, handleAvatarSource, handleAvatarRemoval,
         pendingAvatarUri, cancelSelectedAvatar, saveSelectedAvatar, catalogs, profileOptions,
         isSaving, isSelectingAvatar, isUploadingAvatar, error, successMessage, validationErrors, hasUnsavedChanges,
@@ -158,6 +158,7 @@ const ProfileScreen = ({ navigation }) => {
             <MultiSelectProfileModal visible={editingField === 'chronicConditions'} title="Kronik rahatsızlıkları düzenle" options={COMMON_CHRONIC_CONDITIONS} selectedValues={profile?.chronicConditions || []} customInputLabel="Listede olmayan rahatsızlığı ekle" customInputPlaceholder="Rahatsızlık adı girin" loading={isSaving} onClose={() => setEditingField(null)} onSave={saveChronicConditions} />
             <MultiSelectProfileModal visible={editingField === 'medications'} title="Kullanılan ilaçları düzenle" options={COMMON_MEDICATIONS} selectedValues={profile?.medications || []} customInputLabel="Listede olmayan ilacı ekle" customInputPlaceholder="İlaç adı girin" loading={isSaving} onClose={() => setEditingField(null)} onSave={saveMedications} />
             <MultiSelectProfileModal visible={editingField === 'foodIntolerances'} title="Besin intoleranslarını düzenle" options={COMMON_FOOD_INTOLERANCES} selectedValues={profile?.foodIntolerances || []} customInputLabel="Listede olmayan intoleransı ekle" customInputPlaceholder="İntolerans adı girin" loading={isSaving} onClose={() => setEditingField(null)} onSave={saveFoodIntolerances} />
+            <DislikedFoodsModal visible={editingField === 'dislikedFoods'} selectedValues={profile?.dislikedFoods || []} loading={isSaving} onClose={() => setEditingField(null)} onSave={saveDislikedFoods} bottomInset={insets.bottom} />
             <NumericProfileInputModal visible={editingField === 'dailyWaterGoalMl'} title="Su hedefini düzenle" value={waterGoalLiters} unit="L" placeholder="Örn. 2,5" minimum={0.5} maximum={10} step={0.1} loading={isSaving} validationMessage="Lütfen 0,5 ile 10 litre arasında geçerli bir değer girin." onClose={() => setEditingField(null)} onSave={saveWaterGoalLiters} />
             <NumericProfileInputModal visible={editingField === 'sleepHours'} title="Uyku düzenini düzenle" value={sleepHours} unit="saat" placeholder="Örn. 7,5" minimum={0} maximum={24} step={0.5} loading={isSaving} validationMessage="Lütfen 0 ile 24 saat arasında geçerli bir değer girin." onClose={() => setEditingField(null)} onSave={saveAverageSleepHours} />
         </SafeAreaView>

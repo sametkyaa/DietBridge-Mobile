@@ -20,8 +20,6 @@ import {
 } from '../components/plan';
 import { useMealsViewModel } from '../viewmodels/useMealsViewModel';
 
-const todayIndex = (new Date().getDay() + 6) % 7;
-
 function LoadingState({ retrying }) {
     return (
         <AppCard style={screenStyles.stateCard}>
@@ -61,6 +59,10 @@ const MealsScreen = () => {
         requestSelectedMeals,
         requestMessage,
         setRequestMessage,
+        requestMeals,
+        requestMealsStatus,
+        requestMealsError,
+        retryRequestMeals,
         handleOpenRequestModal,
         handleToggleRequestMeal,
         handleSendRequest,
@@ -86,6 +88,7 @@ const MealsScreen = () => {
     const selectedCompletion = selectedMeal ? completedMeals[selectedMeal.id] : null;
     const showLoading = isLoadingMeals || (isLoadingConnection && mealPlanStatus === 'loading');
     const listData = mealPlanStatus === 'success' ? meals : [];
+    const todayIndex = useMemo(() => (new Date().getDay() + 6) % 7, []);
 
     useEffect(() => {
         if (!hasActiveDietitian && photoPreviewUri) closePhotoPreview();
@@ -181,7 +184,10 @@ const MealsScreen = () => {
                 dayOptions={dayOptions}
                 selectedDay={requestSelectedDay}
                 selectedMeals={requestSelectedMeals}
-                meals={meals}
+                meals={requestMeals}
+                mealsStatus={requestMealsStatus}
+                mealsError={requestMealsError}
+                onRetryMeals={retryRequestMeals}
                 message={requestMessage}
                 onDayChange={handleRequestDayChange}
                 onToggleMeal={handleToggleRequestMeal}

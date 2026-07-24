@@ -211,6 +211,44 @@ export const useMealsViewModel = () => {
     const [requestSelectedDay, setRequestSelectedDay] = useState(0);
     const [requestSelectedMeals, setRequestSelectedMeals] = useState([]);
     const [requestMessage, setRequestMessage] = useState('');
+    const [requestMeals, setRequestMeals] = useState([]);
+    const [requestMealsStatus, setRequestMealsStatus] = useState('idle');
+    const [requestMealsError, setRequestMealsError] = useState(null);
+    const requestMealsSequenceRef = useRef(0);
+
+    // Loads the meals of the day selected inside the change-request sheet.
+    // A dedicated sequence guard keeps a late response for a previously
+    // selected day from overwriting the current day's meal list.
+    const loadRequestMeals = useCallback((dayIndex, { retry = false } = {}) => {
+        const planDate = getLocalWeekDateKey(dayIndex);
+        const requestSequence = requestMealsSequenceRef.current + 1;
+        requestMealsSequenceRef.current = requestSequence;
+
+        if (isMountedRef.current) {
+            setRequestMealsStatus(retry ? 'retrying' : 'loading');
+            setRequestMealsError(null);
+            setRequestMeals([]);
+        }
+
+        return getDailyMealPlan(planDate)
+            .then((result) => {
+                if (!isMountedRef.current || requestMealsSequenceRef.current !== requestSequence) return result;
+                setRequestMeals(result.meals);
+                setRequestMealsStatus(result.status === 'unlinked' ? 'empty' : result.status);
+                return result;
+            })
+            .catch((error) => {
+                if (!isMountedRef.current || requestMealsSequenceRef.current !== requestSequence) return null;
+                setRequestMeals([]);
+                setRequestMealsStatus('error');
+                setRequestMealsError(error?.message || CONNECTION_GENERIC_ERROR_MESSAGE);
+                return null;
+            });
+    }, []);
+
+    const retryRequestMeals = useCallback(() => (
+        loadRequestMeals(requestSelectedDay, { retry: true })
+    ), [loadRequestMeals, requestSelectedDay]);
 
     const handleOpenRequestModal = () => {
         if (!hasActiveDietitian) {
@@ -221,6 +259,7 @@ export const useMealsViewModel = () => {
         setRequestSelectedMeals([]);
         setRequestMessage('');
         setRequestModalVisible(true);
+        loadRequestMeals(selectedDay);
     };
 
     const handleToggleRequestMeal = (mealType) => {
@@ -276,6 +315,7 @@ export const useMealsViewModel = () => {
             return;
         }
         setRequestSelectedDay(index);
+        loadRequestMeals(index);
     };
 
     const buildGroceryItems = () => {
@@ -314,6 +354,10 @@ export const useMealsViewModel = () => {
         requestSelectedMeals,
         requestMessage,
         setRequestMessage,
+        requestMeals,
+        requestMealsStatus,
+        requestMealsError,
+        retryRequestMeals,
         handleOpenRequestModal,
         handleToggleRequestMeal,
         handleSendRequest,
