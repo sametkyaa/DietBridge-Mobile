@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, TouchableOpacity } from 'react-native';
 import { useMealPhotoUri } from '../hooks/useMealPhotoUri';
 
@@ -8,18 +8,29 @@ export const MealPhotoThumbnail = ({
     imageStyle,
     wrapperStyle,
     onPress,
+    accessibilityLabel,
     fallback,
 }) => {
     const { photoUri, retryAfterImageError } = useMealPhotoUri(photoPath);
     const activeUri = completionPhotoUri || photoUri;
+    const [failedUri, setFailedUri] = useState(null);
 
-    if (!activeUri) return fallback || null;
+    useEffect(() => {
+        setFailedUri(null);
+    }, [activeUri]);
+
+    if (!activeUri || failedUri === activeUri) return fallback || null;
 
     const image = (
         <Image
             source={{ uri: activeUri }}
             style={imageStyle}
-            onError={completionPhotoUri ? undefined : retryAfterImageError}
+            resizeMode="cover"
+            onError={() => {
+                setFailedUri(activeUri);
+                if (!completionPhotoUri) retryAfterImageError();
+            }}
+            accessible={false}
         />
     );
 
@@ -30,6 +41,8 @@ export const MealPhotoThumbnail = ({
             activeOpacity={0.9}
             onPress={() => onPress(activeUri)}
             style={wrapperStyle}
+            accessibilityRole="button"
+            accessibilityLabel={accessibilityLabel || 'Öğün fotoğrafını aç'}
         >
             {image}
         </TouchableOpacity>

@@ -1,6 +1,11 @@
 const CANONICAL_TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 const POSTGRES_TIME_PATTERN = /^(([01]\d|2[0-3]):[0-5]\d)(?::00(?:\.0+)?)?$/;
 const CANONICAL_MACRO_KEYS = ['protein', 'carbs', 'fat'];
+const MACRO_KEY_ALIASES = {
+    protein: ['protein', 'protein_g', 'proteinGrams'],
+    carbs: ['carbs', 'carbohydrate', 'carbohydrates', 'carbs_g'],
+    fat: ['fat', 'fats', 'fat_g'],
+};
 
 export const MealPlanReadErrorCode = {
     AUTHORIZATION: 'authorization',
@@ -31,25 +36,60 @@ const optionalNumber = (value, fieldName) => {
     return value;
 };
 
+const parseMacroPayload = (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz meal.macros alanı bulundu.');
+        }
+        try {
+            return JSON.parse(trimmed);
+        } catch {
+            throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz meal.macros alanı bulundu.');
+        }
+    }
+    return value;
+};
+
+const normalizeMacroValue = (value, key) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'string' && !value.trim()) return null;
+
+    const numberValue = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numberValue) || numberValue < 0) {
+        throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, `Plan verisinde geçersiz meal.macros.${key} alanı bulundu.`);
+    }
+    return numberValue;
+};
+
 const normalizeCanonicalMacros = (value) => {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    const payload = parseMacroPayload(value);
+    if (payload === null) return { protein: null, carbs: null, fat: null };
+    if (typeof payload !== 'object' || Array.isArray(payload)) {
         throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz meal.macros alanı bulundu.');
     }
 
-    const keys = Object.keys(value);
-    if (keys.length !== CANONICAL_MACRO_KEYS.length
-        || keys.some((key) => !CANONICAL_MACRO_KEYS.includes(key))) {
-        throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz meal.macros anahtarları bulundu.');
-    }
+    const keys = Object.keys(payload);
+    if (keys.length === 0) return { protein: null, carbs: null, fat: null };
 
     const macros = {};
+    let recognizedKeyCount = 0;
     CANONICAL_MACRO_KEYS.forEach((key) => {
-        const macroValue = value[key];
-        if (typeof macroValue !== 'number' || !Number.isFinite(macroValue) || macroValue < 0) {
-            throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, `Plan verisinde geçersiz meal.macros.${key} alanı bulundu.`);
+        const aliases = MACRO_KEY_ALIASES[key];
+        const presentAlias = aliases.find((alias) => Object.prototype.hasOwnProperty.call(payload, alias));
+        if (!presentAlias) {
+            macros[key] = null;
+            return;
         }
-        macros[key] = macroValue;
+
+        recognizedKeyCount += 1;
+        macros[key] = normalizeMacroValue(payload[presentAlias], key);
     });
+
+    if (recognizedKeyCount === 0) {
+        throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz meal.macros anahtarları bulundu.');
+    }
 
     return macros;
 };
@@ -82,6 +122,30 @@ const validateSortOrder = (value) => {
     return value;
 };
 
+const normalizeMealSource = (source) => {
+    if (typeof source !== 'string' || !source.trim()) return 'manual';
+
+    const normalizedSource = source.trim().toLowerCase();
+    return normalizedSource === 'manual' || normalizedSource === 'recipe'
+        ? normalizedSource
+        : 'manual';
+};
+
+const normalizeRecipeId = (value) => {
+    if (value === null || value === undefined) return null;
+    return requireString(value, 'meal.recipe_id');
+};
+
+const normalizeDescription = (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value !== 'string') {
+        throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz meal.description alanı bulundu.');
+    }
+
+    const normalized = value.trim();
+    return normalized || null;
+};
+
 export const normalizeCanonicalMeal = (meal, plan) => {
     if (!meal || typeof meal !== 'object') {
         throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz öğün bulundu.');
@@ -93,10 +157,6 @@ export const normalizeCanonicalMeal = (meal, plan) => {
         throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Öğün planı beklenen planla eşleşmiyor.');
     }
 
-    if (meal.source !== 'manual' || meal.recipe_id !== null) {
-        throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisi desteklenmeyen öğün kaynağı içeriyor.');
-    }
-
     if (typeof meal.is_eaten !== 'boolean') {
         throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz öğün tamamlanma durumu bulundu.');
     }
@@ -106,6 +166,9 @@ export const normalizeCanonicalMeal = (meal, plan) => {
     }
 
     const macros = normalizeCanonicalMacros(meal.macros);
+    const source = normalizeMealSource(meal.source);
+    const recipeId = normalizeRecipeId(meal.recipe_id);
+    const description = normalizeDescription(meal.description);
 
     return {
         id,
@@ -120,8 +183,9 @@ export const normalizeCanonicalMeal = (meal, plan) => {
         time: normalizeCanonicalMealTime(meal.time),
         sortOrder: validateSortOrder(meal.sort_order),
         photoPath: meal.photo_url,
-        source: meal.source,
-        recipeId: meal.recipe_id,
+        description,
+        source,
+        recipeId,
         isEaten: meal.is_eaten,
         desc: meal.calories === null ? '' : `${meal.calories} kcal`,
         note: plan.notes || '',

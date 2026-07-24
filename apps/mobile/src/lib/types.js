@@ -46,9 +46,13 @@
  * @property {number|null} waist
  * @property {number|null} hip
  * @property {number|null} arm
+ * @property {number|null} right_arm
+ * @property {number|null} left_arm
  * @property {number|null} chest
  * @property {number|null} thigh
  * @property {number|null} calf
+ * @property {number|null} right_calf
+ * @property {number|null} left_calf
  * @property {number|null} neck
  * @property {string|null} notes
  * @property {string} created_at

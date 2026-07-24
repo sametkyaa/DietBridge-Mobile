@@ -9,7 +9,7 @@ import {
 const INVALID_MEAL_ID_MESSAGE = 'Geçerli öğün ID bulunamadı.';
 const MEAL_COMPLETION_UPDATE_ERROR_MESSAGE = 'Öğün durumu güncellenemedi.';
 const ACTIVE_CONNECTION_SELECT_COLUMNS = 'id, client_id, dietitian_id, status';
-const MEAL_SELECT_COLUMNS = 'id, plan_id, type, title, calories, macros, time, sort_order, photo_url, source, recipe_id, is_eaten';
+const MEAL_SELECT_COLUMNS = 'id, plan_id, type, title, description, calories, macros, time, sort_order, photo_url, source, recipe_id, is_eaten';
 const PLAN_SELECT_COLUMNS = `id, client_id, dietitian_id, plan_date, notes, meals (${MEAL_SELECT_COLUMNS})`;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

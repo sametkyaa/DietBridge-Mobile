@@ -429,10 +429,6 @@ export const updateCurrentUserProfile = async (payload = {}) => {
         if (!data) throw new Error(PROFILE_UNAVAILABLE_MESSAGE);
     }
 
-    if (payload.currentWeight !== undefined) {
-        await saveCurrentWeight(payload.currentWeight);
-    }
-
     return getCurrentUserProfile();
 };
 
@@ -529,7 +525,16 @@ export const saveCurrentWeight = async (weight) => {
     });
 
     if (error) throw error;
-    return getCurrentUserProfile();
+    try {
+        return await getCurrentUserProfile();
+    } catch (reloadError) {
+        // Kilo başarıyla kaydedildi.
+        // Profil yeniden yükleme hatası kaydetmeyi geçersiz kılmaz.
+        if (typeof __DEV__ !== 'undefined' && __DEV__) {
+            console.warn('Kilo kaydedildi ancak profil yenilenemedi:', reloadError?.message);
+        }
+        return true;
+    }
 };
 
 const getAvatarMimeType = (asset) => {
@@ -543,30 +548,27 @@ const getAvatarMimeType = (asset) => {
     return 'image/jpeg';
 };
 
-const readAvatarAsArrayBuffer = (uri) => new Promise((resolve, reject) => {
-    const request = new XMLHttpRequest();
-    request.open('GET', uri, true);
-    request.responseType = 'arraybuffer';
-    request.timeout = 15000;
+const decodeAvatarBase64 = (base64) => {
+    if (typeof base64 !== 'string' || !base64.trim() || typeof globalThis.atob !== 'function') {
+        throw new Error('Avatar file could not be read.');
+    }
 
-    request.onload = () => {
-        const fileData = request.response;
-        if (!fileData || !Number.isFinite(fileData.byteLength) || fileData.byteLength === 0) {
-            reject(new Error('Avatar file could not be read.'));
-            return;
+    try {
+        const binary = globalThis.atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) {
+            bytes[index] = binary.charCodeAt(index);
         }
-
-        resolve(fileData);
-    };
-
-    request.onerror = () => reject(new Error('Avatar file could not be read.'));
-    request.ontimeout = () => reject(new Error('Avatar file read timed out.'));
-    request.send(null);
-});
+        if (bytes.byteLength === 0) throw new Error('Avatar file could not be read.');
+        return bytes.buffer;
+    } catch {
+        throw new Error('Avatar file could not be read.');
+    }
+};
 
 export const uploadProfileAvatar = async (asset) => {
     const user = await getCurrentUserOrThrow();
-    if (!asset?.uri) throw new Error('Yüklenecek profil fotoğrafı bulunamadı.');
+    if (!asset?.uri || !asset?.base64) throw new Error('Yüklenecek profil fotoğrafı bulunamadı.');
 
     const mimeType = getAvatarMimeType(asset);
     if (!ALLOWED_AVATAR_TYPES.includes(mimeType)) {
@@ -581,10 +583,12 @@ export const uploadProfileAvatar = async (asset) => {
         'image/png': 'png',
         'image/webp': 'webp',
     };
-    const filePath = `${user.id}/avatar.${extensionMap[mimeType] || 'jpg'}`;
+    const currentProfile = await getCurrentUserProfile();
+    const filePath = `${user.id}/avatar-${Date.now()}.${extensionMap[mimeType] || 'jpg'}`;
+    let uploaded = false;
 
     try {
-        const fileData = await readAvatarAsArrayBuffer(asset.uri);
+        const fileData = decodeAvatarBase64(asset.base64);
 
         if (fileData.byteLength > MAX_AVATAR_BYTES) {
             throw new Error('Profil fotoğrafı en fazla 5 MB olabilir.');
@@ -599,13 +603,29 @@ export const uploadProfileAvatar = async (asset) => {
             });
 
         if (uploadError) throw uploadError;
-        return await updateCurrentUserProfile({ avatarPath: filePath });
+        uploaded = true;
+        const updatedProfile = await updateCurrentUserProfile({ avatarPath: filePath });
+
+        if (currentProfile.avatarPath && currentProfile.avatarPath !== filePath) {
+            const { error: removeError } = await supabase.storage.from(AVATAR_BUCKET).remove([currentProfile.avatarPath]);
+            if (removeError && typeof __DEV__ !== 'undefined' && __DEV__) {
+                console.warn('Previous profile avatar cleanup failed.');
+            }
+        }
+
+        return updatedProfile;
     } catch (error) {
+        if (uploaded) {
+            try {
+                await supabase.storage.from(AVATAR_BUCKET).remove([filePath]);
+            } catch {
+                // The profile still points to the previous avatar if this cleanup fails.
+            }
+        }
         if (typeof __DEV__ !== 'undefined' && __DEV__) {
             console.error('Profile avatar upload failed', {
-                userId: user.id,
                 mimeType,
-                error,
+                error: error?.message,
             });
         }
 
@@ -616,16 +636,28 @@ export const uploadProfileAvatar = async (asset) => {
 
 export const deleteProfileAvatar = async () => {
     const profile = await getCurrentUserProfile();
-    if (profile.avatarPath) {
+    if (!profile.avatarPath) {
+        await updateCurrentUserProfile({ avatarPath: null });
+        return getCurrentUserProfile();
+    }
+
+    await updateCurrentUserProfile({ avatarPath: null });
+    try {
         const { error: removeError } = await supabase
             .storage
             .from(AVATAR_BUCKET)
             .remove([profile.avatarPath]);
 
         if (removeError) throw removeError;
+    } catch {
+        try {
+            await updateCurrentUserProfile({ avatarPath: profile.avatarPath });
+        } catch {
+            // The original path is retained whenever the compensating update succeeds.
+        }
+        throw new Error('Profil fotoğrafı silinemedi. Lütfen tekrar deneyin.');
     }
 
-    await updateCurrentUserProfile({ avatarPath: null });
     return getCurrentUserProfile();
 };
 

@@ -24,8 +24,6 @@ import {
 
 const EMPTY_TEXT = '';
 const EMPTY_NAME = '';
-const EMPTY_MEASUREMENT = '';
-const EMPTY_DIETITIAN = 'Henüz diyetisyen atanmamış';
 
 const INITIAL_REFERENCE_DATA = {
     bloodTypes: [],
@@ -65,7 +63,6 @@ const INITIAL_CLIENT_DATA = {
 const INITIAL_FORM = {
     fullName: '',
     phone: '',
-    currentWeight: '',
     targetWeight: '',
     heightCm: '',
 };
@@ -95,7 +92,6 @@ const buildSleepInput = (profile) => {
 const createFormFromProfile = (profile) => ({
     fullName: toText(profile?.fullName),
     phone: toText(profile?.phone),
-    currentWeight: numberToText(profile?.currentWeight),
     targetWeight: numberToText(profile?.targetWeight),
     heightCm: numberToText(profile?.heightCm),
 });
@@ -135,7 +131,13 @@ const mapProfileToClientData = (profile) => {
 
 const normalizeListInput = (value) => normalizeMultiValue(value);
 
-const normalizedNumberText = (value) => String(value || '').trim().replace(',', '.');
+const normalizeAvatarAsset = (asset) => ({
+    uri: asset?.uri || null,
+    mimeType: asset?.mimeType || null,
+    fileName: asset?.fileName || null,
+    fileSize: asset?.fileSize || null,
+    base64: asset?.base64 || null,
+});
 
 export const useProfileViewModel = () => {
     const [profile, setProfile] = useState(null);
@@ -145,6 +147,7 @@ export const useProfileViewModel = () => {
     const [isSelectingAvatar, setIsSelectingAvatar] = useState(false);
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const [pendingAvatarAsset, setPendingAvatarAsset] = useState(null);
+    const [isAvatarActionMenuVisible, setIsAvatarActionMenuVisible] = useState(false);
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
     const [validationErrors, setValidationErrors] = useState({});
@@ -158,9 +161,12 @@ export const useProfileViewModel = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editingField, setEditingField] = useState(null);
     const [editingValue, setEditingValue] = useState('');
+    const [editingInitialValue, setEditingInitialValue] = useState('');
     const [editForm, setEditForm] = useState(INITIAL_FORM);
     const [isDietitianCardExpanded, setIsDietitianCardExpanded] = useState(false);
     const healthSaveLockRef = useRef(false);
+    const profileSaveLockRef = useRef(false);
+    const rowSaveLockRef = useRef(false);
     const avatarSelectionLockRef = useRef(false);
     const avatarUploadLockRef = useRef(false);
     const {
@@ -241,37 +247,8 @@ export const useProfileViewModel = () => {
         setIsEditing(false);
     };
 
-    const handleEditToggle = () => {
-        if (isEditing) {
-            cancelEditing();
-        } else {
-            startEditing();
-        }
-    };
-
     const updateField = (field, value) => {
         setEditForm((current) => ({ ...current, [field]: value }));
-    };
-
-    const addArrayItem = (field, value) => {
-        const item = String(value || '').trim();
-        if (!item) return;
-
-        setEditingValue((current) => {
-            const nextItems = normalizeListInput(current);
-            if (!nextItems.some((existing) => existing.toLocaleLowerCase('tr-TR') === item.toLocaleLowerCase('tr-TR'))) {
-                nextItems.push(item);
-            }
-            return nextItems.join(', ');
-        });
-    };
-
-    const removeArrayItem = (_field, index) => {
-        setEditingValue((current) => {
-            const nextItems = normalizeListInput(current);
-            nextItems.splice(index, 1);
-            return nextItems.join(', ');
-        });
     };
 
     const handleLogout = async () => {
@@ -318,11 +295,13 @@ export const useProfileViewModel = () => {
             dailyWaterGoalMl: () => numberToText(waterGoalLiters),
         };
 
-        setEditingValue(fieldInitializers[fieldKey]?.() ?? '');
+        const initialValue = fieldInitializers[fieldKey]?.() ?? '';
+        setEditingValue(initialValue);
+        setEditingInitialValue(initialValue);
     };
 
     const handleRowSave = async () => {
-        if (!editingField || isSaving) return;
+        if (!editingField || isSaving || rowSaveLockRef.current) return;
 
         const updatesByField = {
             bloodTypeId: () => ({ bloodTypeId: editingValue }),
@@ -335,21 +314,31 @@ export const useProfileViewModel = () => {
             dislikedFoods: () => ({ dislikedFoods: normalizeListInput(editingValue) }),
         };
 
+        const buildUpdates = updatesByField[editingField];
+        if (!buildUpdates) {
+            setValidationErrors({ [editingField]: 'Bu alan güvenli biçimde kaydedilemiyor.' });
+            return;
+        }
+
         try {
+            rowSaveLockRef.current = true;
             setIsSaving(true);
             setError(null);
+            setSuccessMessage(null);
             setValidationErrors({});
-            const updates = updatesByField[editingField]?.() || {};
+            const updates = buildUpdates();
             const updatedProfile = await updateCurrentUserProfile(updates);
             applyProfile(updatedProfile);
             setEditingField(null);
             setEditingValue('');
+            setEditingInitialValue('');
             setSuccessMessage('Profiliniz güncellendi.');
         } catch (saveError) {
             const message = saveError?.message || 'Güncellenirken sorun oluştu.';
             setValidationErrors({ [editingField]: message });
             Alert.alert('Hata', message);
         } finally {
+            rowSaveLockRef.current = false;
             setIsSaving(false);
         }
     };
@@ -361,6 +350,7 @@ export const useProfileViewModel = () => {
             healthSaveLockRef.current = true;
             setIsSaving(true);
             setError(null);
+            setSuccessMessage(null);
             setValidationErrors({});
             const updatedProfile = await updateFunction(value);
             applyProfile(updatedProfile);
@@ -402,11 +392,13 @@ export const useProfileViewModel = () => {
     );
 
     const saveProfile = async () => {
-        if (isSaving) return;
+        if (isSaving || profileSaveLockRef.current) return;
 
         try {
+            profileSaveLockRef.current = true;
             setIsSaving(true);
             setError(null);
+            setSuccessMessage(null);
             setValidationErrors({});
 
             const updates = {
@@ -415,12 +407,6 @@ export const useProfileViewModel = () => {
                 targetWeight: editForm.targetWeight,
                 heightCm: editForm.heightCm,
             };
-
-            const nextWeightText = normalizedNumberText(editForm.currentWeight);
-            const currentWeightText = normalizedNumberText(profile?.currentWeight);
-            if (nextWeightText && nextWeightText !== currentWeightText) {
-                updates.currentWeight = editForm.currentWeight;
-            }
 
             const updatedProfile = await updateCurrentUserProfile(updates);
             applyProfile(updatedProfile);
@@ -432,33 +418,46 @@ export const useProfileViewModel = () => {
             setValidationErrors({ form: message });
             Alert.alert('Hata', message);
         } finally {
+            profileSaveLockRef.current = false;
             setIsSaving(false);
         }
     };
 
-    const selectAvatar = async () => {
+    const selectAvatarFromSource = async (source) => {
         if (avatarSelectionLockRef.current || isUploadingAvatar) return;
 
         try {
             avatarSelectionLockRef.current = true;
             setIsSelectingAvatar(true);
             setError(null);
+            setSuccessMessage(null);
 
-            const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            const permission = source === 'camera'
+                ? await ImagePicker.requestCameraPermissionsAsync()
+                : await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (!permission.granted) {
-                Alert.alert('İzin Gerekli', 'Profil fotoğrafı seçmek için galeri izni vermelisiniz.');
+                Alert.alert(
+                    'İzin Gerekli',
+                    source === 'camera'
+                        ? 'Profil fotoğrafı çekmek için kamera izni vermelisiniz.'
+                        : 'Profil fotoğrafı seçmek için galeri izni vermelisiniz.',
+                );
                 return;
             }
 
-            const result = await ImagePicker.launchImageLibraryAsync({
+            const picker = source === 'camera'
+                ? ImagePicker.launchCameraAsync
+                : ImagePicker.launchImageLibraryAsync;
+            const result = await picker({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
                 aspect: [1, 1],
                 quality: 0.85,
+                base64: true,
             });
 
             if (result.canceled || !result.assets?.[0]) return;
-            setPendingAvatarAsset(result.assets[0]);
+            setPendingAvatarAsset(normalizeAvatarAsset(result.assets[0]));
         } catch (selectionError) {
             if (typeof __DEV__ !== 'undefined' && __DEV__) {
                 console.error('Profile avatar selection failed', selectionError);
@@ -468,6 +467,11 @@ export const useProfileViewModel = () => {
             avatarSelectionLockRef.current = false;
             setIsSelectingAvatar(false);
         }
+    };
+
+    const selectAvatar = () => {
+        if (avatarSelectionLockRef.current || isUploadingAvatar) return;
+        setIsAvatarActionMenuVisible(true);
     };
 
     const cancelSelectedAvatar = () => {
@@ -482,6 +486,7 @@ export const useProfileViewModel = () => {
             avatarUploadLockRef.current = true;
             setIsUploadingAvatar(true);
             setError(null);
+            setSuccessMessage(null);
             const updatedProfile = await uploadProfileAvatar(pendingAvatarAsset);
             applyProfile(updatedProfile);
             setPendingAvatarAsset(null);
@@ -502,6 +507,7 @@ export const useProfileViewModel = () => {
         if (isSelectingAvatar || isUploadingAvatar) return;
         try {
             setIsUploadingAvatar(true);
+            setSuccessMessage(null);
             const updatedProfile = await deleteProfileAvatar();
             applyProfile(updatedProfile);
         } catch (removeError) {
@@ -511,9 +517,27 @@ export const useProfileViewModel = () => {
         }
     };
 
+    const closeAvatarActionMenu = () => {
+        if (!isSelectingAvatar && !isUploadingAvatar) setIsAvatarActionMenuVisible(false);
+    };
+
+    const handleAvatarSource = async (source) => {
+        closeAvatarActionMenu();
+        await selectAvatarFromSource(source);
+    };
+
+    const handleAvatarRemoval = async () => {
+        closeAvatarActionMenu();
+        await removeAvatar();
+    };
+
     const retry = async () => {
-        await loadReferenceData();
-        await loadProfile();
+        const results = await Promise.allSettled([loadReferenceData(), loadProfile()]);
+        if (results[1].status === 'rejected' || results[1].value === null) {
+            setError('Profil bilgileri yüklenemedi. Lütfen tekrar deneyin.');
+        } else if (results[0].status === 'rejected') {
+            setError('Bazı profil seçenekleri yüklenemedi. Lütfen tekrar deneyin.');
+        }
     };
 
     const handleDietitianCardToggle = () => {
@@ -532,6 +556,8 @@ export const useProfileViewModel = () => {
         isSaving,
         isSelectingAvatar,
         isUploadingAvatar,
+        isAvatarActionMenuVisible,
+        hasAvatar: !!profile?.avatarPath,
         pendingAvatarUri: pendingAvatarAsset?.uri || null,
         error,
         successMessage,
@@ -540,9 +566,6 @@ export const useProfileViewModel = () => {
         userName,
         avatarUrl,
         clientData,
-        emptyText: EMPTY_TEXT,
-        emptyMeasurementText: EMPTY_MEASUREMENT,
-        emptyDietitianText: EMPTY_DIETITIAN,
         notificationsEnabled,
         setNotificationsEnabled,
         waterRemindersEnabled,
@@ -551,18 +574,15 @@ export const useProfileViewModel = () => {
         isEditing,
         startEditing,
         cancelEditing,
-        handleEditToggle,
         updateField,
-        addArrayItem,
-        removeArrayItem,
         editForm,
-        setEditForm,
         handleSaveProfile: saveProfile,
         saveProfile,
         editingField,
         setEditingField,
         editingValue,
         setEditingValue,
+        editingInitialValue,
         handleRowEdit,
         handleRowSave,
         waterGoalLiters,
@@ -574,6 +594,9 @@ export const useProfileViewModel = () => {
         saveAverageSleepHours,
         handleAvatarUpload: selectAvatar,
         selectAvatar,
+        closeAvatarActionMenu,
+        handleAvatarSource,
+        handleAvatarRemoval,
         cancelSelectedAvatar,
         saveSelectedAvatar,
         removeAvatar,

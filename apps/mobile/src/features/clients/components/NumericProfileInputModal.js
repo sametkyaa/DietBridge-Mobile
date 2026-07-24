@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     Keyboard,
     KeyboardAvoidingView,
     Modal,
@@ -13,6 +14,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, radius, spacing, typography } from '../../../shared/theme';
 import { formatDecimalValue, normalizeDecimalInput } from '../utils/profileValueUtils';
 
 const isValidStep = (value, minimum, step) => {
@@ -40,6 +42,8 @@ const NumericProfileInputModal = ({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const submitLockRef = useRef(false);
     const isBusy = loading || isSubmitting;
+    const initialValue = value === null || value === undefined ? '' : formatDecimalValue(value);
+    const hasUnsavedChanges = normalizeDecimalInput(inputValue) !== normalizeDecimalInput(initialValue);
 
     useEffect(() => {
         if (!visible) return;
@@ -51,8 +55,18 @@ const NumericProfileInputModal = ({
 
     const handleClose = () => {
         if (isBusy || submitLockRef.current) return;
-        Keyboard.dismiss();
-        onClose();
+        const close = () => {
+            Keyboard.dismiss();
+            onClose();
+        };
+        if (!hasUnsavedChanges) {
+            close();
+            return;
+        }
+        Alert.alert('Kaydedilmemiş değişiklikler', 'Değişiklikleri kaydetmeden çıkmak istiyor musunuz?', [
+            { text: 'Düzenlemeye devam et', style: 'cancel' },
+            { text: 'Kaydetmeden çık', style: 'destructive', onPress: close },
+        ]);
     };
 
     const handleSave = async () => {
@@ -61,6 +75,8 @@ const NumericProfileInputModal = ({
         const normalizedValue = normalizeDecimalInput(inputValue);
         const parsedValue = normalizedValue === '' ? null : Number.parseFloat(normalizedValue);
         const isInvalid = parsedValue !== null && (
+            !/^\d+(?:\.\d+)?$/.test(normalizedValue)
+            ||
             !Number.isFinite(parsedValue)
             || parsedValue < minimum
             || parsedValue > maximum
@@ -99,7 +115,7 @@ const NumericProfileInputModal = ({
             navigationBarTranslucent
             onRequestClose={handleClose}
         >
-            <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+            <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
                 <KeyboardAvoidingView
                     style={styles.keyboardView}
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -107,7 +123,7 @@ const NumericProfileInputModal = ({
                     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                         <View style={styles.overlay}>
                             <View style={styles.modalContainer}>
-                                <Text style={styles.modalTitle}>{title}</Text>
+                                <Text style={styles.modalTitle} accessibilityRole="header">{title}</Text>
                                 <View style={styles.inputRow}>
                                     <TextInput
                                         style={styles.input}
@@ -118,7 +134,7 @@ const NumericProfileInputModal = ({
                                         }}
                                         keyboardType="decimal-pad"
                                         placeholder={placeholder}
-                                        placeholderTextColor="#9CA3AF"
+                                        placeholderTextColor={colors.textSecondary}
                                         editable={!isBusy}
                                         returnKeyType="done"
                                         onSubmitEditing={handleSave}
@@ -147,10 +163,11 @@ const NumericProfileInputModal = ({
                                         onPress={handleSave}
                                         disabled={isBusy}
                                         accessibilityRole="button"
+                                        accessibilityLabel="Kaydet"
                                         accessibilityState={{ disabled: isBusy, busy: isBusy }}
                                     >
                                         {isBusy ? (
-                                            <ActivityIndicator size="small" color="#FFFFFF" />
+                                            <ActivityIndicator size="small" color={colors.white} />
                                         ) : (
                                             <Text style={styles.saveButtonText}>Kaydet</Text>
                                         )}
@@ -177,78 +194,75 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 16,
+        padding: spacing.x4,
     },
     modalContainer: {
         width: '100%',
         maxWidth: 480,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 20,
+        backgroundColor: colors.surface,
+        borderRadius: radius.card,
+        padding: spacing.x5,
     },
     modalTitle: {
-        color: '#111827',
-        fontSize: 18,
-        fontWeight: '700',
-        marginBottom: 18,
+        ...typography.cardTitle,
+        color: colors.textPrimary,
+        marginBottom: spacing.x5,
     },
     inputRow: {
         flexDirection: 'row',
         alignItems: 'center',
         minHeight: 52,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: colors.surfaceMuted,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
-        borderRadius: 8,
-        paddingHorizontal: 12,
+        borderColor: colors.borderSoft,
+        borderRadius: radius.control,
+        paddingHorizontal: spacing.x3,
     },
     input: {
         flex: 1,
         minHeight: 50,
-        color: '#1F2937',
-        fontSize: 16,
+        ...typography.body,
+        color: colors.textPrimary,
     },
     unitText: {
-        color: '#4B5563',
-        fontSize: 15,
-        fontWeight: '700',
-        marginLeft: 8,
+        ...typography.bodyMedium,
+        color: colors.textSecondary,
+        marginLeft: spacing.x2,
     },
     errorText: {
-        color: '#B91C1C',
-        fontSize: 13,
-        lineHeight: 18,
-        marginTop: 10,
+        ...typography.supporting,
+        color: colors.errorDark,
+        marginTop: spacing.x3,
     },
     actions: {
         flexDirection: 'row',
-        marginTop: 20,
+        marginTop: spacing.x5,
     },
     cancelButton: {
         flex: 1,
         minHeight: 48,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F3F4F6',
-        borderRadius: 8,
-        marginRight: 6,
+        backgroundColor: colors.surfaceMuted,
+        borderRadius: radius.control,
+        marginRight: spacing.x2,
     },
     cancelButtonText: {
-        color: '#4B5563',
-        fontWeight: '700',
+        ...typography.button,
+        color: colors.textSecondary,
     },
     saveButton: {
         flex: 1,
         minHeight: 48,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#16A34A',
-        borderRadius: 8,
-        marginLeft: 6,
+        backgroundColor: colors.primaryDark,
+        borderRadius: radius.control,
+        marginLeft: spacing.x2,
     },
     saveButtonText: {
-        color: '#FFFFFF',
-        fontWeight: '700',
+        ...typography.button,
+        color: colors.white,
     },
     disabledButton: {
         opacity: 0.6,

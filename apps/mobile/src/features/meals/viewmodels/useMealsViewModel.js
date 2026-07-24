@@ -1,15 +1,24 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getLocalWeekDateKey, getLocalWeekDayOptions } from '../../../shared/utils/localDate';
 import { useMeals } from '../../meals/context/MealsContext';
 import { submitMealChangeRequest } from '../services/mealChangeRequestService';
 import { getDailyMealPlan } from '../services/mealService';
+import {
+    createRealtimeRefreshScheduler,
+    getMealPlanRealtimeClientId,
+    isMealEventRelevant,
+    isMealPlanEventRelevant,
+    subscribeMealPlanChanges,
+} from '../services/mealPlanRealtimeService';
 import { useDietitianConnection } from '../../dietitianConnection/context/DietitianConnectionContext';
 import {
     CONNECTION_GENERIC_ERROR_MESSAGE,
     CONNECTION_REQUIRED_MESSAGE,
 } from '../../dietitianConnection/services/dietitianConnectionService';
+
+const REALTIME_REFRESH_DEBOUNCE_MS = 350;
 
 export const useMealsViewModel = () => {
     const dayOptions = useMemo(() => getLocalWeekDayOptions(), []);
@@ -21,10 +30,19 @@ export const useMealsViewModel = () => {
     const [mealsList, setMealsList] = useState([]);
     const [mealPlanStatus, setMealPlanStatus] = useState('loading');
     const [mealPlanError, setMealPlanError] = useState(null);
+    const [isSendingRequest, setIsSendingRequest] = useState(false);
     const { completedMeals, hydrateCompletedMeals } = useMeals();
     const requestSequenceRef = useRef(0);
     const inFlightRequestsRef = useRef(new Map());
     const isMountedRef = useRef(true);
+    const requestSubmissionRef = useRef(false);
+    const selectedPlanDateRef = useRef('');
+    const knownPlanIdsRef = useRef(new Set());
+    const hasCompletedInitialLoadRef = useRef(false);
+    const isFocusedRef = useRef(false);
+    const loadMealPlanRef = useRef(null);
+    const unsubscribeRealtimeRef = useRef(null);
+    const refreshSchedulerRef = useRef(null);
     const {
         hasActiveDietitian,
         isLoadingConnection,
@@ -32,9 +50,27 @@ export const useMealsViewModel = () => {
         refreshConnectionStatus,
     } = useDietitianConnection();
 
+    if (!refreshSchedulerRef.current) {
+        // Single debounced funnel for realtime events, focus and AppState
+        // fallbacks. Always refreshes through the canonical loader with the
+        // latest selected date, so no parallel meal fetch flow exists.
+        refreshSchedulerRef.current = createRealtimeRefreshScheduler({
+            delayMs: REALTIME_REFRESH_DEBOUNCE_MS,
+            onRefresh: () => {
+                if (!isMountedRef.current || !loadMealPlanRef.current) return null;
+                return loadMealPlanRef.current(selectedPlanDateRef.current, { silent: true, force: true });
+            },
+        });
+    }
+
     useEffect(() => () => {
         isMountedRef.current = false;
         requestSequenceRef.current += 1;
+        if (unsubscribeRealtimeRef.current) {
+            unsubscribeRealtimeRef.current();
+            unsubscribeRealtimeRef.current = null;
+        }
+        refreshSchedulerRef.current?.dispose();
     }, []);
 
     useFocusEffect(
@@ -43,13 +79,13 @@ export const useMealsViewModel = () => {
         }, [refreshConnectionStatus]),
     );
 
-    const loadMealPlan = useCallback((planDate, { retry = false, force = false } = {}) => {
+    const loadMealPlan = useCallback((planDate, { retry = false, force = false, silent = false } = {}) => {
         const existingRequest = inFlightRequestsRef.current.get(planDate);
         if (existingRequest && !force) return existingRequest;
 
         const requestSequence = requestSequenceRef.current + 1;
         requestSequenceRef.current = requestSequence;
-        if (isMountedRef.current) {
+        if (isMountedRef.current && !silent) {
             setMealPlanStatus(retry ? 'retrying' : 'loading');
             setMealPlanError(null);
             setMealsList([]);
@@ -59,14 +95,32 @@ export const useMealsViewModel = () => {
             .then((result) => {
                 if (!isMountedRef.current || requestSequenceRef.current !== requestSequence) return result;
 
+                hasCompletedInitialLoadRef.current = true;
+                knownPlanIdsRef.current = new Set(result?.plan?.id ? [result.plan.id] : []);
                 hydrateCompletedMeals(result.meals);
                 setMealsList(result.meals);
+                setSelectedMeal((currentMeal) => (
+                    currentMeal
+                        ? result.meals.find((meal) => meal.id === currentMeal.id) || null
+                        : null
+                ));
                 setMealPlanStatus(result.status);
+                if (silent) setMealPlanError(null);
                 return result;
             })
             .catch((error) => {
                 if (!isMountedRef.current || requestSequenceRef.current !== requestSequence) return null;
 
+                if (silent) {
+                    // Silent refresh failures keep the current plan on screen;
+                    // the next realtime event or focus refetch retries.
+                    if (__DEV__) {
+                        console.warn('Silent meal plan refresh failed.', { planDate });
+                    }
+                    return null;
+                }
+
+                hasCompletedInitialLoadRef.current = true;
                 setMealsList([]);
                 setMealPlanStatus('error');
                 setMealPlanError(error?.message || CONNECTION_GENERIC_ERROR_MESSAGE);
@@ -83,10 +137,71 @@ export const useMealsViewModel = () => {
     }, [hydrateCompletedMeals]);
 
     const selectedPlanDate = getLocalWeekDateKey(selectedDay);
+    selectedPlanDateRef.current = selectedPlanDate;
+    loadMealPlanRef.current = loadMealPlan;
 
     useEffect(() => {
         loadMealPlan(selectedPlanDate);
     }, [loadMealPlan, selectedPlanDate]);
+
+    // Realtime subscription scoped to screen focus: created when the client
+    // session and user id are ready, removed on blur/unmount/logout.
+    useFocusEffect(
+        useCallback(() => {
+            isFocusedRef.current = true;
+            let disposed = false;
+
+            const handleRealtimeChange = ({ table, payload }) => {
+                const relevant = table === 'meal_plans'
+                    ? isMealPlanEventRelevant(payload, selectedPlanDateRef.current)
+                    : isMealEventRelevant(payload, knownPlanIdsRef.current);
+
+                if (relevant) {
+                    refreshSchedulerRef.current?.notify();
+                }
+            };
+
+            getMealPlanRealtimeClientId()
+                .then((clientId) => {
+                    if (disposed || !clientId || !isMountedRef.current) return;
+                    unsubscribeRealtimeRef.current?.();
+                    unsubscribeRealtimeRef.current = subscribeMealPlanChanges({
+                        clientId,
+                        onChange: handleRealtimeChange,
+                    });
+                })
+                .catch(() => undefined);
+
+            // Focus fallback: silently revalidate when returning to a screen
+            // whose initial load already finished. Debounce merges this with
+            // a simultaneous AppState resume signal.
+            if (hasCompletedInitialLoadRef.current) {
+                refreshSchedulerRef.current?.notify();
+            }
+
+            return () => {
+                disposed = true;
+                isFocusedRef.current = false;
+                refreshSchedulerRef.current?.clearPending();
+                if (unsubscribeRealtimeRef.current) {
+                    unsubscribeRealtimeRef.current();
+                    unsubscribeRealtimeRef.current = null;
+                }
+            };
+        }, []),
+    );
+
+    // AppState fallback: the OS can suspend the realtime socket in background,
+    // so resume revalidates the plan once the app returns to foreground.
+    useEffect(() => {
+        const appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
+            if (nextAppState === 'active' && isFocusedRef.current && hasCompletedInitialLoadRef.current) {
+                refreshSchedulerRef.current?.notify();
+            }
+        });
+
+        return () => appStateSubscription.remove();
+    }, []);
 
     const retryMeals = useCallback(() => (
         loadMealPlan(selectedPlanDate, { retry: true, force: true })
@@ -117,6 +232,7 @@ export const useMealsViewModel = () => {
     };
 
     const handleSendRequest = async () => {
+        if (requestSubmissionRef.current) return;
         if (!hasActiveDietitian) {
             Alert.alert('Bilgi', CONNECTION_REQUIRED_MESSAGE);
             return;
@@ -130,6 +246,8 @@ export const useMealsViewModel = () => {
             return;
         }
 
+        requestSubmissionRef.current = true;
+        setIsSendingRequest(true);
         try {
             await submitMealChangeRequest({
                 plan_date: getLocalWeekDateKey(requestSelectedDay),
@@ -142,6 +260,9 @@ export const useMealsViewModel = () => {
         } catch (error) {
             console.error(error);
             Alert.alert('Hata', error.message || CONNECTION_GENERIC_ERROR_MESSAGE);
+        } finally {
+            requestSubmissionRef.current = false;
+            if (isMountedRef.current) setIsSendingRequest(false);
         }
     };
 
@@ -177,15 +298,6 @@ export const useMealsViewModel = () => {
         setGroceryModalVisible(true);
     };
 
-    const getMealIconConfig = (type) => {
-        const value = (type || '').toLowerCase();
-        if (value.includes('breakfast')) return { name: 'sunny-outline', background: '#FEF3C7', color: '#F59E0B' };
-        if (value.includes('lunch')) return { name: 'fast-food-outline', background: '#DBEAFE', color: '#1D4ED8' };
-        if (value.includes('dinner')) return { name: 'moon-outline', background: '#EDE9FE', color: '#6D28D9' };
-        if (value.includes('snack')) return { name: 'nutrition-outline', background: '#FFE4E6', color: '#DB2777' };
-        return { name: 'restaurant-outline', background: '#E6F4EC', color: '#15803D' };
-    };
-
     return {
         dayOptions,
         selectedDay,
@@ -214,7 +326,6 @@ export const useMealsViewModel = () => {
         toggleGroceryItem: (name) => setGroceryItems((previous) => previous.map((item) => (
             item.name === name ? { ...item, checked: !item.checked } : item
         ))),
-        getMealIconConfig,
         meals: mealsList,
         mealPlanStatus,
         mealPlanError,
@@ -224,5 +335,6 @@ export const useMealsViewModel = () => {
         isLoadingConnection,
         connectionError,
         connectionRequiredMessage: CONNECTION_REQUIRED_MESSAGE,
+        isSendingRequest,
     };
 };
