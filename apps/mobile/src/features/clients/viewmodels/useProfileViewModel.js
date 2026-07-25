@@ -171,9 +171,13 @@ export const useProfileViewModel = () => {
     const {
         activeDietitian,
         hasActiveDietitian,
+        pendingRequest,
         isLoadingConnection,
+        connectionAction,
         connectionError,
         refreshConnectionStatus,
+        approvePendingRequest,
+        rejectPendingRequest,
     } = useDietitianConnection();
 
     const applyProfile = useCallback((nextProfile) => {
@@ -549,6 +553,38 @@ export const useProfileViewModel = () => {
 
     const displayedDietitian = activeDietitian || null;
 
+    const handleApproveDietitianRequest = async () => {
+        if (!pendingRequest?.id || connectionAction) return;
+        try {
+            await approvePendingRequest(pendingRequest.id);
+            Alert.alert('Başarılı', 'Diyetisyen bağlantınız oluşturuldu.');
+        } catch (actionError) {
+            Alert.alert('Hata', actionError?.message || 'Bağlantı isteği kabul edilemedi. Lütfen tekrar deneyin.');
+        }
+    };
+
+    const rejectDietitianRequest = async () => {
+        if (!pendingRequest?.id || connectionAction) return;
+        try {
+            await rejectPendingRequest(pendingRequest.id);
+            Alert.alert('Bilgi', 'Bağlantı isteği reddedildi.');
+        } catch (actionError) {
+            Alert.alert('Hata', actionError?.message || 'Bağlantı isteği reddedilemedi. Lütfen tekrar deneyin.');
+        }
+    };
+
+    const handleRejectDietitianRequest = () => {
+        if (!pendingRequest?.id || connectionAction) return;
+        Alert.alert(
+            'Bağlantı isteğini reddet',
+            'Bu diyetisyenin bağlantı isteğini reddetmek istediğinize emin misiniz?',
+            [
+                { text: 'Vazgeç', style: 'cancel' },
+                { text: 'İsteği Reddet', style: 'destructive', onPress: rejectDietitianRequest },
+            ],
+        );
+    };
+
     return {
         profile,
         form: editForm,
@@ -616,10 +652,14 @@ export const useProfileViewModel = () => {
         },
         activeDietitian: displayedDietitian,
         hasActiveDietitian,
+        pendingRequest,
         isLoadingConnection,
+        connectionAction,
         connectionError,
         isDietitianCardExpanded,
         handleDietitianCardToggle,
+        handleApproveDietitianRequest,
+        handleRejectDietitianRequest,
         loadProfile,
         refreshProfile: loadProfile,
     };

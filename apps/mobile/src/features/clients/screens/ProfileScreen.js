@@ -21,6 +21,7 @@ import {
     COMMON_MEDICATIONS,
 } from '../constants/profileOptions';
 import { useProfileViewModel } from '../viewmodels/useProfileViewModel';
+import DietitianConnectionRequestCard from '../../dietitianConnection/components/DietitianConnectionRequestCard';
 
 const FIELD_META = {
     bloodTypeId: { title: 'Kan grubunu düzenle', optionKey: 'bloodTypes' },
@@ -47,7 +48,8 @@ const ProfileScreen = ({ navigation }) => {
         pendingAvatarUri, cancelSelectedAvatar, saveSelectedAvatar, catalogs, profileOptions,
         isSaving, isSelectingAvatar, isUploadingAvatar, error, successMessage, validationErrors, hasUnsavedChanges,
         activeDietitian, hasActiveDietitian, isLoadingConnection, connectionError, isDietitianCardExpanded,
-        handleDietitianCardToggle, retry,
+        handleDietitianCardToggle, pendingRequest, connectionAction, handleApproveDietitianRequest,
+        handleRejectDietitianRequest, retry,
     } = vm;
 
     const closeGenericEditor = () => {
@@ -124,7 +126,17 @@ const ProfileScreen = ({ navigation }) => {
                         {[['Boy', display(clientData.height, 'cm')], ['Güncel kilo', display(clientData.currentWeight, 'kg')], ['Hedef kilo', display(clientData.targetWeight, 'kg')], ['Uyum skoru', clientData.complianceScore == null ? '' : `${clientData.complianceScore}/100`]].map(([label, value]) => <View key={label} style={styles.stat}><Text style={styles.statLabel}>{label}</Text><Text style={styles.statValue}>{value || '—'}</Text></View>)}
                     </View>
                 </AppCard>
-                <DietitianProfileCard loading={isLoadingConnection} dietitian={activeDietitian} hasActive={hasActiveDietitian} error={connectionError} expanded={isDietitianCardExpanded} onToggle={handleDietitianCardToggle} />
+                {pendingRequest ? (
+                    <DietitianConnectionRequestCard
+                        request={pendingRequest}
+                        action={connectionAction}
+                        error={connectionError}
+                        onApprove={handleApproveDietitianRequest}
+                        onReject={handleRejectDietitianRequest}
+                    />
+                ) : (
+                    <DietitianProfileCard loading={isLoadingConnection} dietitian={activeDietitian} hasActive={hasActiveDietitian} error={connectionError} expanded={isDietitianCardExpanded} onToggle={handleDietitianCardToggle} />
+                )}
                 <ProfileSectionCard title="Kişisel bilgiler" icon="person" rows={[
                     { key: 'email', label: 'E-posta', value: profile?.email },
                     { key: 'phone', label: 'Telefon', value: profile?.phone },

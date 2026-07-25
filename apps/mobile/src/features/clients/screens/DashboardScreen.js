@@ -18,6 +18,7 @@ import {
 } from '../components/dashboard';
 import { mapDashboardMeal } from '../mappers/dashboardUiMapper';
 import { useDashboardViewModel } from '../viewmodels/useDashboardViewModel';
+import DietitianConnectionRequestCard from '../../dietitianConnection/components/DietitianConnectionRequestCard';
 
 const DashboardScreen = () => {
     const navigation = useNavigation();
@@ -63,6 +64,11 @@ const DashboardScreen = () => {
         isSavingWeight,
         hasActiveDietitian,
         connectionRequiredMessage,
+        pendingRequest,
+        connectionAction,
+        connectionError,
+        handleApproveDietitianRequest,
+        handleRejectDietitianRequest,
     } = useDashboardViewModel();
     const [isPhotoPromptVisible, setIsPhotoPromptVisible] = useState(false);
     const [isPhotoPickerActive, setIsPhotoPickerActive] = useState(false);
@@ -210,6 +216,14 @@ const DashboardScreen = () => {
                     dateLabel={dateLabel}
                     avatarUrl={avatarUrl}
                     onAvatarPress={() => setIsSidebarVisible(true)}
+                />
+
+                <DietitianConnectionRequestCard
+                    request={pendingRequest}
+                    action={connectionAction}
+                    error={connectionError}
+                    onApprove={handleApproveDietitianRequest}
+                    onReject={handleRejectDietitianRequest}
                 />
 
                 {hasActiveDietitian && mealPlanStatus === 'success' ? (

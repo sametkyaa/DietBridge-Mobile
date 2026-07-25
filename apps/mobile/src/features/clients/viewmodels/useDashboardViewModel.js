@@ -372,26 +372,38 @@ export const useDashboardViewModel = () => {
     const handleGoToNextMeal = () => setFocusedMealId(firstIncompleteMeal?.id || null);
 
     const handleApproveDietitianRequest = async () => {
-        if (!pendingRequest?.id) return;
+        if (!pendingRequest?.id || connectionAction) return;
         try {
             await approvePendingRequest(pendingRequest.id);
-            Alert.alert('Başarılı', 'Diyetisyen bağlantınız onaylandı.');
+            Alert.alert('Başarılı', 'Diyetisyen bağlantınız oluşturuldu.');
             await loadTodayMeals(new Date(), { force: true });
         } catch (error) {
-            Alert.alert('Hata', error.message || CONNECTION_GENERIC_ERROR_MESSAGE);
+            Alert.alert('Hata', error.message || 'Bağlantı isteği kabul edilemedi. Lütfen tekrar deneyin.');
         }
     };
 
-    const handleRejectDietitianRequest = async () => {
-        if (!pendingRequest?.id) return;
+    const rejectDietitianRequest = async () => {
+        if (!pendingRequest?.id || connectionAction) return;
         try {
             await rejectPendingRequest(pendingRequest.id);
             setMeals([]);
             setMealPlanStatus('unlinked');
             Alert.alert('Bilgi', 'Bağlantı isteği reddedildi.');
         } catch (error) {
-            Alert.alert('Hata', error.message || CONNECTION_GENERIC_ERROR_MESSAGE);
+            Alert.alert('Hata', error.message || 'Bağlantı isteği reddedilemedi. Lütfen tekrar deneyin.');
         }
+    };
+
+    const handleRejectDietitianRequest = () => {
+        if (!pendingRequest?.id || connectionAction) return;
+        Alert.alert(
+            'Bağlantı isteğini reddet',
+            'Bu diyetisyenin bağlantı isteğini reddetmek istediğinize emin misiniz?',
+            [
+                { text: 'Vazgeç', style: 'cancel' },
+                { text: 'İsteği Reddet', style: 'destructive', onPress: rejectDietitianRequest },
+            ],
+        );
     };
 
     return {

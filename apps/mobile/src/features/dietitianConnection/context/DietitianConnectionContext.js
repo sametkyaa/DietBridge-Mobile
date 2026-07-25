@@ -1,9 +1,11 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import {
     approveDietitianConnectionRequest,
     CONNECTION_GENERIC_ERROR_MESSAGE,
     getDietitianConnectionStatus,
     rejectDietitianConnectionRequest,
+    subscribeDietitianConnectionChanges,
 } from '../services/dietitianConnectionService';
 
 const EMPTY_CONNECTION_STATE = {
@@ -25,7 +27,6 @@ const defaultContext = {
 };
 
 const DietitianConnectionContext = createContext(defaultContext);
-
 const normalizeErrorMessage = (error) => error?.message || CONNECTION_GENERIC_ERROR_MESSAGE;
 
 export const DietitianConnectionProvider = ({ children, userId }) => {
@@ -33,8 +34,13 @@ export const DietitianConnectionProvider = ({ children, userId }) => {
     const [isLoadingConnection, setIsLoadingConnection] = useState(false);
     const [connectionAction, setConnectionAction] = useState(null);
     const [connectionError, setConnectionError] = useState(null);
+    const isMountedRef = useRef(true);
+    const inFlightRefreshRef = useRef(null);
+    const actionLockRef = useRef(false);
+    const refreshTimerRef = useRef(null);
 
     const resetConnectionState = useCallback(() => {
+        if (!isMountedRef.current) return;
         setConnectionState(EMPTY_CONNECTION_STATE);
         setConnectionError(null);
         setIsLoadingConnection(false);
@@ -46,67 +52,99 @@ export const DietitianConnectionProvider = ({ children, userId }) => {
             resetConnectionState();
             return EMPTY_CONNECTION_STATE;
         }
+        if (inFlightRefreshRef.current) return inFlightRefreshRef.current;
 
-        setIsLoadingConnection(true);
-        setConnectionError(null);
-        try {
-            const nextState = await getDietitianConnectionStatus();
-            setConnectionState(nextState);
-            return nextState;
-        } catch (error) {
-            const message = normalizeErrorMessage(error);
-            setConnectionError(message);
-            setConnectionState(EMPTY_CONNECTION_STATE);
-            return {
-                ...EMPTY_CONNECTION_STATE,
-                error: message,
-            };
-        } finally {
-            setIsLoadingConnection(false);
-        }
+        const request = (async () => {
+            if (isMountedRef.current) {
+                setIsLoadingConnection(true);
+                setConnectionError(null);
+            }
+            try {
+                const nextState = await getDietitianConnectionStatus();
+                if (isMountedRef.current) setConnectionState(nextState);
+                return nextState;
+            } catch (error) {
+                const message = normalizeErrorMessage(error);
+                if (isMountedRef.current) {
+                    setConnectionError(message);
+                    setConnectionState(EMPTY_CONNECTION_STATE);
+                }
+                return { ...EMPTY_CONNECTION_STATE, error: message };
+            } finally {
+                if (isMountedRef.current) setIsLoadingConnection(false);
+                if (inFlightRefreshRef.current === request) inFlightRefreshRef.current = null;
+            }
+        })();
+        inFlightRefreshRef.current = request;
+        return request;
     }, [resetConnectionState, userId]);
 
     useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+            if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+        };
+    }, []);
+
+    useEffect(() => {
+        actionLockRef.current = false;
+        inFlightRefreshRef.current = null;
         refreshConnectionStatus();
-    }, [refreshConnectionStatus]);
+    }, [refreshConnectionStatus, userId]);
 
-    const approvePendingRequest = useCallback(async (requestId) => {
-        if (!requestId) {
-            throw new Error(CONNECTION_GENERIC_ERROR_MESSAGE);
+    useEffect(() => {
+        if (!userId) return undefined;
+        const scheduleRefresh = () => {
+            if (refreshTimerRef.current) return;
+            refreshTimerRef.current = setTimeout(() => {
+                refreshTimerRef.current = null;
+                refreshConnectionStatus();
+            }, 150);
+        };
+        const unsubscribe = subscribeDietitianConnectionChanges({ clientId: userId, onChange: scheduleRefresh });
+        const appStateSubscription = AppState.addEventListener('change', (nextState) => {
+            if (nextState === 'active') scheduleRefresh();
+        });
+        return () => {
+            unsubscribe();
+            appStateSubscription.remove();
+            if (refreshTimerRef.current) {
+                clearTimeout(refreshTimerRef.current);
+                refreshTimerRef.current = null;
+            }
+        };
+    }, [refreshConnectionStatus, userId]);
+
+    const runPendingAction = useCallback(async (requestId, action, execute) => {
+        if (!requestId || actionLockRef.current) throw new Error(CONNECTION_GENERIC_ERROR_MESSAGE);
+
+        actionLockRef.current = true;
+        if (isMountedRef.current) {
+            setConnectionAction(action);
+            setConnectionError(null);
         }
-
-        setConnectionAction('approve');
-        setConnectionError(null);
         try {
-            await approveDietitianConnectionRequest(requestId);
+            await execute(requestId);
             return await refreshConnectionStatus();
         } catch (error) {
             const message = normalizeErrorMessage(error);
-            setConnectionError(message);
+            if (isMountedRef.current) setConnectionError(message);
             throw new Error(message);
         } finally {
-            setConnectionAction(null);
+            actionLockRef.current = false;
+            if (isMountedRef.current) setConnectionAction(null);
         }
     }, [refreshConnectionStatus]);
 
-    const rejectPendingRequest = useCallback(async (requestId) => {
-        if (!requestId) {
-            throw new Error(CONNECTION_GENERIC_ERROR_MESSAGE);
-        }
-
-        setConnectionAction('reject');
-        setConnectionError(null);
-        try {
-            await rejectDietitianConnectionRequest(requestId);
-            return await refreshConnectionStatus();
-        } catch (error) {
-            const message = normalizeErrorMessage(error);
-            setConnectionError(message);
-            throw new Error(message);
-        } finally {
-            setConnectionAction(null);
-        }
-    }, [refreshConnectionStatus]);
+    const approvePendingRequest = useCallback(
+        (requestId) => runPendingAction(requestId, 'approving', approveDietitianConnectionRequest),
+        [runPendingAction],
+    );
+    const rejectPendingRequest = useCallback(
+        (requestId) => runPendingAction(requestId, 'rejecting', rejectDietitianConnectionRequest),
+        [runPendingAction],
+    );
 
     const value = useMemo(() => ({
         ...connectionState,
@@ -117,20 +155,11 @@ export const DietitianConnectionProvider = ({ children, userId }) => {
         approvePendingRequest,
         rejectPendingRequest,
     }), [
-        approvePendingRequest,
-        connectionAction,
-        connectionError,
-        connectionState,
-        isLoadingConnection,
-        refreshConnectionStatus,
-        rejectPendingRequest,
+        approvePendingRequest, connectionAction, connectionError, connectionState,
+        isLoadingConnection, refreshConnectionStatus, rejectPendingRequest,
     ]);
 
-    return (
-        <DietitianConnectionContext.Provider value={value}>
-            {children}
-        </DietitianConnectionContext.Provider>
-    );
+    return <DietitianConnectionContext.Provider value={value}>{children}</DietitianConnectionContext.Provider>;
 };
 
 export const useDietitianConnection = () => useContext(DietitianConnectionContext);

@@ -5,6 +5,32 @@ export const CONNECTION_GENERIC_ERROR_MESSAGE = 'İşlem sırasında bir hata ol
 export const CONNECTION_STALE_REQUEST_MESSAGE = 'Bu bağlantı isteği artık geçerli değil.';
 export const CONNECTION_ACTIVE_EXISTS_MESSAGE = 'Zaten aktif bir diyetisyen bağlantınız var.';
 
+// Realtime ownership stays in the service layer; consumers only receive an
+// invalidation signal and re-read the normalized connection status.
+export const subscribeDietitianConnectionChanges = ({ clientId, onChange } = {}) => {
+    if (!clientId || typeof onChange !== 'function') return () => {};
+
+    const channel = supabase
+        .channel(`dietitian-connection:${clientId}`)
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'dietitian_clients',
+            filter: `client_id=eq.${clientId}`,
+        }, onChange)
+        .subscribe();
+
+    return () => {
+        try {
+            supabase.removeChannel(channel);
+        } catch (error) {
+            if (typeof __DEV__ !== 'undefined' && __DEV__) {
+                console.warn('Dietitian connection realtime cleanup failed.');
+            }
+        }
+    };
+};
+
 const getCurrentUser = async () => {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user) {
