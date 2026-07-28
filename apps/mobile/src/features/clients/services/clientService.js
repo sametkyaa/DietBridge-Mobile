@@ -218,13 +218,30 @@ export const getAvatarSignedUrl = async (path) => {
     const objectPath = cleanString(path);
     if (!objectPath) return null;
 
+    try {
+        const remoteUrl = new URL(objectPath);
+        if (remoteUrl.protocol === 'https:' || remoteUrl.protocol === 'http:') return objectPath;
+    } catch {
+        // Non-URL values continue through the validated Storage-path flow.
+    }
+
+    const pathParts = objectPath.split('/');
+    if (objectPath.includes('\\') || pathParts.some((part) => !part || part === '.' || part === '..')) return null;
+
     const { data, error } = await supabase
         .storage
         .from(AVATAR_BUCKET)
         .createSignedUrl(objectPath, 60 * 60);
 
     if (error) throw error;
-    return data?.signedUrl || null;
+    const signedUrl = cleanString(data?.signedUrl);
+    if (!signedUrl) return null;
+    try {
+        const parsed = new URL(signedUrl);
+        return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? signedUrl : null;
+    } catch {
+        return null;
+    }
 };
 
 const normalizeProfileResult = async ({ user, profile, clientProfile, referenceData }) => {

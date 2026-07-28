@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabaseClient';
+import { getAvatarSignedUrl } from '../../clients/services/clientService';
 
 export const CONNECTION_REQUIRED_MESSAGE = 'Bu özelliği kullanmak için aktif bir diyetisyen bağlantınız olmalı.';
 export const CONNECTION_GENERIC_ERROR_MESSAGE = 'İşlem sırasında bir hata oluştu. Lütfen tekrar deneyin.';
@@ -48,7 +49,7 @@ const getDietitianProfilesById = async (dietitianIds = []) => {
     const [{ data: profiles, error: profilesError }, { data: dietitianProfiles, error: dietitianProfilesError }] = await Promise.all([
         supabase
             .from('profiles')
-            .select('id, email, full_name')
+            .select('id, email, full_name, avatar_url')
             .in('id', uniqueIds),
         supabase
             .from('dietitian_profiles')
@@ -58,11 +59,7 @@ const getDietitianProfilesById = async (dietitianIds = []) => {
 
     if (profilesError || dietitianProfilesError) {
         if (typeof __DEV__ !== 'undefined' && __DEV__) {
-            console.error('Assigned dietitian could not be loaded', {
-                dietitianIds: uniqueIds,
-                profilesError,
-                dietitianProfilesError,
-            });
+            console.error('Assigned dietitian profile data could not be loaded.');
         }
     }
 
@@ -74,6 +71,8 @@ const getDietitianProfilesById = async (dietitianIds = []) => {
             fullName,
             name: fullName,
             email: profile.email || '',
+            avatarPath: profile.avatar_url || null,
+            avatarUrl: null,
             nameLoadError: false,
         };
     });
@@ -84,6 +83,8 @@ const getDietitianProfilesById = async (dietitianIds = []) => {
             fullName: '',
             name: '',
             email: '',
+            avatarPath: null,
+            avatarUrl: null,
             nameLoadError: false,
         };
         profileMap[detail.user_id] = {
@@ -102,6 +103,8 @@ const getDietitianProfilesById = async (dietitianIds = []) => {
                 fullName: '',
                 name: '',
                 email: '',
+                avatarPath: null,
+                avatarUrl: null,
                 nameLoadError: false,
             };
         }
@@ -127,7 +130,7 @@ const getDietitianProfilesById = async (dietitianIds = []) => {
         fallbackResults.forEach(({ id, name, error }) => {
             if (error) {
                 if (typeof __DEV__ !== 'undefined' && __DEV__) {
-                    console.warn('Dietitian display name RPC failed for', id, error.message);
+                    console.warn('Dietitian display name could not be resolved.');
                 }
                 if (profileMap[id]) profileMap[id].nameLoadError = true;
                 return;
@@ -146,6 +149,12 @@ const getDietitianProfilesById = async (dietitianIds = []) => {
         });
     }
 
+    await Promise.all(uniqueIds.map(async (id) => {
+        const profile = profileMap[id];
+        if (!profile?.avatarPath) return;
+        profile.avatarUrl = await getAvatarSignedUrl(profile.avatarPath).catch(() => null);
+    }));
+
     return profileMap;
 };
 
@@ -157,6 +166,8 @@ const mapConnection = (connection, profileMap = {}) => {
         fullName: '',
         name: '',
         email: '',
+        avatarPath: null,
+        avatarUrl: null,
         nameLoadError: false,
     };
 
