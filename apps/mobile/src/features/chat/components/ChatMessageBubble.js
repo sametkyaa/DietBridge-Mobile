@@ -7,6 +7,7 @@ import {
     formatChatMessageTime,
     getChatReceiptState,
 } from '../utils/chatUiUtils';
+import { getChatImageBubbleLabel } from '../utils/chatImageUiState';
 
 export default function ChatMessageBubble({
     message,
@@ -19,6 +20,11 @@ export default function ChatMessageBubble({
     const isFailed = message?.deliveryState === 'failed';
     const isPending = message?.deliveryState === 'pending';
     const isDeleted = message?.isDeleted === true;
+    const isImage = message?.messageKind === 'image' && !isDeleted;
+    const imageLabel = isImage ? getChatImageBubbleLabel(message) : null;
+    const imageCaption = isImage && typeof message?.body === 'string' && message.body.trim()
+        ? message.body
+        : null;
     const timeLabel = formatChatMessageTime(message?.createdAt);
     const receiptState = getChatReceiptState({ message, peerReadState });
     const canDelete = canDeleteChatMessage(message) && !isDeleting;
@@ -51,13 +57,27 @@ export default function ChatMessageBubble({
                     pressed && canDelete && styles.pressed,
                 ]}
             >
-                <Text style={[
-                    styles.body,
-                    isOwn ? styles.ownBody : styles.otherBody,
-                    isDeleted && styles.deletedBody,
-                ]}>
-                    {isDeleted ? 'Bu mesaj silindi' : message?.body}
-                </Text>
+                {isImage ? (
+                    <View style={styles.imageContainer}>
+                        <View style={[styles.imagePlaceholder, isOwn ? styles.ownImagePlaceholder : styles.otherImagePlaceholder]}>
+                            <Icon name="image" size={26} color={isOwn ? colors.white : colors.textSecondary} />
+                            <Text style={[styles.imageLabel, isOwn ? styles.ownBody : styles.otherBody]}>{imageLabel}</Text>
+                        </View>
+                        {imageCaption ? (
+                            <Text style={[styles.body, styles.imageCaption, isOwn ? styles.ownBody : styles.otherBody]}>
+                                {imageCaption}
+                            </Text>
+                        ) : null}
+                    </View>
+                ) : (
+                    <Text style={[
+                        styles.body,
+                        isOwn ? styles.ownBody : styles.otherBody,
+                        isDeleted && styles.deletedBody,
+                    ]}>
+                        {isDeleted ? 'Bu mesaj silindi' : message?.body}
+                    </Text>
+                )}
                 <View style={styles.metaRow}>
                     {timeLabel ? (
                         <Text style={[styles.time, isOwn ? styles.ownTime : styles.otherTime]}>{timeLabel}</Text>
@@ -111,6 +131,20 @@ const styles = StyleSheet.create({
     deletedBody: { fontStyle: 'italic', opacity: 0.82 },
     ownBody: { color: colors.white },
     otherBody: { color: colors.textPrimary },
+    imageContainer: { flexShrink: 1 },
+    imagePlaceholder: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.x2,
+        minWidth: 160,
+        borderRadius: radius.control,
+        paddingHorizontal: spacing.x3,
+        paddingVertical: spacing.x3,
+    },
+    ownImagePlaceholder: { backgroundColor: colors.primarySurface },
+    otherImagePlaceholder: { backgroundColor: colors.surface },
+    imageLabel: { ...typography.body, fontWeight: '600' },
+    imageCaption: { marginTop: spacing.x2 },
     metaRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', gap: spacing.x1, marginTop: spacing.x1 },
     time: { ...typography.caption },
     ownTime: { color: colors.primarySoft },

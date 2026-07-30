@@ -19,6 +19,7 @@ import { useChatViewModel } from '../../chat/viewmodels/useChatViewModel';
 import { useDietitianConnection } from '../../dietitianConnection/context/DietitianConnectionContext';
 import { CONNECTION_REQUIRED_MESSAGE } from '../../dietitianConnection/services/dietitianConnectionService';
 import { resolveDietitianAvatarPresentation } from '../../chat/utils/chatUiUtils';
+import { isChatImagesFeatureEnabled } from '../../chat/utils/chatImageFeatureFlag';
 
 function DietitianHeader({ activeConnection, activeDietitian }) {
   const dietitian = activeConnection?.dietitian || activeDietitian || {};
@@ -120,6 +121,9 @@ function ActiveChatContent({ activeConnection, activeDietitian, isScreenFocused 
         disabled={!viewModel.canSend}
         isSending={viewModel.isSending}
         sendError={viewModel.sendError}
+        featureEnabled={isChatImagesFeatureEnabled()}
+        conversationId={viewModel.conversation?.id ?? null}
+        imageUpload={viewModel.imageUpload}
       />
     </KeyboardAvoidingView>
   );
