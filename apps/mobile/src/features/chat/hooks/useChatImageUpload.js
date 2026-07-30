@@ -6,6 +6,7 @@ import {
     finalizeChatImageMessage,
     normalizeChatImageCaption,
     uploadCanonicalChatImage,
+    validateChatImageUpload,
 } from '../services/chatImageService';
 import { canonicalizeChatImage } from '../utils/canonicalizeChatImage';
 import { createExpoCanonicalizerDeps, pickChatImage } from '../services/chatImagePicker';
@@ -165,6 +166,15 @@ export const useChatImageUpload = ({
                 await uploadCanonicalChatImage(intent, canonical);
                 if (!isCurrent(operationId)) return;
                 dispatch({ type: 'uploaded', operationId });
+                stage = 'validating';
+            }
+
+            if (stage === 'validating') {
+                const intentId = operation.intent?.id;
+                if (!intentId) throw createChatImageError('invalid_request');
+                await validateChatImageUpload(intentId);
+                if (!isCurrent(operationId)) return;
+                dispatch({ type: 'validated', operationId });
                 stage = 'finalizing';
             }
 

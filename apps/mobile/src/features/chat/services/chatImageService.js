@@ -64,6 +64,41 @@ export const uploadCanonicalChatImage = async (intent, canonical) => {
     }
 };
 
+const VALIDATOR_CODES = new Set([
+    'unauthorized', 'invalid_request', 'not_found', 'intent_not_pending',
+    'intent_expired', 'object_not_found', 'invalid_image', 'image_too_large',
+    'image_dimensions_exceeded', 'validation_failed', 'internal_error',
+]);
+
+const readValidatorCode = async (error) => {
+    const json = error?.context?.json;
+    if (typeof json !== 'function') return null;
+    try {
+        const code = (await json())?.code;
+        return VALIDATOR_CODES.has(code) ? code : null;
+    } catch {
+        return null;
+    }
+};
+
+// Runs after the exact Storage upload and before finalization. Raw Function
+// errors never escape this service boundary.
+export const validateChatImageUpload = async (intentId) => {
+    if (!isValidUuid(intentId)) throw createChatImageError('invalid_request');
+    try {
+        const { error } = await supabase.functions.invoke('validate-chat-image', { body: { intentId } });
+        if (!error) return;
+        const code = await readValidatorCode(error);
+        throw createChatImageError(code || 'internal_error', {
+            retryable: code === 'validation_failed' || code === 'internal_error',
+            cause: error,
+        });
+    } catch (error) {
+        if (error?.name === 'ChatImageError') throw error;
+        throw mapChatImageError(error, 'internal_error');
+    }
+};
+
 // Finalizes the image message through the canonical RPC. Retry is safe: the
 // RPC is idempotent per (sender, client_message_id) and returns the original
 // canonical row when a finalized intent is replayed.

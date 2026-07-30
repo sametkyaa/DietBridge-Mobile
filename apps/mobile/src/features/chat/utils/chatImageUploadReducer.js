@@ -82,7 +82,11 @@ const chatImageUploadReducer = (state, action) => {
 
         case 'uploaded':
             if (state.status !== 'uploading') return state;
-            return { ...state, status: 'finalizing', progress: null, error: null };
+            return { ...state, status: 'validating', progress: null, error: null };
+
+        case 'validated':
+            if (state.status !== 'validating') return state;
+            return { ...state, status: 'finalizing', error: null };
 
         case 'progress':
             if (state.status !== 'uploading') return state;

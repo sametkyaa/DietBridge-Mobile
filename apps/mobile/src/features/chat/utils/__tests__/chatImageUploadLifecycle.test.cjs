@@ -60,8 +60,10 @@ test('the happy path walks idle to succeeded through every stage', () => {
     state = reducer.chatImageUploadReducer(state, { type: 'progress', operationId: 1, progress: 0.5 });
     assert.equal(state.progress, 0.5);
     state = reducer.chatImageUploadReducer(state, { type: 'uploaded', operationId: 1 });
-    assert.equal(state.status, 'finalizing');
+    assert.equal(state.status, 'validating');
     assert.equal(state.progress, null);
+    state = reducer.chatImageUploadReducer(state, { type: 'validated', operationId: 1 });
+    assert.equal(state.status, 'finalizing');
     state = reducer.chatImageUploadReducer(state, { type: 'finalized', operationId: 1 });
     assert.equal(state.status, 'succeeded');
     assert.equal(state.previewUri, null);
@@ -117,6 +119,7 @@ test('a succeeded upload is never rolled back into cancelled', () => {
     state = reducer.chatImageUploadReducer(state, { type: 'canonicalized', operationId: 1, canonical: canonical('a') });
     state = reducer.chatImageUploadReducer(state, { type: 'intent-created', operationId: 1, intent: uploadIntent });
     state = reducer.chatImageUploadReducer(state, { type: 'uploaded', operationId: 1 });
+    state = reducer.chatImageUploadReducer(state, { type: 'validated', operationId: 1 });
     state = reducer.chatImageUploadReducer(state, { type: 'finalized', operationId: 1 });
     assert.equal(reducer.chatImageUploadReducer(state, { type: 'cancelled', operationId: 1 }), state);
 });

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import {
     deleteChatMessage,
@@ -27,6 +28,7 @@ import { useChatReadState } from '../hooks/useChatReadState';
 import { useChatDeliveryState } from '../hooks/useChatDeliveryState';
 import { useChatImageUpload } from '../hooks/useChatImageUpload';
 import { canDeleteChatMessage } from '../utils/chatUiUtils';
+import { purgeChatImageUri, refreshChatImageUri, resolveChatImageUri } from '../services/chatImageResolver';
 
 const GENERIC_CHAT_ERROR = 'Sohbet işlemi şu anda tamamlanamadı. Lütfen tekrar deneyin.';
 const UUID_ERROR = 'Güvenli mesaj kimliği oluşturulamadı. Lütfen tekrar deneyin.';
@@ -82,6 +84,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
     const [deletingMessageIds, setDeletingMessageIds] = useState([]);
     const [bottomScrollToken, setBottomScrollToken] = useState(0);
     const [visibleCanonicalMessage, setVisibleCanonicalMessage] = useState(null);
+    const [imageStates, setImageStates] = useState({});
 
     const isMountedRef = useRef(true);
     const requestGenerationRef = useRef(0);
@@ -98,6 +101,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
     const latestRefreshRef = useRef(null);
     const pendingMessageFetchRef = useRef(new Map());
     const [realtimeScrollToken, setRealtimeScrollToken] = useState(0);
+    const imageRequestVersionRef = useRef(0);
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -629,6 +633,34 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
         buildChatTimeline(serverMessages, optimisticMessages, relationId)
     ), [optimisticMessages, relationId, serverMessages]);
 
+    // Image reads remain available independently of the send feature flag. The
+    // generation guard prevents an old conversation/foreground request from
+    // writing signed URLs into the currently active conversation.
+    const resolveImageMessages = useCallback(async (forceRefresh = false) => {
+        const generation = ++imageRequestVersionRef.current;
+        const activeConversationId = conversationRef.current?.id ?? null;
+        const imageMessages = serverMessages.filter((message) => message?.messageKind === 'image');
+        imageMessages.forEach((message) => { if (!message?.attachment || message.isDeleted || message.attachment.deletedAt) purgeChatImageUri(message); });
+        setImageStates(Object.fromEntries(imageMessages.map((message) => [message.id, { uri: null, status: 'loading' }])));
+        const results = await Promise.all(imageMessages.map((message) => (
+            forceRefresh ? refreshChatImageUri(message) : resolveChatImageUri(message)
+        )));
+        if (!isMountedRef.current || imageRequestVersionRef.current !== generation
+            || conversationRef.current?.id !== activeConversationId) return;
+        setImageStates(Object.fromEntries(imageMessages.map((message, index) => [message.id, results[index]])));
+    }, [serverMessages]);
+
+    useEffect(() => { void resolveImageMessages(); }, [conversation?.id, resolveImageMessages]);
+
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', (nextState) => {
+            if (nextState === 'active') void resolveImageMessages(true);
+        });
+        return () => subscription.remove();
+    }, [resolveImageMessages]);
+
+    const retryImage = useCallback((message) => { void resolveImageMessages(true); }, [resolveImageMessages]);
+
     // Optional canonical-JPEG image sending. The feature flag defaults off, so
     // this hook is inert (picker hidden) unless EXPO_PUBLIC_ENABLE_CHAT_IMAGES
     // is exactly 'true'. Finalized uploads reconcile through the same targeted
@@ -676,6 +708,8 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
         realtimeScrollToken,
         realtimeStatus,
         imageUpload,
+        imageStates,
+        retryImage,
     };
 };
 
