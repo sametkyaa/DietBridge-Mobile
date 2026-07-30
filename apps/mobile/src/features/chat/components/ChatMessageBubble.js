@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 import { Icon } from '../../../shared/components/ui';
 import {
@@ -15,6 +15,9 @@ export default function ChatMessageBubble({
     onRetry,
     onRequestDelete,
     isDeleting = false,
+    imageState,
+    onRetryImage,
+    onOpenImage,
 }) {
     const isOwn = Boolean(message?.isOwn);
     const isFailed = message?.deliveryState === 'failed';
@@ -59,10 +62,13 @@ export default function ChatMessageBubble({
             >
                 {isImage ? (
                     <View style={styles.imageContainer}>
-                        <View style={[styles.imagePlaceholder, isOwn ? styles.ownImagePlaceholder : styles.otherImagePlaceholder]}>
-                            <Icon name="image" size={26} color={isOwn ? colors.white : colors.textSecondary} />
-                            <Text style={[styles.imageLabel, isOwn ? styles.ownBody : styles.otherBody]}>{imageLabel}</Text>
-                        </View>
+                        {imageState?.uri ? <Pressable onPress={onOpenImage} accessibilityRole="button" accessibilityLabel={`${imageLabel} görselini büyüt`}><Image source={{ uri: imageState.uri }} style={styles.imageThumbnail} resizeMode="cover" accessibilityLabel={imageLabel} /></Pressable> : (
+                            <View style={[styles.imagePlaceholder, isOwn ? styles.ownImagePlaceholder : styles.otherImagePlaceholder]}>
+                                {imageState?.status === 'loading' ? <ActivityIndicator color={isOwn ? colors.white : colors.textSecondary} /> : <Icon name="image" size={26} color={isOwn ? colors.white : colors.textSecondary} />}
+                                <Text style={[styles.imageLabel, isOwn ? styles.ownBody : styles.otherBody]}>{imageState?.status === 'loading' ? 'Görsel yükleniyor' : imageState?.status === 'error' ? 'Görsel kullanılamıyor' : imageLabel}</Text>
+                                {imageState?.status === 'error' ? <Pressable onPress={onRetryImage} accessibilityRole="button" accessibilityLabel="Görseli tekrar yükle"><Text style={[styles.retryText, isOwn ? styles.ownRetryText : styles.otherRetryText]}>Tekrar dene</Text></Pressable> : null}
+                            </View>
+                        )}
                         {imageCaption ? (
                             <Text style={[styles.body, styles.imageCaption, isOwn ? styles.ownBody : styles.otherBody]}>
                                 {imageCaption}
@@ -144,6 +150,7 @@ const styles = StyleSheet.create({
     ownImagePlaceholder: { backgroundColor: colors.primarySurface },
     otherImagePlaceholder: { backgroundColor: colors.surface },
     imageLabel: { ...typography.body, fontWeight: '600' },
+    imageThumbnail: { width: 240, height: 180, borderRadius: radius.control, backgroundColor: colors.surfaceMuted },
     imageCaption: { marginTop: spacing.x2 },
     metaRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', gap: spacing.x1, marginTop: spacing.x1 },
     time: { ...typography.caption },

@@ -112,6 +112,8 @@ function ActiveChatContent({ activeConnection, activeDietitian, isScreenFocused 
           realtimeScrollToken={viewModel.realtimeScrollToken}
           conversationId={viewModel.conversation?.id ?? null}
           onLastVisibleCanonicalMessageChange={viewModel.handleVisibleCanonicalMessageChange}
+          imageStates={viewModel.imageStates}
+          onRetryImage={viewModel.retryImage}
         />
       </View>
       <ChatComposer

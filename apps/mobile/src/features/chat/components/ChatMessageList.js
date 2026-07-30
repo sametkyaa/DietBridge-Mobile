@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton, EmptyState, ErrorState } from '../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../shared/theme';
 import ChatMessageBubble from './ChatMessageBubble';
@@ -27,6 +27,8 @@ export default function ChatMessageList({
     realtimeScrollToken,
     conversationId,
     onLastVisibleCanonicalMessageChange,
+    imageStates = {},
+    onRetryImage,
 }) {
     const listRef = useRef(null);
     const isNearBottomRef = useRef(true);
@@ -40,11 +42,13 @@ export default function ChatMessageList({
         });
         visibleMessageCallbackRef.current?.(latestMessage);
     });
+    const [viewerMessage, setViewerMessage] = React.useState(null);
 
     useEffect(() => {
         conversationIdRef.current = conversationId;
         visibleMessageCallbackRef.current = onLastVisibleCanonicalMessageChange;
     }, [conversationId, onLastVisibleCanonicalMessageChange]);
+    useEffect(() => setViewerMessage(null), [conversationId]);
 
     useEffect(() => {
         const timer = setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 0);
@@ -100,6 +104,7 @@ export default function ChatMessageList({
     };
 
     return (
+        <>
         <FlatList
             ref={listRef}
             style={styles.list}
@@ -112,6 +117,9 @@ export default function ChatMessageList({
                     onRetry={onRetryMessage}
                     onRequestDelete={onRequestDeleteMessage}
                     isDeleting={Boolean(item?.id && deletingMessageIds?.includes(item.id))}
+                    imageState={imageStates[item?.id]}
+                    onRetryImage={() => onRetryImage?.(item)}
+                    onOpenImage={() => setViewerMessage(item)}
                 />
             )}
             ListHeaderComponent={renderHeader}
@@ -139,6 +147,17 @@ export default function ChatMessageList({
             }}
             accessibilityLabel="Sohbet mesajları"
         />
+        <Modal visible={Boolean(viewerMessage)} transparent animationType="fade" onRequestClose={() => setViewerMessage(null)}>
+            <View style={styles.viewerBackdrop}>
+                <Pressable style={StyleSheet.absoluteFill} onPress={() => setViewerMessage(null)} accessibilityLabel="Görseli kapat" />
+                <View style={styles.viewerContent}>
+                    {imageStates[viewerMessage?.id]?.uri ? <Image source={{ uri: imageStates[viewerMessage.id].uri }} style={styles.viewerImage} resizeMode="contain" accessibilityLabel={viewerMessage?.body?.trim() || 'Görsel'} /> : null}
+                    {viewerMessage?.body?.trim() ? <Text style={styles.viewerCaption}>{viewerMessage.body.trim()}</Text> : null}
+                    <AppButton variant="secondary" label="Kapat" onPress={() => setViewerMessage(null)} />
+                </View>
+            </View>
+        </Modal>
+        </>
     );
 }
 
@@ -151,4 +170,8 @@ const styles = StyleSheet.create({
     olderSection: { alignItems: 'center', paddingHorizontal: spacing.x4, paddingBottom: spacing.x2 },
     olderError: { ...typography.supporting, color: colors.errorDark, textAlign: 'center', marginBottom: spacing.x1 },
     emptyState: { flex: 1, justifyContent: 'center' },
+    viewerBackdrop: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(15, 23, 42, 0.9)', padding: spacing.x4 },
+    viewerContent: { maxHeight: '90%', gap: spacing.x3 },
+    viewerImage: { width: '100%', aspectRatio: 1, maxHeight: 520 },
+    viewerCaption: { ...typography.body, color: colors.white, textAlign: 'center' },
 });

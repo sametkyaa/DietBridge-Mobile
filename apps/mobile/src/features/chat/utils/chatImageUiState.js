@@ -50,6 +50,7 @@ const isChatImageUploadInFlight = (state) => (
     state.status === 'canonicalizing'
     || state.status === 'creating-intent'
     || state.status === 'uploading'
+    || state.status === 'validating'
     || state.status === 'finalizing'
 );
 
@@ -70,6 +71,7 @@ const CHAT_IMAGE_UPLOAD_STATUS_LABELS = Object.freeze({
     canonicalizing: 'Görsel hazırlanıyor',
     'creating-intent': 'Gönderim hazırlanıyor',
     uploading: 'Görsel yükleniyor',
+    validating: 'Görsel doğrulanıyor',
     finalizing: 'Mesaj tamamlanıyor',
 });
 
