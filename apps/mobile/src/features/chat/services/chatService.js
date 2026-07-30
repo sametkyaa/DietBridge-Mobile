@@ -133,7 +133,21 @@ const throwUnexpectedPayload = (resource) => {
     );
 };
 
-const CHAT_MESSAGE_COLUMNS = 'id, conversation_id, sender_id, client_message_id, body, created_at, deleted_at, deleted_by';
+const CHAT_MESSAGE_COLUMNS = [
+    'id',
+    'conversation_id',
+    'sender_id',
+    'client_message_id',
+    'body',
+    'message_kind',
+    'created_at',
+    'deleted_at',
+    'deleted_by',
+    // Embedded to-one join: chat_attachments.message_id is unique in the image
+    // schema. Realtime postgres_changes payloads cannot carry this join, so
+    // image rows arriving over Realtime are reconciled with a targeted refetch.
+    'attachment:chat_attachments(id, message_id, bucket_id, object_path, mime_type, byte_size, width, height, deleted_at)',
+].join(', ');
 const CHAT_READ_STATE_COLUMNS = 'conversation_id, user_id, last_delivered_message_id, last_delivered_at, last_read_message_id, last_read_at, updated_at';
 
 // Reads the canonical conversation for the caller's active relationship.
@@ -248,6 +262,49 @@ export const fetchChatMessagesPage = async ({
                 ? { createdAt: oldestMessage.createdAt, id: oldestMessage.id }
                 : null,
         };
+    } catch (error) {
+        throw toChatServiceError(error);
+    }
+};
+
+// Re-reads a single canonical message with its attachment join.
+//
+// Realtime postgres_changes payloads carry only the chat_messages row, so an
+// image INSERT arrives without the embedded chat_attachments metadata and
+// cannot be normalized fail-closed. This targeted read resolves the canonical
+// row without waiting for a reconnect-driven full refetch.
+//
+// `null` means "not readable yet": the caller must not synthesize a partial
+// message from the Realtime payload.
+export const fetchChatMessageById = async ({
+    messageId,
+    conversationId,
+    currentUserId,
+} = {}) => {
+    const normalizedMessageId = assertUuid(messageId, 'messageId');
+    const normalizedConversationId = assertUuid(conversationId, 'conversationId');
+    const normalizedCurrentUserId = assertUuid(currentUserId, 'currentUserId');
+
+    try {
+        const { data, error } = await supabase
+            .from('chat_messages')
+            .select(CHAT_MESSAGE_COLUMNS)
+            .eq('id', normalizedMessageId)
+            .eq('conversation_id', normalizedConversationId)
+            .not('conversation_id', 'is', null)
+            .limit(1);
+
+        if (error) throw toChatServiceError(error);
+
+        const row = Array.isArray(data) ? data[0] : null;
+        if (!row) return null;
+
+        const message = normalizeChatMessageRow(row, normalizedCurrentUserId);
+        if (!message || message.id !== normalizedMessageId
+            || message.conversationId !== normalizedConversationId) {
+            return null;
+        }
+        return message;
     } catch (error) {
         throw toChatServiceError(error);
     }

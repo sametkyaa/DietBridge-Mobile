@@ -10,6 +10,15 @@
 // used as a fallback for the canonical body column.
 
 const { CHAT_MESSAGE_MAX_LENGTH } = require('../constants/chatConstants');
+const {
+    CHAT_IMAGE_BUCKET_ID,
+    CHAT_IMAGE_MAX_BYTES,
+    CHAT_IMAGE_MAX_EDGE_PIXELS,
+    CHAT_IMAGE_MAX_TOTAL_PIXELS,
+    CHAT_IMAGE_MIME_TYPE,
+    CHAT_IMAGE_OBJECT_PATH_PATTERN,
+    isChatMessageKind,
+} = require('../constants/chatImageConstants');
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -23,6 +32,58 @@ const normalizeIsoTimestamp = (value) => {
     if (typeof value !== 'string' || !value.trim()) return null;
     const time = Date.parse(value);
     return Number.isNaN(time) ? null : new Date(time).toISOString();
+};
+
+const firstAttachmentRecord = (value) => {
+    const candidate = Array.isArray(value) ? value[0] : value;
+    return candidate && typeof candidate === 'object' && !Array.isArray(candidate) ? candidate : null;
+};
+
+const isPositiveBoundedInteger = (value, maximum) => (
+    typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= maximum
+);
+
+// Resolves `message_kind`. A missing value stays backward compatible with rows
+// written before the image schema; any unknown value is rejected (returns null).
+const resolveMessageKind = (value) => {
+    if (value === undefined || value === null) return 'text';
+    return isChatMessageKind(value) ? value : null;
+};
+
+// Fail-closed normalization of embedded `chat_attachments` metadata against the
+// canonical JPEG-only contract. Returns null when the payload is missing/empty
+// or violates the contract so a malformed row can never render as a real image.
+const normalizeChatImageAttachment = (value, expectedMessageId) => {
+    const row = firstAttachmentRecord(value);
+    if (!row) return null;
+
+    const id = typeof row.id === 'string' ? row.id : null;
+    const messageId = typeof row.message_id === 'string' ? row.message_id : null;
+    const bucketId = typeof row.bucket_id === 'string' ? row.bucket_id : null;
+    const objectPath = typeof row.object_path === 'string' ? row.object_path : null;
+    const mimeType = typeof row.mime_type === 'string' ? row.mime_type : null;
+    const byteSize = row.byte_size;
+    const width = row.width;
+    const height = row.height;
+    const deletedAt = normalizeIsoTimestamp(row.deleted_at);
+
+    if (
+        !isValidUuid(id)
+        || !isValidUuid(messageId)
+        || messageId !== expectedMessageId
+        || bucketId !== CHAT_IMAGE_BUCKET_ID
+        || !objectPath
+        || !CHAT_IMAGE_OBJECT_PATH_PATTERN.test(objectPath)
+        || mimeType !== CHAT_IMAGE_MIME_TYPE
+        || !isPositiveBoundedInteger(byteSize, CHAT_IMAGE_MAX_BYTES)
+        || !isPositiveBoundedInteger(width, CHAT_IMAGE_MAX_EDGE_PIXELS)
+        || !isPositiveBoundedInteger(height, CHAT_IMAGE_MAX_EDGE_PIXELS)
+        || width * height > CHAT_IMAGE_MAX_TOTAL_PIXELS
+    ) {
+        return null;
+    }
+
+    return { id, messageId, bucketId, objectPath, mimeType, byteSize, width, height, deletedAt };
 };
 
 // Validates and trims an outgoing message body. Throws a plain Error with a
@@ -81,8 +142,10 @@ const normalizeChatConversationRow = (row) => {
 
 // Maps a raw chat_messages row to the canonical mobile model.
 // Returns null for legacy rows (conversation_id IS NULL), non-string or empty
-// bodies, and any row with invalid identifiers, so a single broken row can be
-// discarded without dropping the whole history page.
+// text bodies, unknown message kinds, and any row with invalid identifiers, so
+// a single broken row can be discarded without dropping the whole history page.
+// Extends the model with `messageKind` ('text' | 'image') and a fail-closed
+// `attachment` while preserving the existing text-message contract.
 const normalizeChatMessageRow = (row, currentUserId) => {
     if (!row || typeof row !== 'object' || Array.isArray(row)) return null;
 
@@ -94,37 +157,81 @@ const normalizeChatMessageRow = (row, currentUserId) => {
     const createdAt = normalizeIsoTimestamp(row.created_at);
     const deletedAt = normalizeIsoTimestamp(row.deleted_at);
     const rawDeletedBy = row.deleted_by;
+    const messageKind = resolveMessageKind(row.message_kind);
 
     if (!isValidUuid(id) || !isValidUuid(conversationId) || !isValidUuid(senderId)) return null;
 
     // Canonical rows always carry a client id. Nullable values belong only to
     // legacy rows, which never enter the mobile chat timeline.
     if (!isValidUuid(rawClientMessageId)) return null;
+    if (messageKind === null) return null;
+    if (!createdAt) return null;
 
     const isDeleted = row.deleted_at !== null && row.deleted_at !== undefined;
-    let deletedBy = null;
+
+    // Tombstones keep the existing deleted-message contract for both kinds: no
+    // body, no readable attachment, and a recorded deleter equal to the sender.
     if (isDeleted) {
         if (!deletedAt || !isValidUuid(rawDeletedBy) || rawDeletedBy !== senderId || body !== null) return null;
-        deletedBy = rawDeletedBy;
-    } else {
-        if (rawDeletedBy !== null && rawDeletedBy !== undefined) return null;
-        if (typeof body !== 'string' || !body.trim()) return null;
-        if (Array.from(body).length > CHAT_MESSAGE_MAX_LENGTH) return null;
+        return {
+            id,
+            conversationId,
+            senderId,
+            clientMessageId: rawClientMessageId,
+            body: null,
+            createdAt,
+            deletedAt,
+            deletedBy: rawDeletedBy,
+            isDeleted: true,
+            isOwn: senderId === currentUserId,
+            deliveryState: 'sent',
+            messageKind,
+            attachment: null,
+        };
     }
-    if (!createdAt) return null;
+
+    if (rawDeletedBy !== null && rawDeletedBy !== undefined) return null;
+
+    const trimmedBody = typeof body === 'string' ? body.trim() : null;
+    if (trimmedBody !== null && Array.from(trimmedBody).length > CHAT_MESSAGE_MAX_LENGTH) return null;
+
+    const rawAttachment = row.attachment;
+    const hasAttachmentPayload = Array.isArray(rawAttachment)
+        ? rawAttachment.length > 0
+        : rawAttachment !== undefined && rawAttachment !== null;
+    const attachment = rawAttachment === undefined || rawAttachment === null
+        ? null
+        : normalizeChatImageAttachment(rawAttachment, id);
+
+    let resolvedBody;
+    if (messageKind === 'image') {
+        // Live image rows require complete, live attachment metadata. The
+        // caption is optional and an empty caption normalizes to null.
+        if (!attachment || attachment.deletedAt !== null) return null;
+        resolvedBody = trimmedBody ? trimmedBody : null;
+    } else {
+        // Live text rows keep the mandatory body contract and must not carry a
+        // live attachment. A non-null but malformed attachment invalidates the row.
+        if (typeof body !== 'string' || !trimmedBody) return null;
+        if (hasAttachmentPayload && !attachment) return null;
+        if (attachment && attachment.deletedAt === null) return null;
+        resolvedBody = body;
+    }
 
     return {
         id,
         conversationId,
         senderId,
         clientMessageId: rawClientMessageId,
-        body: isDeleted ? null : body,
+        body: resolvedBody,
         createdAt,
-        deletedAt: isDeleted ? deletedAt : null,
-        deletedBy,
-        isDeleted,
+        deletedAt: null,
+        deletedBy: null,
+        isDeleted: false,
         isOwn: senderId === currentUserId,
         deliveryState: 'sent',
+        messageKind,
+        attachment: messageKind === 'image' ? attachment : null,
     };
 };
 
@@ -163,22 +270,32 @@ const normalizeChatReadStateRow = (row) => {
 };
 
 // Minimal structural check for canonical (and future optimistic) message
-// models: a server UUID, a non-empty string body, and a clientMessageId that
-// is either null or a non-empty string.
-const isCanonicalChatMessage = (candidate) => Boolean(candidate)
-    && typeof candidate === 'object'
-    && isValidUuid(candidate.id)
-    && isValidUuid(candidate.conversationId)
-    && isValidUuid(candidate.senderId)
-    && isValidUuid(candidate.clientMessageId)
-    && normalizeIsoTimestamp(candidate.createdAt) !== null
-    && candidate.deliveryState === 'sent'
-    && (
-        (candidate.isDeleted === true && candidate.body === null
+// models: a server UUID, a valid content shape for the message kind, and a
+// clientMessageId that is a non-empty string. A live text message needs a
+// non-empty body; a live image message needs a live attachment (its caption
+// may be null). Tombstones keep the deleted-message shape for both kinds.
+const isCanonicalChatMessage = (candidate) => {
+    if (!candidate || typeof candidate !== 'object') return false;
+    if (!isValidUuid(candidate.id) || !isValidUuid(candidate.conversationId)
+        || !isValidUuid(candidate.senderId) || !isValidUuid(candidate.clientMessageId)) {
+        return false;
+    }
+    if (normalizeIsoTimestamp(candidate.createdAt) === null) return false;
+    if (candidate.deliveryState !== 'sent') return false;
+
+    if (candidate.isDeleted === true) {
+        return candidate.body === null
             && normalizeIsoTimestamp(candidate.deletedAt) !== null
-            && candidate.deletedBy === candidate.senderId)
-        || (candidate.isDeleted !== true && typeof candidate.body === 'string' && Boolean(candidate.body.trim()))
-    );
+            && candidate.deletedBy === candidate.senderId;
+    }
+
+    if (candidate.messageKind === 'image') {
+        return Boolean(candidate.attachment)
+            && (candidate.body === null || (typeof candidate.body === 'string' && Boolean(candidate.body.trim())));
+    }
+
+    return typeof candidate.body === 'string' && Boolean(candidate.body.trim());
+};
 
 const compareChatMessages = (left, right) => {
     const timeDifference = (Date.parse(left.createdAt) || 0) - (Date.parse(right.createdAt) || 0);
@@ -241,4 +358,6 @@ module.exports = {
     mergeCanonicalChatMessages,
     isCanonicalChatMessage,
     isValidChatCursor,
+    resolveMessageKind,
+    normalizeChatImageAttachment,
 };
