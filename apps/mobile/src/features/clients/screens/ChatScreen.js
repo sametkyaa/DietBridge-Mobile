@@ -20,6 +20,7 @@ import { useDietitianConnection } from '../../dietitianConnection/context/Dietit
 import { CONNECTION_REQUIRED_MESSAGE } from '../../dietitianConnection/services/dietitianConnectionService';
 import { resolveDietitianAvatarPresentation } from '../../chat/utils/chatUiUtils';
 import { isChatImagesFeatureEnabled } from '../../chat/utils/chatImageFeatureFlag';
+import { CHAT_SCREEN_CONTENT, resolveChatScreenContent } from '../../chat/utils/chatScreenContent';
 
 function DietitianHeader({ activeConnection, activeDietitian }) {
   const dietitian = activeConnection?.dietitian || activeDietitian || {};
@@ -144,7 +145,19 @@ export default function ChatScreen() {
 
   let content;
 
-  if (isLoadingConnection) {
+  // Once an active connection is resolved, a background refresh (for example
+  // the AppState -> active transition after returning from the system image
+  // picker) must not swap the chat for a full-screen loader. Doing so would
+  // unmount ActiveChatContent and discard the picked image draft before the
+  // user reaches the preview/caption step.
+  const screenContent = resolveChatScreenContent({
+    isLoadingConnection,
+    connectionError,
+    hasActiveDietitian,
+    activeConnection,
+  });
+
+  if (screenContent === CHAT_SCREEN_CONTENT.LOADING) {
     content = (
       <View
         style={styles.loading}
@@ -158,7 +171,7 @@ export default function ChatScreen() {
         <Text style={styles.loadingText}>Diyetisyen bağlantısı kontrol ediliyor…</Text>
       </View>
     );
-  } else if (connectionError) {
+  } else if (screenContent === CHAT_SCREEN_CONTENT.ERROR) {
     content = (
       <ErrorState
         title="Diyetisyen bağlantısı kontrol edilemedi"
@@ -166,7 +179,7 @@ export default function ChatScreen() {
         onRetry={refreshConnectionStatus}
       />
     );
-  } else if (!hasActiveDietitian || !activeConnection) {
+  } else if (screenContent === CHAT_SCREEN_CONTENT.LOCKED) {
     content = (
       <EmptyState
         icon="lock"
