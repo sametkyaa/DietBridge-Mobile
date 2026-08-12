@@ -4,6 +4,7 @@ import {
     getActiveDietitianConnection,
 } from '../../dietitianConnection/services/dietitianConnectionService';
 import { saveCurrentWeight } from '../../clients/services/clientService';
+import { addLocalDateDays, toLocalDateKey } from '../../../shared/utils/localDate';
 
 const getAuthorizedAnalyticsClientId = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -28,9 +29,9 @@ const getWeightHistory = async (clientId) => {
     data.reverse();
 
     return data.map((log, index) => {
-        const dateObj = new Date(log.measured_at);
+        const [year, month, day] = log.measured_at.split('-').map(Number);
         const months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
-        const dateLabel = `${dateObj.getDate()} ${months[dateObj.getMonth()]}`;
+        const dateLabel = `${day} ${months[month - 1]}`;
         return {
             week: (index + 1).toString(),
             dateLabel,
@@ -112,7 +113,8 @@ export const saveAnalyticsWeight = async (weight) => saveCurrentWeight(weight);
 
 const validateMeasurementData = (data) => {
     for (const [key, value] of Object.entries(data)) {
-        if (value !== undefined && value !== null && (!Number.isFinite(value) || value < 0)) {
+        if (value !== undefined && value !== null
+            && (!Number.isFinite(value) || value <= 0 || value > 500)) {
             throw new Error(`Geçersiz ölçüm değeri: ${key}`);
         }
     }
@@ -126,8 +128,7 @@ export const saveBodyMeasurements = async (measurementData) => {
 
     validateMeasurementData(measurementData);
 
-    const d = new Date();
-    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const dateStr = toLocalDateKey();
 
     // Safely check if an entry exists for today
     const { data: existing, error: findError } = await supabase
@@ -148,29 +149,25 @@ export const saveBodyMeasurements = async (measurementData) => {
             .single();
         if (error) throw error;
         return data;
-    } else {
-        const { data, error } = await supabase
-            .from('measurements')
-            .insert({
-                client_id: user.id,
-                measured_at: dateStr,
-                ...measurementData
-            })
-            .select()
-            .single();
-        if (error) throw error;
-        return data;
     }
+
+    const { data, error } = await supabase
+        .from('measurements')
+        .insert({
+            client_id: user.id,
+            measured_at: dateStr,
+            ...measurementData,
+        })
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
 };
 
 const getWaterHistory = async (clientId) => {
     const today = new Date();
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(today.getDate() - 6);
-
-    const formatDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const startStr = formatDate(sevenDaysAgo);
-    const endStr = formatDate(today);
+    const startStr = addLocalDateDays(today, -6);
+    const endStr = toLocalDateKey(today);
 
     const { data, error } = await supabase
         .from('daily_logs')
@@ -190,10 +187,10 @@ const getWaterHistory = async (clientId) => {
     const days = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
     return data.map((log) => {
         const [year, month, day] = log.date.split('-').map(Number);
-        const localDate = new Date(year, month - 1, day);
+        const localDate = new Date(Date.UTC(year, month - 1, day));
         return {
             dateKey: log.date,
-            day: days[localDate.getDay()],
+            day: days[localDate.getUTCDay()],
             amount: Number(log.water_intake),
         };
     });

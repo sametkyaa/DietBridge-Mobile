@@ -12,6 +12,7 @@ import {
     CONNECTION_GENERIC_ERROR_MESSAGE,
     CONNECTION_REQUIRED_MESSAGE,
 } from '../../dietitianConnection/services/dietitianConnectionService';
+const { hasSessionChanged, normalizeSessionUserId } = require('./sessionDataIsolation.cjs');
 
 const toFiniteNumber = (value) => {
     if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) return null;
@@ -69,6 +70,19 @@ export const buildNutritionSummary = (meals) => {
 
 export const useDashboardViewModel = () => {
     const { completedMeals, hydrateCompletedMeals, toggleMealCompletion } = useMeals();
+    const {
+        userId,
+        connectionStatus,
+        activeDietitian,
+        pendingRequest,
+        hasActiveDietitian,
+        isLoadingConnection,
+        connectionAction,
+        connectionError,
+        refreshConnectionStatus,
+        approvePendingRequest,
+        rejectPendingRequest,
+    } = useDietitianConnection();
     const [water, setWater] = useState(0);
     const [waterInput, setWaterInput] = useState('200');
     const [dailyLogStatus, setDailyLogStatus] = useState('loading');
@@ -95,18 +109,32 @@ export const useDashboardViewModel = () => {
     const planRequestSequenceRef = useRef(0);
     const inFlightPlanRequestsRef = useRef(new Map());
     const isMountedRef = useRef(true);
-    const {
-        connectionStatus,
-        activeDietitian,
-        pendingRequest,
-        hasActiveDietitian,
-        isLoadingConnection,
-        connectionAction,
-        connectionError,
-        refreshConnectionStatus,
-        approvePendingRequest,
-        rejectPendingRequest,
-    } = useDietitianConnection();
+    const previousUserIdRef = useRef(normalizeSessionUserId(userId));
+    const sessionGenerationRef = useRef(0);
+
+    useEffect(() => {
+        const nextUserId = normalizeSessionUserId(userId);
+        if (!hasSessionChanged(previousUserIdRef.current, nextUserId)) return;
+        previousUserIdRef.current = nextUserId;
+        sessionGenerationRef.current += 1;
+        planRequestSequenceRef.current += 1;
+        inFlightPlanRequestsRef.current.clear();
+        mealRequestVersionsRef.current = {};
+        mealMutationsRef.current.clear();
+        waterMutationRef.current = null;
+        weightMutationRef.current = false;
+        if (!isMountedRef.current) return;
+        setWater(0);
+        setWeight(null);
+        setWeightInput('');
+        setMeals([]);
+        setFocusedMealId(null);
+        setSelectedMeal(null);
+        setMealPlanStatus('loading');
+        setMealPlanError(null);
+        setDailyLogStatus('loading');
+        setDailyLogError(null);
+    }, [userId]);
 
     useEffect(() => () => {
         isMountedRef.current = false;
@@ -121,6 +149,7 @@ export const useDashboardViewModel = () => {
 
         const requestSequence = planRequestSequenceRef.current + 1;
         planRequestSequenceRef.current = requestSequence;
+        const requestGeneration = sessionGenerationRef.current;
         if (isMountedRef.current) {
             setMealPlanStatus(retry ? 'retrying' : 'loading');
             setMealPlanError(null);
@@ -130,7 +159,8 @@ export const useDashboardViewModel = () => {
 
         const request = getDailyMealPlan(planDate)
             .then((result) => {
-                if (!isMountedRef.current || planRequestSequenceRef.current !== requestSequence) return result;
+                if (!isMountedRef.current || sessionGenerationRef.current !== requestGeneration
+                    || planRequestSequenceRef.current !== requestSequence) return result;
 
                 hydrateCompletedMeals(result.meals);
                 setMeals(result.meals);
@@ -143,7 +173,8 @@ export const useDashboardViewModel = () => {
                 return result;
             })
             .catch((error) => {
-                if (!isMountedRef.current || planRequestSequenceRef.current !== requestSequence) return null;
+                if (!isMountedRef.current || sessionGenerationRef.current !== requestGeneration
+                    || planRequestSequenceRef.current !== requestSequence) return null;
 
                 setMeals([]);
                 setMealPlanStatus('error');

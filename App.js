@@ -113,8 +113,8 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <MealsProvider>
-        <DietitianConnectionProvider userId={authState.user?.id}>
+      <MealsProvider userId={authState.user?.id || null}>
+        <DietitianConnectionProvider userId={authState.user?.id || null}>
           <StatusBar barStyle="dark-content" backgroundColor="#F4F5F7" />
           <NavigationContainer>
             {canOpenClientRoutes ? <RootNavigator /> : <AuthNavigator />}

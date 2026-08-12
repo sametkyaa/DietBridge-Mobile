@@ -18,6 +18,7 @@ import {
 } from '../components/dashboard';
 import { mapDashboardMeal } from '../mappers/dashboardUiMapper';
 import { useDashboardViewModel } from '../viewmodels/useDashboardViewModel';
+import { toLocalDateKey } from '../../../shared/utils/localDate';
 import DietitianConnectionRequestCard from '../../dietitianConnection/components/DietitianConnectionRequestCard';
 
 const DashboardScreen = () => {
@@ -74,7 +75,7 @@ const DashboardScreen = () => {
     const [isPhotoPickerActive, setIsPhotoPickerActive] = useState(false);
     const completionButtonRef = useRef(null);
 
-    const dateLabel = useMemo(() => new Date().toLocaleDateString('tr-TR', {
+    const dateLabel = useMemo(() => new Date(`${toLocalDateKey()}T12:00:00Z`).toLocaleDateString('tr-TR', {
         weekday: 'long',
         day: 'numeric',
         month: 'long',

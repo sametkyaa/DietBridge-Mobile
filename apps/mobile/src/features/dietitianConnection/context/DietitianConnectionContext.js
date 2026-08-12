@@ -38,6 +38,7 @@ export const DietitianConnectionProvider = ({ children, userId }) => {
     const inFlightRefreshRef = useRef(null);
     const actionLockRef = useRef(false);
     const refreshTimerRef = useRef(null);
+    const previousUserIdRef = useRef(userId || null);
 
     const resetConnectionState = useCallback(() => {
         if (!isMountedRef.current) return;
@@ -90,8 +91,13 @@ export const DietitianConnectionProvider = ({ children, userId }) => {
     useEffect(() => {
         actionLockRef.current = false;
         inFlightRefreshRef.current = null;
+        const nextUserId = userId || null;
+        if (previousUserIdRef.current !== nextUserId) {
+            previousUserIdRef.current = nextUserId;
+            resetConnectionState();
+        }
         refreshConnectionStatus();
-    }, [refreshConnectionStatus, userId]);
+    }, [refreshConnectionStatus, resetConnectionState, userId]);
 
     useEffect(() => {
         if (!userId) return undefined;
@@ -148,6 +154,7 @@ export const DietitianConnectionProvider = ({ children, userId }) => {
 
     const value = useMemo(() => ({
         ...connectionState,
+        userId: userId || null,
         isLoadingConnection,
         connectionAction,
         connectionError,
@@ -156,7 +163,7 @@ export const DietitianConnectionProvider = ({ children, userId }) => {
         rejectPendingRequest,
     }), [
         approvePendingRequest, connectionAction, connectionError, connectionState,
-        isLoadingConnection, refreshConnectionStatus, rejectPendingRequest,
+        isLoadingConnection, refreshConnectionStatus, rejectPendingRequest, userId,
     ]);
 
     return <DietitianConnectionContext.Provider value={value}>{children}</DietitianConnectionContext.Provider>;

@@ -88,7 +88,10 @@ const MealsScreen = () => {
     const selectedCompletion = selectedMeal ? completedMeals[selectedMeal.id] : null;
     const showLoading = isLoadingMeals || (isLoadingConnection && mealPlanStatus === 'loading');
     const listData = mealPlanStatus === 'success' ? meals : [];
-    const todayIndex = useMemo(() => (new Date().getDay() + 6) % 7, []);
+    const todayIndex = useMemo(() => {
+        const istanbulNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }));
+        return (istanbulNow.getDay() + 6) % 7;
+    }, []);
 
     useEffect(() => {
         if (!hasActiveDietitian && photoPreviewUri) closePhotoPreview();

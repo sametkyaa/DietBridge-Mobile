@@ -22,7 +22,10 @@ const REALTIME_REFRESH_DEBOUNCE_MS = 350;
 
 export const useMealsViewModel = () => {
     const dayOptions = useMemo(() => getLocalWeekDayOptions(), []);
-    const [selectedDay, setSelectedDay] = useState(() => (new Date().getDay() + 6) % 7);
+    const [selectedDay, setSelectedDay] = useState(() => {
+        const istanbulNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }));
+        return (istanbulNow.getDay() + 6) % 7;
+    });
     const [selectedMeal, setSelectedMeal] = useState(null);
     const [groceryModalVisible, setGroceryModalVisible] = useState(false);
     const [groceryItems, setGroceryItems] = useState([]);
