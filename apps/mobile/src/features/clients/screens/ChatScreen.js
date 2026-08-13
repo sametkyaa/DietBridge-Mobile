@@ -107,6 +107,7 @@ function ActiveChatContent({ activeConnection, activeDietitian, isScreenFocused 
           onRequestDeleteMessage={confirmDeleteMessage}
           deletingMessageIds={viewModel.deletingMessageIds}
           peerReadState={viewModel.peerReadState}
+          initialPositionToken={viewModel.initialPositionToken}
           bottomScrollToken={viewModel.bottomScrollToken}
           realtimeScrollToken={viewModel.realtimeScrollToken}
           conversationId={viewModel.conversation?.id ?? null}

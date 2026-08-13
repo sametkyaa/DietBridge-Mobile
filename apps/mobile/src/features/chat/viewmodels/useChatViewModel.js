@@ -78,6 +78,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
     const [sendError, setSendError] = useState(null);
     const [deleteError, setDeleteError] = useState(null);
     const [deletingMessageIds, setDeletingMessageIds] = useState([]);
+    const [initialPositionToken, setInitialPositionToken] = useState(0);
     const [bottomScrollToken, setBottomScrollToken] = useState(0);
     const [visibleCanonicalMessage, setVisibleCanonicalMessage] = useState(null);
 
@@ -203,7 +204,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
                 setReadStates((current) => mergeChatReadStates(current, nextReadStates));
                 setNextCursor(page.nextCursor);
                 historyConversationIdRef.current = nextConversation.id;
-                setBottomScrollToken((token) => token + 1);
+                setInitialPositionToken((token) => token + 1);
                 return nextConversation;
             } catch (error) {
                 if (isMountedRef.current && requestGenerationRef.current === generation
@@ -608,6 +609,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
         deliveryStateError,
         canSend: Boolean(relationId && validCurrentUserId),
         bottomScrollToken,
+        initialPositionToken,
         realtimeScrollToken,
         realtimeStatus,
     };

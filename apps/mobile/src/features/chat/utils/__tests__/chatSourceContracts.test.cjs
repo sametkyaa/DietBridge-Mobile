@@ -42,6 +42,9 @@ test('foreground and chat focus reconcile latest history into the FlatList sourc
     assert.match(viewModel, /const addedMessages = mergeServerMessages\(page\.messages\)/);
     assert.match(viewModel, /if \(addedMessages\.length\) setRealtimeScrollToken/);
     assert.match(list, /data=\{Array\.isArray\(messages\) \? messages : \[\]\}/);
+    assert.match(list, /onContentSizeChange=\{\(_, contentHeight\) => positionInitialLatest\(contentHeight\)\}/);
+    assert.match(list, /shouldPositionInitialChat/);
+    assert.match(list, /if \(!bottomScrollToken\) return undefined;/);
 });
 
 test('keyboard and composer source retain the required flex layout contract', () => {

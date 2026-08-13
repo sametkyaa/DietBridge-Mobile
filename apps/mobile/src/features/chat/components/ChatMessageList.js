@@ -4,6 +4,7 @@ import { AppButton, EmptyState, ErrorState } from '../../../shared/components/ui
 import { colors, spacing, typography } from '../../../shared/theme';
 import ChatMessageBubble from './ChatMessageBubble';
 import { selectLatestVisibleCanonicalMessage } from '../utils/chatReadStatePolicy';
+import { shouldAdjustInitialChatLayout, shouldPositionInitialChat } from '../utils/chatScrollLifecycle';
 
 const getMessageKey = (message, index) => (
     message?.id || message?.optimisticId || message?.clientMessageId || `chat-message-${index}`
@@ -23,6 +24,7 @@ export default function ChatMessageList({
     onRequestDeleteMessage,
     deletingMessageIds,
     peerReadState,
+    initialPositionToken,
     bottomScrollToken,
     realtimeScrollToken,
     conversationId,
@@ -30,6 +32,8 @@ export default function ChatMessageList({
 }) {
     const listRef = useRef(null);
     const isNearBottomRef = useRef(true);
+    const initialPositionedKeyRef = useRef(null);
+    const initialLayoutAdjustedKeyRef = useRef(null);
     const conversationIdRef = useRef(conversationId);
     const visibleMessageCallbackRef = useRef(onLastVisibleCanonicalMessageChange);
     const viewabilityConfigRef = useRef({ itemVisiblePercentThreshold: 50 });
@@ -46,7 +50,34 @@ export default function ChatMessageList({
         visibleMessageCallbackRef.current = onLastVisibleCanonicalMessageChange;
     }, [conversationId, onLastVisibleCanonicalMessageChange]);
 
+    const positionInitialLatest = (contentHeight) => {
+        if (typeof contentHeight === 'number' && contentHeight <= 0) return;
+        const positionKey = `${conversationId}:${initialPositionToken}`;
+        if (shouldPositionInitialChat({
+            conversationId,
+            initialPositionToken,
+            messageCount: Array.isArray(messages) ? messages.length : 0,
+            positionedKey: initialPositionedKeyRef.current,
+        })) {
+            listRef.current?.scrollToEnd({ animated: false });
+            initialPositionedKeyRef.current = positionKey;
+            return;
+        }
+
+        if (shouldAdjustInitialChatLayout({
+            conversationId,
+            initialPositionToken,
+            positionedKey: initialPositionedKeyRef.current,
+            adjustedKey: initialLayoutAdjustedKeyRef.current,
+            isNearBottom: isNearBottomRef.current,
+        })) {
+            listRef.current?.scrollToEnd({ animated: false });
+            initialLayoutAdjustedKeyRef.current = positionKey;
+        }
+    };
+
     useEffect(() => {
+        if (!bottomScrollToken) return undefined;
         const timer = setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 0);
         return () => clearTimeout(timer);
     }, [bottomScrollToken]);
@@ -125,6 +156,7 @@ export default function ChatMessageList({
             )}
             contentContainerStyle={styles.content}
             maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+            onContentSizeChange={(_, contentHeight) => positionInitialLatest(contentHeight)}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
