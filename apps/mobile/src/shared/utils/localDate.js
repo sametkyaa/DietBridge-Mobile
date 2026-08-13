@@ -2,6 +2,7 @@ const dayLabels = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 const {
     addIstanbulDays,
     civilDateFromInstant,
+    getIstanbulWeekdayIndex,
     toIstanbulDateKey,
 } = require('./istanbulDateContract.cjs');
 
@@ -31,6 +32,8 @@ export const getLocalWeekDateKey = (weekIndex, date = new Date()) => (
 );
 
 export const addLocalDateDays = (date, amount) => addIstanbulDays(date, amount);
+
+export const getLocalWeekDayIndex = (date = new Date()) => getIstanbulWeekdayIndex(date);
 
 export const getLocalWeekDayOptions = (date = new Date()) => (
     dayLabels.map((label, index) => {

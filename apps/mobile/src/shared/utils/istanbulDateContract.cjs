@@ -27,6 +27,11 @@ const civilDateFromInstant = (value = new Date()) => {
     return new Date(Date.UTC(year, month - 1, day));
 };
 
+const getIstanbulWeekdayIndex = (value = new Date()) => {
+    const civilDate = civilDateFromInstant(value);
+    return (civilDate.getUTCDay() + 6) % 7;
+};
+
 const addIstanbulDays = (value, amount) => {
     if (!Number.isInteger(amount)) throw new Error('Geçerli bir gün farkı bulunamadı.');
     const civilDate = civilDateFromInstant(value);
@@ -38,5 +43,6 @@ module.exports = {
     TIME_ZONE,
     addIstanbulDays,
     civilDateFromInstant,
+    getIstanbulWeekdayIndex,
     toIstanbulDateKey,
 };
