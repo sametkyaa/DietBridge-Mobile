@@ -3,7 +3,10 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const {
+    classifyAppointment,
     formatAppointmentDate,
+    getAppointmentBadgeStatus,
+    getAppointmentStatusLabel,
     getTodayDateKey,
     normalizeAppointment,
     partitionAppointments,
@@ -12,6 +15,7 @@ const {
 
 const CLIENT_ID = '11111111-1111-4111-8111-111111111111';
 const DIETITIAN_ID = '22222222-2222-4222-8222-222222222222';
+const ISTANBUL_15_00 = new Date('2026-08-14T12:00:00.000Z');
 
 const appointment = (overrides = {}) => ({
     id: '33333333-3333-4333-8333-333333333333',
@@ -46,20 +50,108 @@ test('malformed or cross-client appointment rows fail closed', () => {
     assert.throws(() => normalizeAppointment(appointment({ date: '2026-02-30' }), CLIENT_ID));
 });
 
-test('appointment sections use actual status and deterministic Istanbul civil-date ordering', () => {
-    const first = appointment({ id: 'a', date: '2026-08-13', time: '09:30', status: 'upcoming' });
-    const second = appointment({ id: 'b', date: '2026-08-14', time: '09:00', status: 'upcoming' });
-    const completed = appointment({ id: 'c', date: '2026-08-12', time: '17:00', status: 'completed' });
-    const cancelled = appointment({ id: 'd', date: '2026-08-13', time: '18:00', status: 'cancelled' });
-
-    const sections = partitionAppointments([completed, second, cancelled, first]);
-    assert.deepEqual(sections.upcoming.map((item) => item.id), ['a', 'b']);
-    assert.deepEqual(sections.past.map((item) => item.id), ['d', 'c']);
-    assert.deepEqual(sortAppointmentsChronologically([second, first]).map((item) => item.id), ['a', 'b']);
+test('future upcoming appointment stays in Yaklaşan', () => {
+    const result = classifyAppointment(
+        appointment({ date: '2026-08-15', time: '09:00' }),
+        ISTANBUL_15_00,
+    );
+    assert.equal(result.tab, 'upcoming');
+    assert.equal(result.displayStatus, 'upcoming');
 });
 
-test('date labels never reinterpret an appointment date as a device instant', () => {
-    assert.equal(formatAppointmentDate('2026-08-13'), '13 Ağustos 2026');
+test('yesterday stale upcoming appointment moves to Geçmiş', () => {
+    const result = classifyAppointment(
+        appointment({ date: '2026-08-13', time: '18:00' }),
+        ISTANBUL_15_00,
+    );
+    assert.equal(result.tab, 'past');
+    assert.equal(result.displayStatus, 'past');
+    assert.equal(getAppointmentStatusLabel(result.displayStatus), 'Geçmiş');
+});
+
+test('today earlier upcoming appointment moves to Geçmiş', () => {
+    const result = classifyAppointment(
+        appointment({ date: '2026-08-14', time: '14:59', duration: null }),
+        new Date('2026-08-14T12:00:01.000Z'),
+    );
+    assert.equal(result.tab, 'past');
+    assert.equal(result.displayStatus, 'past');
+});
+
+test('today later upcoming appointment stays in Yaklaşan', () => {
+    const result = classifyAppointment(
+        appointment({ date: '2026-08-14', time: '15:01' }),
+        ISTANBUL_15_00,
+    );
+    assert.equal(result.tab, 'upcoming');
+    assert.equal(result.displayStatus, 'upcoming');
+});
+
+test('completed future-dated appointment is always Geçmiş', () => {
+    const result = classifyAppointment(
+        appointment({ date: '2026-08-20', time: '10:00', status: 'completed' }),
+        ISTANBUL_15_00,
+    );
+    assert.equal(result.tab, 'past');
+    assert.equal(result.displayStatus, 'completed');
+});
+
+test('cancelled appointment is always Geçmiş', () => {
+    const result = classifyAppointment(
+        appointment({ date: '2026-08-20', time: '10:00', status: 'cancelled' }),
+        ISTANBUL_15_00,
+    );
+    assert.equal(result.tab, 'past');
+    assert.equal(result.displayStatus, 'cancelled');
+});
+
+test('ongoing appointment remains Yaklaşan with Devam ediyor display status', () => {
+    const result = classifyAppointment(
+        appointment({ date: '2026-08-14', time: '14:30', duration: 60 }),
+        ISTANBUL_15_00,
+    );
+    assert.equal(result.tab, 'upcoming');
+    assert.equal(result.displayStatus, 'in_progress');
+    assert.equal(getAppointmentStatusLabel(result.displayStatus), 'Devam ediyor');
+    assert.equal(getAppointmentBadgeStatus(result.displayStatus), 'info');
+});
+
+test('appointment classification follows Istanbul midnight boundary', () => {
+    const appointmentAtMidnight = appointment({ date: '2026-08-14', time: '00:00', duration: null });
+    const beforeMidnight = classifyAppointment(
+        appointmentAtMidnight,
+        new Date('2026-08-13T20:59:59.000Z'),
+    );
+    const atMidnight = classifyAppointment(
+        appointmentAtMidnight,
+        new Date('2026-08-13T21:00:00.000Z'),
+    );
+    assert.equal(beforeMidnight.tab, 'upcoming');
+    assert.equal(atMidnight.tab, 'past');
+});
+
+test('UTC conversion does not shift the Istanbul appointment date', () => {
+    const localMorning = classifyAppointment(
+        appointment({ date: '2026-08-14', time: '00:30', duration: null }),
+        new Date('2026-08-13T21:00:00.000Z'),
+    );
+    assert.equal(localMorning.tab, 'upcoming');
+    assert.equal(formatAppointmentDate('2026-08-14'), '14 Ağustos 2026');
+});
+
+test('past appointments sort newest first and upcoming appointments nearest first', () => {
+    const sections = partitionAppointments([
+        appointment({ id: 'old', date: '2026-08-13', time: '18:00' }),
+        appointment({ id: 'new', date: '2026-08-14', time: '14:59', duration: null }),
+        appointment({ id: 'near', date: '2026-08-14', time: '15:01' }),
+        appointment({ id: 'far', date: '2026-08-15', time: '09:00' }),
+    ], new Date('2026-08-14T12:00:01.000Z'));
+    assert.deepEqual(sections.past.map((item) => item.id), ['new', 'old']);
+    assert.deepEqual(sections.upcoming.map((item) => item.id), ['near', 'far']);
+    assert.deepEqual(sortAppointmentsChronologically(sections.upcoming).map((item) => item.id), ['near', 'far']);
+});
+
+test('Istanbul date key remains stable across the UTC boundary', () => {
     assert.equal(getTodayDateKey(new Date('2026-08-13T20:59:59.000Z')), '2026-08-13');
     assert.equal(getTodayDateKey(new Date('2026-08-13T21:00:00.000Z')), '2026-08-14');
 });

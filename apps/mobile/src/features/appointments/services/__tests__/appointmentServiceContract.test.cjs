@@ -48,7 +48,11 @@ test('appointments screen has default upcoming and read-only detail navigation',
     assert.match(listScreen, /EmptyState/);
     assert.match(detailScreen, /Randevu Detayı/);
     assert.match(detailScreen, /formatAppointmentDate\(appointment\.date\)/);
-    assert.match(detailScreen, /appointment\.status/);
+    assert.match(detailScreen, /appointment\?\.status/);
     assert.doesNotMatch(detailScreen, /createAppointment|updateAppointment|deleteAppointment|onCancel|onReschedule/);
     assert.match(viewModel, /useFocusEffect/);
+    assert.match(viewModel, /partitionAppointments\(appointments, classificationNow\)/);
+    assert.match(viewModel, /setInterval\(refreshClassification, 60 \* 1000\)/);
+    assert.match(listScreen, /refreshClassification\(\);/);
+    assert.match(listScreen, /displayStatus/);
 });

@@ -20,6 +20,8 @@ const APPOINTMENT_TYPE_ALIASES = Object.freeze({
 
 const APPOINTMENT_STATUS_LABELS = Object.freeze({
     upcoming: 'Yaklaşan',
+    in_progress: 'Devam ediyor',
+    past: 'Geçmiş',
     completed: 'Tamamlandı',
     cancelled: 'İptal edildi',
 });
@@ -45,6 +47,49 @@ const parseDateKey = (value) => {
     ) return null;
 
     return date;
+};
+
+const createCivilDateTime = (dateKey, timeKey) => {
+    const date = parseDateKey(dateKey);
+    const timeMatch = typeof timeKey === 'string' ? TIME_PATTERN.exec(timeKey) : null;
+    if (!date || !timeMatch) throw new Error('Geçersiz randevu tarih/saat bilgisi.');
+
+    const dateTime = new Date(date.getTime());
+    dateTime.setUTCHours(
+        Number(timeKey.slice(0, 2)),
+        Number(timeKey.slice(3, 5)),
+        timeKey.length >= 8 ? Number(timeKey.slice(6, 8)) : 0,
+        0,
+    );
+    return dateTime;
+};
+
+const getIstanbulDateTimeParts = (instant = new Date()) => {
+    if (!(instant instanceof Date) || Number.isNaN(instant.getTime())) {
+        throw new Error('Geçerli bir tarih bulunamadı.');
+    }
+
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: APPOINTMENT_TIME_ZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23',
+    }).formatToParts(instant);
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
+    return {
+        date: `${values.year}-${values.month}-${values.day}`,
+        time: `${values.hour}:${values.minute}:${values.second}`,
+    };
+};
+
+const getIstanbulCivilDateTime = (instant = new Date()) => {
+    const parts = getIstanbulDateTimeParts(instant);
+    return createCivilDateTime(parts.date, parts.time);
 };
 
 const normalizeDateKey = (value) => {
@@ -112,12 +157,57 @@ const sortAppointmentsChronologically = (appointments) => (
     [...appointments].sort(compareAppointmentsChronologically)
 );
 
-const partitionAppointments = (appointments) => {
+const getAppointmentTimeWindow = (appointment) => {
+    const startDateTime = createCivilDateTime(appointment.date, appointment.time);
+    const hasTrustworthyDuration = Number.isInteger(appointment.duration) && appointment.duration > 0;
+    const endDateTime = hasTrustworthyDuration
+        ? new Date(startDateTime.getTime() + appointment.duration * 60 * 1000)
+        : new Date(startDateTime.getTime());
+
+    return { startDateTime, endDateTime };
+};
+
+const classifyAppointment = (appointment, instant = new Date()) => {
+    if (appointment.status === 'completed' || appointment.status === 'cancelled') {
+        return {
+            ...appointment,
+            tab: 'past',
+            displayStatus: appointment.status,
+        };
+    }
+
+    const nowDateTime = getIstanbulCivilDateTime(instant);
+    const { startDateTime, endDateTime } = getAppointmentTimeWindow(appointment);
+    const isElapsed = endDateTime.getTime() <= nowDateTime.getTime();
+    if (isElapsed) {
+        return {
+            ...appointment,
+            tab: 'past',
+            displayStatus: 'past',
+        };
+    }
+
+    const hasTrustworthyDuration = Number.isInteger(appointment.duration) && appointment.duration > 0;
+    const isInProgress = hasTrustworthyDuration
+        && startDateTime.getTime() <= nowDateTime.getTime()
+        && nowDateTime.getTime() < endDateTime.getTime();
+
+    return {
+        ...appointment,
+        tab: 'upcoming',
+        displayStatus: isInProgress ? 'in_progress' : 'upcoming',
+    };
+};
+
+const partitionAppointments = (appointments, instant = new Date()) => {
+    const classifiedAppointments = appointments.map((appointment) => (
+        classifyAppointment(appointment, instant)
+    ));
     const upcoming = sortAppointmentsChronologically(
-        appointments.filter((appointment) => appointment.status === 'upcoming'),
+        classifiedAppointments.filter((appointment) => appointment.tab === 'upcoming'),
     );
     const past = sortAppointmentsChronologically(
-        appointments.filter((appointment) => appointment.status === 'completed' || appointment.status === 'cancelled'),
+        classifiedAppointments.filter((appointment) => appointment.tab === 'past'),
     ).reverse();
 
     return { upcoming, past };
@@ -137,19 +227,14 @@ const formatAppointmentDate = (dateKey, options = {}) => {
 };
 
 const getTodayDateKey = (instant = new Date()) => {
-    const parts = new Intl.DateTimeFormat('en-CA', {
-        timeZone: APPOINTMENT_TIME_ZONE,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-    }).formatToParts(instant);
-    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-    return `${values.year}-${values.month}-${values.day}`;
+    return getIstanbulDateTimeParts(instant).date;
 };
 
 const getAppointmentStatusLabel = (status) => APPOINTMENT_STATUS_LABELS[status] || 'Bilinmeyen durum';
 
-const getAppointmentBadgeStatus = (status) => (status === 'cancelled' ? 'info' : status);
+const getAppointmentBadgeStatus = (status) => (
+    status === 'cancelled' || status === 'past' || status === 'in_progress' ? 'info' : status
+);
 
 const formatAppointmentDuration = (duration) => (
     Number.isInteger(duration) && duration > 0 ? `${duration} dakika` : null
@@ -159,11 +244,14 @@ module.exports = {
     APPOINTMENT_STATUSES,
     APPOINTMENT_TIME_ZONE,
     APPOINTMENT_TYPES,
+    classifyAppointment,
     compareAppointmentsChronologically,
     formatAppointmentDate,
     formatAppointmentDuration,
     getAppointmentBadgeStatus,
     getAppointmentStatusLabel,
+    getAppointmentTimeWindow,
+    getIstanbulCivilDateTime,
     getTodayDateKey,
     normalizeAppointment,
     normalizeAppointmentStatus,

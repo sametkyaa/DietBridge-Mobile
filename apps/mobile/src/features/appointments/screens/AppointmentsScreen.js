@@ -37,6 +37,7 @@ function ScreenHeader({ navigation, title }) {
 function AppointmentCard({ appointment, onPress }) {
     const durationLabel = formatAppointmentDuration(appointment.duration);
     const metadata = [appointment.type, durationLabel].filter(Boolean).join(' • ');
+    const displayStatus = appointment.displayStatus || appointment.status;
 
     return (
         <AppCard
@@ -48,8 +49,8 @@ function AppointmentCard({ appointment, onPress }) {
             <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle} numberOfLines={2}>{appointment.title}</Text>
                 <StatusBadge
-                    status={getAppointmentBadgeStatus(appointment.status)}
-                    label={getAppointmentStatusLabel(appointment.status)}
+                    status={getAppointmentBadgeStatus(displayStatus)}
+                    label={getAppointmentStatusLabel(displayStatus)}
                 />
             </View>
             <View style={styles.detailLine}>
@@ -91,6 +92,7 @@ export default function AppointmentsScreen({ navigation }) {
         status,
         error,
         isLoading,
+        refreshClassification,
         retryAppointments,
     } = useAppointmentsViewModel();
     const appointments = selectedTab === 'upcoming' ? upcomingAppointments : pastAppointments;
@@ -106,7 +108,10 @@ export default function AppointmentsScreen({ navigation }) {
                     {TABS.map((tab) => (
                         <Pressable
                             key={tab.key}
-                            onPress={() => setSelectedTab(tab.key)}
+                            onPress={() => {
+                                refreshClassification();
+                                setSelectedTab(tab.key);
+                            }}
                             accessibilityRole="tab"
                             accessibilityLabel={tab.label}
                             accessibilityState={{ selected: selectedTab === tab.key }}

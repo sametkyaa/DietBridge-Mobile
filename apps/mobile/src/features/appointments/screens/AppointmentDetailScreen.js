@@ -44,6 +44,7 @@ function DetailRow({ icon, label, value }) {
 
 export default function AppointmentDetailScreen({ navigation, route }) {
     const appointment = route.params?.appointment || null;
+    const displayStatus = appointment?.displayStatus || appointment?.status;
 
     return (
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
@@ -57,8 +58,8 @@ export default function AppointmentDetailScreen({ navigation, route }) {
                         <View style={styles.titleBlock}>
                             <Text style={styles.title}>{appointment.title}</Text>
                             <StatusBadge
-                                status={getAppointmentBadgeStatus(appointment.status)}
-                                label={getAppointmentStatusLabel(appointment.status)}
+                                status={getAppointmentBadgeStatus(displayStatus)}
+                                label={getAppointmentStatusLabel(displayStatus)}
                             />
                         </View>
                         <View style={styles.rows}>

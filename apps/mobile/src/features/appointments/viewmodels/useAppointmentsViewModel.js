@@ -7,6 +7,7 @@ export const useAppointmentsViewModel = () => {
     const [appointments, setAppointments] = useState([]);
     const [status, setStatus] = useState('loading');
     const [error, setError] = useState(null);
+    const [classificationNow, setClassificationNow] = useState(() => new Date());
     const requestSequenceRef = useRef(0);
     const isMountedRef = useRef(true);
 
@@ -21,10 +22,12 @@ export const useAppointmentsViewModel = () => {
         setStatus(retry ? 'retrying' : 'loading');
         setError(null);
         setAppointments([]);
+        setClassificationNow(new Date());
 
         return fetchClientAppointments()
             .then((nextAppointments) => {
                 if (!isMountedRef.current || requestSequenceRef.current !== requestSequence) return nextAppointments;
+                setClassificationNow(new Date());
                 setAppointments(nextAppointments);
                 setStatus(nextAppointments.length > 0 ? 'success' : 'empty');
                 return nextAppointments;
@@ -40,16 +43,20 @@ export const useAppointmentsViewModel = () => {
 
     useFocusEffect(
         useCallback(() => {
+            const refreshClassification = () => setClassificationNow(new Date());
+            refreshClassification();
+            const timer = setInterval(refreshClassification, 60 * 1000);
             void loadAppointments();
-            return undefined;
+            return () => clearInterval(timer);
         }, [loadAppointments]),
     );
 
     const { upcoming, past } = useMemo(
-        () => partitionAppointments(appointments),
-        [appointments],
+        () => partitionAppointments(appointments, classificationNow),
+        [appointments, classificationNow],
     );
 
+    const refreshClassification = useCallback(() => setClassificationNow(new Date()), []);
     const retryAppointments = useCallback(() => loadAppointments({ retry: true }), [loadAppointments]);
 
     return {
@@ -59,6 +66,7 @@ export const useAppointmentsViewModel = () => {
         status,
         error,
         isLoading: status === 'loading' || status === 'retrying',
+        refreshClassification,
         retryAppointments,
     };
 };
