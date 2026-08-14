@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-nativ
 import { AppButton, EmptyState, ErrorState } from '../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../shared/theme';
 import ChatMessageBubble from './ChatMessageBubble';
+import MealActivityCard from './MealActivityCard';
 import { selectLatestVisibleCanonicalMessage } from '../utils/chatReadStatePolicy';
 import { shouldAdjustInitialChatLayout, shouldPositionInitialChat } from '../utils/chatScrollLifecycle';
 
@@ -12,6 +13,7 @@ const getMessageKey = (message, index) => (
 
 export default function ChatMessageList({
     messages,
+    mealActivityError,
     isInitialLoading,
     initialError,
     onRetryInitial,
@@ -137,15 +139,24 @@ export default function ChatMessageList({
             data={Array.isArray(messages) ? messages : []}
             keyExtractor={getMessageKey}
             renderItem={({ item }) => (
-                <ChatMessageBubble
-                    message={item}
-                    peerReadState={peerReadState}
-                    onRetry={onRetryMessage}
-                    onRequestDelete={onRequestDeleteMessage}
-                    isDeleting={Boolean(item?.id && deletingMessageIds?.includes(item.id))}
-                />
+                item?.kind === 'meal_activity' ? (
+                    <MealActivityCard activity={item} />
+                ) : (
+                    <ChatMessageBubble
+                        message={item}
+                        peerReadState={peerReadState}
+                        onRetry={onRetryMessage}
+                        onRequestDelete={onRequestDeleteMessage}
+                        isDeleting={Boolean(item?.id && deletingMessageIds?.includes(item.id))}
+                    />
+                )
             )}
-            ListHeaderComponent={renderHeader}
+            ListHeaderComponent={() => (
+                <>
+                    {mealActivityError ? <Text style={styles.activityError} accessibilityRole="alert">{mealActivityError}</Text> : null}
+                    {renderHeader()}
+                </>
+            )}
             ListEmptyComponent={(
                 <EmptyState
                     icon="message"
@@ -182,5 +193,6 @@ const styles = StyleSheet.create({
     headerSpacing: { height: spacing.x2 },
     olderSection: { alignItems: 'center', paddingHorizontal: spacing.x4, paddingBottom: spacing.x2 },
     olderError: { ...typography.supporting, color: colors.errorDark, textAlign: 'center', marginBottom: spacing.x1 },
+    activityError: { ...typography.caption, color: colors.warningDark, textAlign: 'center', paddingHorizontal: spacing.x4, paddingTop: spacing.x2 },
     emptyState: { flex: 1, justifyContent: 'center' },
 });

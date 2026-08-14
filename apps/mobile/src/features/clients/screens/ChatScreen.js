@@ -95,6 +95,7 @@ function ActiveChatContent({ activeConnection, activeDietitian, isScreenFocused 
       <View style={styles.listArea}>
         <ChatMessageList
           messages={viewModel.timelineMessages}
+          mealActivityError={viewModel.mealActivityError}
           isInitialLoading={viewModel.isInitialLoading}
           initialError={viewModel.initialError}
           onRetryInitial={viewModel.retryInitialLoad}
