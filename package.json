@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "test": "node --test \"apps/mobile/src/features/meals/services/__tests__/*.test.cjs\"",
     "test:water": "node --test apps/mobile/src/features/clients/services/__tests__/dailyWaterContract.test.cjs",
-    "test:appointments": "node --test \"apps/mobile/src/features/appointments/utils/__tests__/*.test.cjs\" \"apps/mobile/src/features/appointments/services/__tests__/*.test.cjs\""
+    "test:appointments": "node --test \"apps/mobile/src/features/appointments/utils/__tests__/*.test.cjs\" \"apps/mobile/src/features/appointments/services/__tests__/*.test.cjs\"",
+    "test:notifications": "node --test \"apps/mobile/src/features/notifications/utils/__tests__/*.test.cjs\" \"apps/mobile/src/features/notifications/services/__tests__/*.test.cjs\""
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
