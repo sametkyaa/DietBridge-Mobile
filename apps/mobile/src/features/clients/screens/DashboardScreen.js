@@ -20,10 +20,12 @@ import { mapDashboardMeal } from '../mappers/dashboardUiMapper';
 import { useDashboardViewModel } from '../viewmodels/useDashboardViewModel';
 import { toLocalDateKey } from '../../../shared/utils/localDate';
 import DietitianConnectionRequestCard from '../../dietitianConnection/components/DietitianConnectionRequestCard';
+import { useNotifications } from '../../notifications/context/NotificationContext';
 
 const DashboardScreen = () => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
+    const { unseenCount } = useNotifications();
     const {
         water,
         waterInput,
@@ -217,6 +219,8 @@ const DashboardScreen = () => {
                     dateLabel={dateLabel}
                     avatarUrl={avatarUrl}
                     onAvatarPress={() => setIsSidebarVisible(true)}
+                    unseenCount={unseenCount}
+                    onNotificationPress={() => navigation.navigate('NotificationCenter')}
                 />
 
                 <DietitianConnectionRequestCard

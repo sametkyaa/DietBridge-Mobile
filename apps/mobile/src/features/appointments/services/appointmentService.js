@@ -15,6 +15,7 @@ export class AppointmentServiceError extends Error {
 }
 
 const APPOINTMENT_SELECT = 'id,dietitian_id,client_id,title,date,time,duration,type,status';
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const getCurrentUserOrThrow = async () => {
     let response;
@@ -54,6 +55,36 @@ export const fetchClientAppointments = async () => {
         return sortAppointmentsChronologically(
             (response?.data || []).map((row) => normalizeAppointment(row, user.id)),
         );
+    } catch (error) {
+        throw new AppointmentServiceError(APPOINTMENT_LOAD_ERROR, error);
+    }
+};
+
+export const fetchClientAppointmentById = async (appointmentId) => {
+    const user = await getCurrentUserOrThrow();
+    if (typeof appointmentId !== 'string' || !UUID_PATTERN.test(appointmentId)) {
+        throw new AppointmentServiceError(APPOINTMENT_LOAD_ERROR, new Error('Invalid appointment id'));
+    }
+
+    let response;
+    try {
+        response = await supabase
+            .from('appointments')
+            .select(APPOINTMENT_SELECT)
+            .eq('client_id', user.id)
+            .eq('id', appointmentId)
+            .maybeSingle();
+    } catch (error) {
+        throw new AppointmentServiceError(APPOINTMENT_LOAD_ERROR, error);
+    }
+
+    if (response?.error) {
+        throw new AppointmentServiceError(APPOINTMENT_LOAD_ERROR, response.error);
+    }
+    if (!response?.data) return null;
+
+    try {
+        return normalizeAppointment(response.data, user.id);
     } catch (error) {
         throw new AppointmentServiceError(APPOINTMENT_LOAD_ERROR, error);
     }
