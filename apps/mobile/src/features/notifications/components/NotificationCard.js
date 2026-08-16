@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
         borderColor: colors.borderSoft,
     },
     unreadCard: {
-        backgroundColor: colors.primarySurface,
+        backgroundColor: colors.primarySoft,
         borderColor: colors.primarySoft,
     },
     iconWrap: {
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    unreadIconWrap: { backgroundColor: colors.primarySoft },
+    unreadIconWrap: { backgroundColor: colors.primarySurface },
     body: { flex: 1, minWidth: 0, gap: spacing.x1 },
     summaryRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.x2 },
     summary: { ...typography.bodyMedium, color: colors.textPrimary, flex: 1 },

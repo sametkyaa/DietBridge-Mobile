@@ -35,34 +35,39 @@ const NotificationSeparator = () => <View style={styles.separator} />;
 function ScreenHeader({ navigation, canMarkAllRead, isMarkingAll, onMarkAllRead }) {
     return (
         <View style={styles.header}>
-            <Pressable
-                onPress={() => navigation.goBack()}
-                accessibilityRole="button"
-                accessibilityLabel="Geri"
-                hitSlop={4}
-                style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-            >
-                <Icon name="back" size={22} color={colors.textPrimary} />
-            </Pressable>
-            <Text accessibilityRole="header" style={styles.headerTitle} numberOfLines={1}>Bildirimler</Text>
-            <Pressable
-                onPress={canMarkAllRead && !isMarkingAll ? onMarkAllRead : undefined}
-                disabled={!canMarkAllRead || isMarkingAll}
-                accessibilityRole="button"
-                accessibilityLabel="Tümünü okundu işaretle"
-                accessibilityState={{
-                    disabled: !canMarkAllRead || isMarkingAll,
-                    busy: isMarkingAll,
-                }}
-                style={({ pressed }) => [
-                    styles.markAllButton,
-                    !canMarkAllRead && styles.markAllDisabled,
-                    pressed && canMarkAllRead && !isMarkingAll && styles.pressed,
-                ]}
-            >
-                {isMarkingAll ? <ActivityIndicator size="small" color={colors.primaryDark} /> : null}
-                <Text style={styles.markAllLabel} numberOfLines={2}>Tümünü okundu işaretle</Text>
-            </Pressable>
+            <View style={styles.headerTopRow}>
+                <Pressable
+                    onPress={() => navigation.goBack()}
+                    accessibilityRole="button"
+                    accessibilityLabel="Geri"
+                    hitSlop={4}
+                    style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+                >
+                    <Icon name="back" size={22} color={colors.textPrimary} />
+                </Pressable>
+                <Text accessibilityRole="header" style={styles.headerTitle} numberOfLines={1}>Bildirimler</Text>
+                <View style={styles.headerTopSpacer} accessible={false} />
+            </View>
+            <View style={styles.markAllRow}>
+                <Pressable
+                    onPress={canMarkAllRead && !isMarkingAll ? onMarkAllRead : undefined}
+                    disabled={!canMarkAllRead || isMarkingAll}
+                    accessibilityRole="button"
+                    accessibilityLabel="Tümünü okundu işaretle"
+                    accessibilityState={{
+                        disabled: !canMarkAllRead || isMarkingAll,
+                        busy: isMarkingAll,
+                    }}
+                    style={({ pressed }) => [
+                        styles.markAllButton,
+                        !canMarkAllRead && styles.markAllDisabled,
+                        pressed && canMarkAllRead && !isMarkingAll && styles.pressed,
+                    ]}
+                >
+                    {isMarkingAll ? <ActivityIndicator size="small" color={colors.primaryDark} /> : null}
+                    <Text style={styles.markAllLabel} numberOfLines={1}>Tümünü okundu işaretle</Text>
+                </Pressable>
+            </View>
         </View>
     );
 }
@@ -405,18 +410,19 @@ export default function NotificationCenterScreen({ navigation }) {
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: colors.background },
     header: {
-        minHeight: 68,
-        flexDirection: 'row',
-        alignItems: 'center',
+        paddingTop: spacing.x1,
+        paddingBottom: spacing.x1,
         paddingHorizontal: spacing.x2,
         borderBottomWidth: 1,
         borderBottomColor: colors.borderSoft,
         backgroundColor: colors.surface,
     },
+    headerTopRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center' },
     backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
     headerTitle: { flex: 1, ...typography.sectionTitle, color: colors.textPrimary, textAlign: 'center' },
+    headerTopSpacer: { width: 44, height: 44 },
+    markAllRow: { minHeight: 44, alignItems: 'flex-end', justifyContent: 'center' },
     markAllButton: {
-        width: 132,
         minHeight: 44,
         flexDirection: 'row',
         alignItems: 'center',
@@ -428,7 +434,6 @@ const styles = StyleSheet.create({
         ...typography.caption,
         color: colors.primaryDark,
         textAlign: 'right',
-        flexShrink: 1,
     },
     markAllDisabled: { opacity: 0.45 },
     content: { flex: 1, paddingHorizontal: spacing.x4, paddingTop: spacing.x3 },
