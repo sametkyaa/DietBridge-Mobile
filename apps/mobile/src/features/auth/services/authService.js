@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabaseClient';
+import { revokePushInstallationBestEffort } from '../../push/services/pushRegistrationService';
 
 export const CLIENT_ONLY_ERROR_MESSAGE =
     'Bu uygulama danışan kullanımı içindir. Diyetisyen paneline web uygulamasından giriş yapabilirsiniz.';
@@ -21,6 +22,7 @@ const createAuthState = ({ session = null, profile = null } = {}) => {
 };
 
 const safeSignOut = async () => {
+    await revokePushInstallationBestEffort();
     const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) {
         console.warn('Supabase yerel çıkış işlemi tamamlanamadı.');

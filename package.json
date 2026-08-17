@@ -10,7 +10,9 @@
     "test": "node --test \"apps/mobile/src/features/meals/services/__tests__/*.test.cjs\"",
     "test:water": "node --test apps/mobile/src/features/clients/services/__tests__/dailyWaterContract.test.cjs",
     "test:appointments": "node --test \"apps/mobile/src/features/appointments/utils/__tests__/*.test.cjs\" \"apps/mobile/src/features/appointments/services/__tests__/*.test.cjs\"",
-    "test:notifications": "node --test \"apps/mobile/src/features/notifications/utils/__tests__/*.test.cjs\" \"apps/mobile/src/features/notifications/services/__tests__/*.test.cjs\""
+    "test:notifications": "node --test \"apps/mobile/src/features/notifications/utils/__tests__/*.test.cjs\" \"apps/mobile/src/features/notifications/services/__tests__/*.test.cjs\"",
+    "test:push": "node --test apps/mobile/src/features/push/utils/__tests__/pushClientPolicy.test.cjs apps/mobile/src/features/push/services/__tests__/pushClientServiceContract.test.cjs apps/mobile/src/features/push/services/__tests__/pushLifecycleController.test.cjs",
+    "test:push:backend": "node scripts/runDisposablePushClientBackendIntegration.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -22,10 +24,13 @@
     "@supabase/supabase-js": "^2.84.0",
     "expo": "~54.0.36",
     "expo-asset": "~12.0.13",
+    "expo-constants": "~18.0.13",
     "expo-crypto": "~15.0.9",
+    "expo-device": "~8.0.10",
     "expo-font": "~14.0.12",
     "expo-image-picker": "~17.0.11",
     "expo-linear-gradient": "~15.0.8",
+    "expo-notifications": "~0.32.17",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
     "react-native": "0.81.5",
