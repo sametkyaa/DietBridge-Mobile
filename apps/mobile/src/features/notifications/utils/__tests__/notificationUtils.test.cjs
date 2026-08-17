@@ -9,6 +9,7 @@ const {
 const {
     buildNotificationRow,
     buildAppointmentRow,
+    buildAppointmentReminderRow,
     buildRelationshipRow,
 } = require('./notificationTestFixtures.cjs');
 const {
@@ -44,6 +45,17 @@ test('maps valid appointment notification metadata', () => {
     assert.equal(model.appointmentStatus, 'upcoming');
 });
 
+test('maps both bounded appointment reminder events with exact summary keys', () => {
+    const reminder24h = normalizeNotificationRow(buildAppointmentReminderRow('reminder_24h'));
+    const reminder1h = normalizeNotificationRow(buildAppointmentReminderRow('reminder_1h'));
+
+    assert.equal(reminder24h.eventType, 'reminder_24h');
+    assert.equal(reminder24h.summaryKey, 'appointment_reminder_24h');
+    assert.equal(reminder1h.eventType, 'reminder_1h');
+    assert.equal(reminder1h.summaryKey, 'appointment_reminder_1h');
+    assert.equal(Object.prototype.hasOwnProperty.call(reminder24h, 'body'), false);
+});
+
 test('maps valid relationship notification metadata', () => {
     const model = normalizeNotificationRow(buildRelationshipRow());
 
@@ -57,6 +69,8 @@ test('maps valid relationship notification metadata', () => {
 test('rejects malformed category, unsupported event, and invalid source fields safely', () => {
     assert.equal(normalizeNotificationRow(buildNotificationRow({ category: 'meal_activity' })), null);
     assert.equal(normalizeNotificationRow(buildNotificationRow({ event_type: 'opened' })), null);
+    assert.equal(normalizeNotificationRow(buildAppointmentReminderRow('reminder_24h', { summary_key: 'appointment_created' })), null);
+    assert.equal(normalizeNotificationRow(buildAppointmentReminderRow('reminder_90m', { summary_key: 'appointment_reminder_90m' })), null);
     assert.equal(normalizeNotificationRow(buildNotificationRow({ conversation_id: null })), null);
     assert.equal(normalizeNotificationRow(buildRelationshipRow({ relationship_to_status: 'removed' })), null);
 });

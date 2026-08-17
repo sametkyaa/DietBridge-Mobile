@@ -19,6 +19,8 @@ const APPOINTMENT_COPY = Object.freeze({
     updated: 'Randevunuz güncellendi.',
     cancelled: 'Randevunuz iptal edildi.',
     removed_from_client: 'Randevunuz kaldırıldı.',
+    reminder_24h: 'Randevunuza 24 saat kaldı',
+    reminder_1h: 'Randevunuza 1 saat kaldı',
 });
 
 const RELATIONSHIP_COPY = Object.freeze({

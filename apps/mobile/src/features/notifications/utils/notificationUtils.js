@@ -16,6 +16,8 @@ const APPOINTMENT_SUMMARY_KEYS = Object.freeze({
     cancelled: 'appointment_cancelled',
     assigned: 'appointment_assigned',
     removed_from_client: 'appointment_removed_from_client',
+    reminder_24h: 'appointment_reminder_24h',
+    reminder_1h: 'appointment_reminder_1h',
 });
 
 const RELATIONSHIP_SUMMARY_KEYS = Object.freeze({

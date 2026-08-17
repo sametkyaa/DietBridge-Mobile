@@ -43,6 +43,13 @@ const buildAppointmentRow = (overrides = {}) => buildNotificationRow({
     ...overrides,
 });
 
+const buildAppointmentReminderRow = (eventType = 'reminder_24h', overrides = {}) => buildAppointmentRow({
+    event_type: eventType,
+    aggregation_key: `appointment_reminder:33333333-3333-4333-8333-333333333333:2026-08-20:10:30:${eventType === 'reminder_24h' ? '24h' : '1h'}`,
+    summary_key: eventType === 'reminder_24h' ? 'appointment_reminder_24h' : 'appointment_reminder_1h',
+    ...overrides,
+});
+
 const buildRelationshipRow = (overrides = {}) => buildNotificationRow({
     category: 'relationship',
     event_type: 'accepted',
@@ -59,5 +66,6 @@ const buildRelationshipRow = (overrides = {}) => buildNotificationRow({
 module.exports = {
     buildNotificationRow,
     buildAppointmentRow,
+    buildAppointmentReminderRow,
     buildRelationshipRow,
 };

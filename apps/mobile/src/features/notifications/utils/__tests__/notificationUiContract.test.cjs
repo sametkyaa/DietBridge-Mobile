@@ -76,6 +76,8 @@ test('card copy is centralized, native-text-only, and keeps read/unread treatmen
     assert.match(formatter, /\$\{actor\} size/);
     assert.match(formatter, /Yeni mesajınız var/);
     assert.match(formatter, /Randevunuz güncellendi/);
+    assert.match(formatter, /Randevunuza 24 saat kaldı/);
+    assert.match(formatter, /Randevunuza 1 saat kaldı/);
     assert.match(formatter, /Diyetisyen bağlantınız sonlandırıldı/);
 });
 

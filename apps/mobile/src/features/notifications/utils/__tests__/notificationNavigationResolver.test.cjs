@@ -45,6 +45,28 @@ test('appointment navigation fetches current appointment and never trusts the sn
     assert.notEqual(result.appointment.title, 'Eski snapshot');
 });
 
+test('reminder navigation fetches the current rescheduled appointment through the existing path', async () => {
+    const currentAppointment = { id: APPOINTMENT_ID, title: 'Güncel randevu', time: '17:00:00' };
+    let fetchedId = null;
+    const result = await resolveNotificationDestinationWithDependencies({
+        notification: {
+            category: 'appointment',
+            eventType: 'reminder_24h',
+            appointmentId: APPOINTMENT_ID,
+            appointmentTitleSnapshot: 'Eski 15:00 snapshot',
+            appointmentTime: '15:00:00',
+        },
+        fetchClientAppointmentById: async (id) => {
+            fetchedId = id;
+            return currentAppointment;
+        },
+    });
+
+    assert.deepEqual(result, { kind: 'appointment', appointment: currentAppointment });
+    assert.equal(fetchedId, APPOINTMENT_ID);
+    assert.equal(result.appointment.time, '17:00:00');
+});
+
 test('removed appointment notification does not attempt an RLS-protected detail fetch', async () => {
     let fetchCount = 0;
     const result = await resolveNotificationDestinationWithDependencies({
@@ -68,6 +90,12 @@ test('stale appointment and relationship targets fail or route safely', async ()
         fetchClientAppointmentById: async () => null,
     });
     assert.equal(staleAppointment.kind, 'invalid');
+
+    const deletedReminder = await resolveNotificationDestinationWithDependencies({
+        notification: { category: 'appointment', eventType: 'reminder_1h', appointmentId: APPOINTMENT_ID },
+        fetchClientAppointmentById: async () => null,
+    });
+    assert.equal(deletedReminder.kind, 'invalid');
 
     const pending = await resolveNotificationDestinationWithDependencies({
         notification: { category: 'relationship', eventType: 'request_pending', dietitianClientId: RELATIONSHIP_ID },

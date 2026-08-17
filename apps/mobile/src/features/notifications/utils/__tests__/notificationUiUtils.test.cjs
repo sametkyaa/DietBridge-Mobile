@@ -56,6 +56,14 @@ test('appointment and relationship formatters use canonical safe event copy', ()
         'Randevunuz kaldırıldı.',
     );
     assert.equal(
+        formatNotificationSummary({ category: 'appointment', eventType: 'reminder_24h' }),
+        'Randevunuza 24 saat kaldı',
+    );
+    assert.equal(
+        formatNotificationSummary({ category: 'appointment', eventType: 'reminder_1h' }),
+        'Randevunuza 1 saat kaldı',
+    );
+    assert.equal(
         formatNotificationSummary({ category: 'relationship', eventType: 'request_pending' }),
         'Yeni bir diyetisyen bağlantı isteğiniz var.',
     );
