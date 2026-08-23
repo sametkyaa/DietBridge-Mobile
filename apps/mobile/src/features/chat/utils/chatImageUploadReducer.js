@@ -1,0 +1,180 @@
+'use strict';
+
+// Pure state machine for the single-slot chat image upload.
+//
+// Only one upload may be in flight. Every async result carries the
+// `operationId` it was started with, so a late result from a superseded or
+// cancelled operation is dropped instead of corrupting the current state.
+
+const { isValidUuid } = require('./chatMessageUtils');
+const { isSupportedChatImageSourceMimeType } = require('./canonicalJpegPlan');
+
+const initialChatImageUploadState = Object.freeze({
+    status: 'idle',
+    operationId: 0,
+    conversationId: null,
+    clientMessageId: null,
+    source: null,
+    previewUri: null,
+    canonical: null,
+    intent: null,
+    progress: null,
+    error: null,
+    retryStage: null,
+});
+
+const isStale = (state, operationId) => operationId !== state.operationId;
+
+const isTerminal = (status) => (
+    status === 'succeeded' || status === 'failed' || status === 'cancelled' || status === 'idle'
+);
+
+const chatImageUploadReducer = (state, action) => {
+    if (action.type === 'reset') {
+        return { ...initialChatImageUploadState, operationId: state.operationId };
+    }
+
+    // A new selection always wins: it carries a strictly newer operation id and
+    // invalidates any in-flight work.
+    if (action.type === 'select') {
+        if (action.operationId <= state.operationId) return state;
+        return {
+            status: 'selected',
+            operationId: action.operationId,
+            conversationId: action.conversationId,
+            clientMessageId: action.clientMessageId,
+            source: action.source,
+            previewUri: action.previewUri ?? null,
+            canonical: null,
+            intent: null,
+            progress: null,
+            error: null,
+            retryStage: null,
+        };
+    }
+
+    // A start that never reached the first stage (feature disabled, no
+    // conversation, unsupported type) still has to surface its error.
+    if (action.type === 'rejected') {
+        if (action.operationId <= state.operationId) return state;
+        return {
+            ...initialChatImageUploadState,
+            status: 'failed',
+            operationId: action.operationId,
+            error: action.error,
+        };
+    }
+
+    if (isStale(state, action.operationId)) return state;
+
+    switch (action.type) {
+        case 'start':
+            if (state.status !== 'selected') return state;
+            return { ...state, status: 'canonicalizing', error: null, retryStage: null };
+
+        case 'canonicalized':
+            if (state.status !== 'canonicalizing') return state;
+            return { ...state, status: 'creating-intent', canonical: action.canonical, error: null };
+
+        case 'intent-created':
+            if (state.status !== 'creating-intent') return state;
+            return { ...state, status: 'uploading', intent: action.intent, error: null };
+
+        case 'uploaded':
+            if (state.status !== 'uploading') return state;
+            return { ...state, status: 'validating', progress: null, error: null };
+
+        case 'validated':
+            if (state.status !== 'validating') return state;
+            return { ...state, status: 'finalizing', error: null };
+
+        case 'progress':
+            if (state.status !== 'uploading') return state;
+            if (!Number.isFinite(action.progress) || action.progress < 0 || action.progress > 1) return state;
+            return { ...state, progress: action.progress };
+
+        case 'finalized':
+            if (state.status !== 'finalizing') return state;
+            return {
+                ...state,
+                status: 'succeeded',
+                progress: null,
+                error: null,
+                retryStage: null,
+                source: null,
+                previewUri: null,
+                canonical: null,
+                intent: null,
+            };
+
+        case 'failed':
+            if (isTerminal(state.status)) return state;
+            return {
+                ...state,
+                status: 'failed',
+                progress: null,
+                error: action.error,
+                retryStage: action.retryStage ?? null,
+            };
+
+        case 'cancelled':
+            // A finished upload is never rolled back into `cancelled`.
+            if (state.status === 'succeeded' || state.status === 'idle') return state;
+            // Cancellation is a terminal UI state. Network/resource ownership is
+            // handled by the operation lifecycle helper; the reducer only removes
+            // every state value that could point at a revoked or stale resource.
+            return {
+                ...state,
+                status: 'cancelled',
+                conversationId: null,
+                clientMessageId: null,
+                source: null,
+                previewUri: null,
+                canonical: null,
+                intent: null,
+                progress: null,
+                error: null,
+                retryStage: null,
+            };
+
+        case 'retry':
+            if (state.status !== 'failed') return state;
+            if (state.retryStage !== action.stage) return state;
+            return { ...state, status: action.stage, progress: null, error: null, retryStage: null };
+
+        default:
+            return state;
+    }
+};
+
+// Resolves the stage a failure can resume from while preserving idempotency:
+// the same `clientMessageId` (and therefore the same server intent) is reused.
+const resolveRetryStage = (state, stage, retryable) => {
+    if (!retryable) return null;
+    if (stage === 'canonicalizing') return 'canonicalizing';
+    if (!state.canonical) return null;
+    if (stage === 'creating-intent') return 'creating-intent';
+    if (!state.intent) return null;
+    return stage;
+};
+
+// Fail-closed gate evaluated before any RPC or Storage call.
+//
+// The image RPCs are dormant, so the flag defaults to off; and an image can
+// never be the first message of a conversation, so a missing `conversationId`
+// stops the flow before it starts.
+const evaluateChatImageUploadStart = (guard) => {
+    if (!guard.featureEnabled) return { allowed: false, reason: 'feature_unavailable' };
+    if (!isValidUuid(guard.conversationId)) return { allowed: false, reason: 'invalid_request' };
+    if (!isSupportedChatImageSourceMimeType(guard.sourceMimeType)) {
+        return { allowed: false, reason: 'unsupported_type' };
+    }
+    return { allowed: true, conversationId: guard.conversationId };
+};
+
+module.exports = {
+    initialChatImageUploadState,
+    chatImageUploadReducer,
+    resolveRetryStage,
+    evaluateChatImageUploadStart,
+};

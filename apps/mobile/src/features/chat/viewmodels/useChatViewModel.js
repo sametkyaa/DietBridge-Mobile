@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import {
     deleteChatMessage,
     fetchChatReadStates,
     fetchChatMessagesPage,
+    fetchChatMessageById,
     getChatConversationByRelationId,
     sendChatMessage,
 } from '../services/chatService';
@@ -27,7 +29,9 @@ import { mergeMealActivities } from '../utils/mealActivityUtils';
 import { useChatRealtime } from '../hooks/useChatRealtime';
 import { useChatReadState } from '../hooks/useChatReadState';
 import { useChatDeliveryState } from '../hooks/useChatDeliveryState';
+import { useChatImageUpload } from '../hooks/useChatImageUpload';
 import { canDeleteChatMessage } from '../utils/chatUiUtils';
+import { purgeChatImageUri, refreshChatImageUri, resolveChatImageUri } from '../services/chatImageResolver';
 
 const GENERIC_CHAT_ERROR = 'Sohbet işlemi şu anda tamamlanamadı. Lütfen tekrar deneyin.';
 const UUID_ERROR = 'Güvenli mesaj kimliği oluşturulamadı. Lütfen tekrar deneyin.';
@@ -86,6 +90,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
     const [initialPositionToken, setInitialPositionToken] = useState(0);
     const [bottomScrollToken, setBottomScrollToken] = useState(0);
     const [visibleCanonicalMessage, setVisibleCanonicalMessage] = useState(null);
+    const [imageStates, setImageStates] = useState({});
 
     const isMountedRef = useRef(true);
     const requestGenerationRef = useRef(0);
@@ -101,7 +106,9 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
     const mealActivitiesRef = useRef([]);
     const historyConversationIdRef = useRef(null);
     const latestRefreshRef = useRef(null);
+    const pendingMessageFetchRef = useRef(new Map());
     const [realtimeScrollToken, setRealtimeScrollToken] = useState(0);
+    const imageRequestVersionRef = useRef(0);
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -113,6 +120,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
             sendRequestsRef.current.clear();
             sendingRelationsRef.current.clear();
             deleteRequestsRef.current.clear();
+            pendingMessageFetchRef.current.clear();
         };
     }, []);
 
@@ -488,6 +496,51 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
         if (addedMessages.length) setRealtimeScrollToken((token) => token + 1);
     }, [mergeServerMessages, relationId, relationKey]);
 
+    // Realtime image INSERTs (and any payload the normalizer rejects) arrive
+    // without the embedded attachment join. This performs a single deduplicated
+    // targeted fetch per message id and merges only a fully normalized image
+    // message that still belongs to the active conversation. A synthetic or
+    // partial message is never produced.
+    const reconcileMessageById = useCallback((messageId, eventConversationId) => {
+        const currentConversationId = conversationRef.current?.id ?? null;
+        if (!relationId || !relationKey || !validCurrentUserId || !currentConversationId
+            || activeRelationKeyRef.current !== relationKey
+            || !isValidUuid(messageId)
+            || eventConversationId !== currentConversationId) return;
+
+        const pending = pendingMessageFetchRef.current;
+        const fetchKey = `${currentConversationId}:${messageId}`;
+        if (pending.has(fetchKey)) return;
+
+        const generation = requestGenerationRef.current;
+        const request = (async () => {
+            try {
+                const message = await fetchChatMessageById({
+                    messageId,
+                    conversationId: currentConversationId,
+                    currentUserId: validCurrentUserId,
+                });
+                if (!message) return;
+                if (!isMountedRef.current || requestGenerationRef.current !== generation
+                    || activeRelationKeyRef.current !== relationKey
+                    || conversationRef.current?.id !== currentConversationId
+                    || message.conversationId !== currentConversationId) return;
+
+                const addedMessages = mergeServerMessages([message]);
+                if (message.clientMessageId) {
+                    setOptimisticMessages((current) => removeOptimisticMessage(current, message.clientMessageId));
+                }
+                if (addedMessages.length) setRealtimeScrollToken((token) => token + 1);
+            } catch (error) {
+                // Targeted reconciliation is best-effort; the reconnect refetch
+                // and lifecycle reconciliation remain the safety net.
+            } finally {
+                if (pending.get(fetchKey) === request) pending.delete(fetchKey);
+            }
+        })();
+        pending.set(fetchKey, request);
+    }, [mergeServerMessages, relationId, relationKey, validCurrentUserId]);
+
     // Conversation INSERT can arrive before the RPC's relation refetch. It is
     // metadata-only for an existing conversation and never clears history or
     // optimistic state.
@@ -587,6 +640,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
         isScreenFocused,
         onConversation: applyRealtimeConversation,
         onMessage: mergeRealtimeMessage,
+        onReconcileMessage: reconcileMessageById,
         onReadState: applyRealtimeReadState,
         onRefetchRequired: refreshLatestChatState,
     });
@@ -638,6 +692,49 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
         buildChatTimeline(serverMessages, optimisticMessages, relationId, mealActivities)
     ), [mealActivities, optimisticMessages, relationId, serverMessages]);
 
+    // Image reads remain available independently of the send feature flag. The
+    // generation guard prevents an old conversation/foreground request from
+    // writing signed URLs into the currently active conversation.
+    const resolveImageMessages = useCallback(async (forceRefresh = false) => {
+        const generation = ++imageRequestVersionRef.current;
+        const activeConversationId = conversationRef.current?.id ?? null;
+        const imageMessages = serverMessages.filter((message) => message?.messageKind === 'image');
+        imageMessages.forEach((message) => { if (!message?.attachment || message.isDeleted || message.attachment.deletedAt) purgeChatImageUri(message); });
+        setImageStates(Object.fromEntries(imageMessages.map((message) => [message.id, { uri: null, status: 'loading' }])));
+        const results = await Promise.all(imageMessages.map((message) => (
+            forceRefresh ? refreshChatImageUri(message) : resolveChatImageUri(message)
+        )));
+        if (!isMountedRef.current || imageRequestVersionRef.current !== generation
+            || conversationRef.current?.id !== activeConversationId) return;
+        setImageStates(Object.fromEntries(imageMessages.map((message, index) => [message.id, results[index]])));
+    }, [serverMessages]);
+
+    useEffect(() => { void resolveImageMessages(); }, [conversation?.id, resolveImageMessages]);
+
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', (nextState) => {
+            if (nextState === 'active') void resolveImageMessages(true);
+        });
+        return () => subscription.remove();
+    }, [resolveImageMessages]);
+
+    const retryImage = useCallback((message) => { void resolveImageMessages(true); }, [resolveImageMessages]);
+
+    // Optional canonical-JPEG image sending. The feature flag defaults off, so
+    // this hook is inert (picker hidden) unless EXPO_PUBLIC_ENABLE_CHAT_IMAGES
+    // is exactly 'true'. Finalized uploads reconcile through the same targeted
+    // fetch used by realtime, so only a fully normalized image message enters
+    // the timeline.
+    const handleImageFinalized = useCallback((result) => {
+        if (!result || !isValidUuid(result.messageId) || !isValidUuid(result.conversationId)) return;
+        reconcileMessageById(result.messageId, conversationRef.current?.id ?? null);
+    }, [reconcileMessageById]);
+
+    const imageUpload = useChatImageUpload({
+        conversationId: conversation?.id ?? null,
+        onFinalized: handleImageFinalized,
+    });
+
     return {
         relationId,
         conversation,
@@ -672,6 +769,9 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
         initialPositionToken,
         realtimeScrollToken,
         realtimeStatus,
+        imageUpload,
+        imageStates,
+        retryImage,
     };
 };
 

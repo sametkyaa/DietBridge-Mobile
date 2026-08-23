@@ -23,19 +23,24 @@ export const useChatRealtime = ({
     isScreenFocused = false,
     onConversation,
     onMessage,
+    onReconcileMessage,
     onReadState,
     onRefetchRequired,
 } = {}) => {
     const [appState, setAppState] = useState(() => AppState.currentState || 'active');
     const [connectionStatus, setConnectionStatus] = useState('idle');
     const contextRef = useRef({ currentUserId, relationId, conversationId });
-    const callbacksRef = useRef({ onConversation, onMessage, onReadState, onRefetchRequired });
+    const callbacksRef = useRef({
+        onConversation, onMessage, onReconcileMessage, onReadState, onRefetchRequired,
+    });
     const generationRef = useRef(0);
 
     useEffect(() => {
         contextRef.current = { currentUserId, relationId, conversationId };
-        callbacksRef.current = { onConversation, onMessage, onReadState, onRefetchRequired };
-    }, [conversationId, currentUserId, onConversation, onMessage, onReadState, onRefetchRequired, relationId]);
+        callbacksRef.current = {
+            onConversation, onMessage, onReconcileMessage, onReadState, onRefetchRequired,
+        };
+    }, [conversationId, currentUserId, onConversation, onMessage, onReconcileMessage, onReadState, onRefetchRequired, relationId]);
 
     useEffect(() => {
         const subscription = AppState.addEventListener('change', setAppState);
@@ -93,6 +98,10 @@ export const useChatRealtime = ({
                 onMessage: (message) => {
                     if (!isCurrent(eventConversationId) || message.conversationId !== eventConversationId) return;
                     callbacksRef.current.onMessage?.(message);
+                },
+                onReconcile: (messageId) => {
+                    if (!isCurrent(eventConversationId)) return;
+                    callbacksRef.current.onReconcileMessage?.(messageId, eventConversationId);
                 },
                 onStatus: handleStatus,
             })

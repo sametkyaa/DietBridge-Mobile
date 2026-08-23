@@ -57,6 +57,28 @@ const isMessageForConversation = (message, conversationId) => (
     && message.conversationId === conversationId
 );
 
+// Pure router for a realtime chat_messages payload. Given the raw row and a
+// normalizer, it decides whether to deliver a normalized text/tombstone row on
+// the fast path or to reconcile an unresolvable row (e.g. an image INSERT whose
+// attachment join is absent) with a targeted refetch by id. A payload for a
+// different conversation, or a legacy/malformed row without a usable id, is
+// ignored. `normalize` is injected so this stays free of Supabase imports.
+const resolveRealtimeMessageAction = (row, conversationId, normalize) => {
+    if (!isValidUuid(conversationId)) return { type: 'ignore' };
+    const record = row && typeof row === 'object' && !Array.isArray(row) ? row : null;
+    const rowConversationId = record && typeof record.conversation_id === 'string' ? record.conversation_id : null;
+    if (rowConversationId !== conversationId) return { type: 'ignore' };
+
+    const message = typeof normalize === 'function' ? normalize(record) : null;
+    if (message && message.conversationId === conversationId) {
+        return { type: 'deliver', message };
+    }
+
+    const rowId = record && typeof record.id === 'string' ? record.id : null;
+    if (isValidUuid(rowId)) return { type: 'reconcile', messageId: rowId };
+    return { type: 'ignore' };
+};
+
 const isRealtimeContextCurrent = ({
     currentUserId,
     relationId,
@@ -144,6 +166,7 @@ module.exports = {
     normalizeSubscriptionStatus,
     isConversationForRelation,
     isMessageForConversation,
+    resolveRealtimeMessageAction,
     isRealtimeContextCurrent,
     createChatRealtimeRefreshScheduler,
 };

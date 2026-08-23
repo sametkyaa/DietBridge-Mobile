@@ -8,6 +8,7 @@ import {
     buildConversationChannelConfig,
     buildMessageChannelConfig,
     buildReadStateChannelConfig,
+    resolveRealtimeMessageAction,
 } from '../utils/chatRealtimePolicy';
 
 const createNoopSubscription = () => ({ unsubscribe: async () => undefined });
@@ -74,17 +75,38 @@ export const subscribeToChatConversation = ({ relationId, onConversation, onStat
 // Observes canonical message INSERT and UPDATE rows for the active
 // conversation. UPDATE carries soft-delete tombstones and replaces the
 // existing message by id in the ViewModel.
-// Legacy rows are discarded by normalizeChatMessageRow because they lack a
-// canonical conversation_id/body shape.
-export const subscribeToChatMessages = ({ conversationId, currentUserId, onMessage, onStatus } = {}) => {
+//
+// Realtime postgres_changes payloads never contain the embedded attachment
+// join, so an image row (or any row the normalizer rejects) is handed to
+// `onReconcile` with its message id instead of being rendered from the raw
+// payload. Text rows keep the existing fast path. Legacy rows are discarded by
+// normalizeChatMessageRow because they lack a canonical conversation_id/body
+// shape, and are not reconciled.
+export const subscribeToChatMessages = ({
+    conversationId,
+    currentUserId,
+    onMessage,
+    onReconcile,
+    onStatus,
+} = {}) => {
     const config = buildMessageChannelConfig(conversationId);
     if (!config || typeof onMessage !== 'function') return createNoopSubscription();
 
     const handlePayload = (payload) => {
-        const message = normalizeChatMessageRow(payload?.new, currentUserId);
-        if (!message || message.conversationId !== conversationId) return;
+        const action = resolveRealtimeMessageAction(
+            payload?.new,
+            conversationId,
+            (row) => normalizeChatMessageRow(row, currentUserId),
+        );
         try {
-            onMessage(message);
+            if (action.type === 'deliver') {
+                onMessage(action.message);
+            } else if (action.type === 'reconcile' && typeof onReconcile === 'function') {
+                // An unresolvable payload (e.g. an image INSERT without its
+                // attachment join) is reconciled with a targeted refetch,
+                // never rendered partially.
+                onReconcile(action.messageId);
+            }
         } catch (error) {
             // Consumer errors must not destabilize the shared realtime channel.
         }
