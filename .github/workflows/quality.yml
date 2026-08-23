@@ -1,0 +1,51 @@
+name: DietBridge Mobile Quality Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - codex/quality-baseline
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-quality-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  TZ: Europe/Istanbul
+  CI: "1"
+  EXPO_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-static-export-placeholder
+
+jobs:
+  mobile-quality:
+    name: Mobile Quality Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Unit and contract tests
+        run: npm run test
+      - name: Validate Expo configuration
+        run: npm run expo:config
+      - name: Export Android bundle
+        run: npm run export:android
+      - name: Export iOS bundle
+        run: npm run export:ios
+
