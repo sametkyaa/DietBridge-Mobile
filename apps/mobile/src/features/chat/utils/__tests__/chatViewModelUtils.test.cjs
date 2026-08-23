@@ -13,6 +13,7 @@ const {
     mergeChatReadStates,
     selectParticipantReadStates,
 } = require('../chatViewModelUtils');
+const { shouldAdjustInitialChatLayout, shouldPositionInitialChat } = require('../chatScrollLifecycle');
 
 const RELATION_ID = '11111111-1111-4111-8111-111111111111';
 const CONVERSATION_ID = '22222222-2222-4222-8222-222222222222';
@@ -176,4 +177,64 @@ test('read-state merge replaces a user row only with an equal or newer update', 
     const newer = { ...older, updatedAt: '2026-07-27T10:01:00Z', lastReadMessageId: SERVER_ID };
     assert.deepEqual(mergeChatReadStates([newer], [older]), [newer]);
     assert.deepEqual(mergeChatReadStates([older], [newer]), [newer]);
+});
+
+test('initial mobile chat positioning handles empty, one-message and long conversations once', () => {
+    assert.equal(shouldPositionInitialChat({
+        conversationId: CONVERSATION_ID,
+        initialPositionToken: 1,
+        messageCount: 0,
+        positionedKey: null,
+    }), false);
+    assert.equal(shouldPositionInitialChat({
+        conversationId: CONVERSATION_ID,
+        initialPositionToken: 1,
+        messageCount: 1,
+        positionedKey: null,
+    }), true);
+    assert.equal(shouldPositionInitialChat({
+        conversationId: CONVERSATION_ID,
+        initialPositionToken: 1,
+        messageCount: 100,
+        positionedKey: `${CONVERSATION_ID}:1`,
+    }), false);
+});
+
+test('conversation identity or fresh load token resets the initial positioning decision', () => {
+    assert.equal(shouldPositionInitialChat({
+        conversationId: CONVERSATION_ID,
+        initialPositionToken: 2,
+        messageCount: 2,
+        positionedKey: `${CONVERSATION_ID}:1`,
+    }), true);
+    assert.equal(shouldPositionInitialChat({
+        conversationId: '99999999-9999-4999-8999-999999999999',
+        initialPositionToken: 1,
+        messageCount: 2,
+        positionedKey: `${CONVERSATION_ID}:1`,
+    }), true);
+});
+
+test('mobile variable-height layout permits one guarded initial adjustment only near the latest messages', () => {
+    assert.equal(shouldAdjustInitialChatLayout({
+        conversationId: CONVERSATION_ID,
+        initialPositionToken: 1,
+        positionedKey: `${CONVERSATION_ID}:1`,
+        adjustedKey: null,
+        isNearBottom: true,
+    }), true);
+    assert.equal(shouldAdjustInitialChatLayout({
+        conversationId: CONVERSATION_ID,
+        initialPositionToken: 1,
+        positionedKey: `${CONVERSATION_ID}:1`,
+        adjustedKey: `${CONVERSATION_ID}:1`,
+        isNearBottom: true,
+    }), false);
+    assert.equal(shouldAdjustInitialChatLayout({
+        conversationId: CONVERSATION_ID,
+        initialPositionToken: 1,
+        positionedKey: `${CONVERSATION_ID}:1`,
+        adjustedKey: null,
+        isNearBottom: false,
+    }), false);
 });

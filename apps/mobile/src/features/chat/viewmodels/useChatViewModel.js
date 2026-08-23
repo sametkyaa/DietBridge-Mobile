@@ -9,6 +9,8 @@ import {
     getChatConversationByRelationId,
     sendChatMessage,
 } from '../services/chatService';
+import { fetchMealActivities } from '../services/mealActivityService';
+import { subscribeMealPlanChanges } from '../../meals/services/mealPlanRealtimeService';
 import {
     isValidUuid,
     normalizeChatBody,
@@ -23,6 +25,7 @@ import {
     selectParticipantReadStates,
     updateOptimisticDeliveryState,
 } from '../utils/chatViewModelUtils';
+import { mergeMealActivities } from '../utils/mealActivityUtils';
 import { useChatRealtime } from '../hooks/useChatRealtime';
 import { useChatReadState } from '../hooks/useChatReadState';
 import { useChatDeliveryState } from '../hooks/useChatDeliveryState';
@@ -70,6 +73,8 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
 
     const [conversation, setConversation] = useState(null);
     const [serverMessages, setServerMessages] = useState([]);
+    const [mealActivities, setMealActivities] = useState([]);
+    const [mealActivityError, setMealActivityError] = useState(null);
     const [optimisticMessages, setOptimisticMessages] = useState([]);
     const [readStates, setReadStates] = useState([]);
     const [draft, setDraft] = useState('');
@@ -82,6 +87,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
     const [sendError, setSendError] = useState(null);
     const [deleteError, setDeleteError] = useState(null);
     const [deletingMessageIds, setDeletingMessageIds] = useState([]);
+    const [initialPositionToken, setInitialPositionToken] = useState(0);
     const [bottomScrollToken, setBottomScrollToken] = useState(0);
     const [visibleCanonicalMessage, setVisibleCanonicalMessage] = useState(null);
     const [imageStates, setImageStates] = useState({});
@@ -97,6 +103,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
     const conversationRef = useRef(null);
     const nextCursorRef = useRef(null);
     const serverMessagesRef = useRef([]);
+    const mealActivitiesRef = useRef([]);
     const historyConversationIdRef = useRef(null);
     const latestRefreshRef = useRef(null);
     const pendingMessageFetchRef = useRef(new Map());
@@ -129,6 +136,10 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
         serverMessagesRef.current = serverMessages;
     }, [serverMessages]);
 
+    useEffect(() => {
+        mealActivitiesRef.current = mealActivities;
+    }, [mealActivities]);
+
     const mergeServerMessages = useCallback((incomingMessages) => {
         const result = mergeLatestCanonicalHistory(serverMessagesRef.current, incomingMessages);
         serverMessagesRef.current = result.messages;
@@ -136,14 +147,24 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
         return result.addedMessages;
     }, []);
 
+    const mergeMealActivityProjection = useCallback((incomingActivities) => {
+        const result = mergeMealActivities(mealActivitiesRef.current, incomingActivities);
+        mealActivitiesRef.current = result;
+        setMealActivities(result);
+        return result;
+    }, []);
+
     const resetForRelation = useCallback(() => {
         conversationRef.current = null;
         nextCursorRef.current = null;
         serverMessagesRef.current = [];
+        mealActivitiesRef.current = [];
         historyConversationIdRef.current = null;
         latestRefreshRef.current = null;
         setConversation(null);
         setServerMessages([]);
+        setMealActivities([]);
+        setMealActivityError(null);
         setOptimisticMessages([]);
         setReadStates([]);
         setDraft('');
@@ -188,6 +209,8 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
                     if (!conversationRef.current) {
                         setConversation(null);
                         setServerMessages([]);
+                        setMealActivities([]);
+                        setMealActivityError(null);
                         setReadStates([]);
                         setNextCursor(null);
                         historyConversationIdRef.current = null;
@@ -195,12 +218,15 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
                     return conversationRef.current;
                 }
 
-                const [page, nextReadStates] = await Promise.all([
+                const [page, nextReadStates, activityResult] = await Promise.all([
                     fetchChatMessagesPage({
                         conversationId: nextConversation.id,
                         currentUserId: validCurrentUserId,
                     }),
                     fetchChatReadStates({ conversationId: nextConversation.id }),
+                    fetchMealActivities({ conversation: nextConversation, currentUserId: validCurrentUserId })
+                        .then((value) => ({ status: 'fulfilled', value }))
+                        .catch((reason) => ({ status: 'rejected', reason })),
                 ]);
                 if (!isMountedRef.current || requestGenerationRef.current !== generation
                     || activeRelationKeyRef.current !== relationKey) return null;
@@ -208,10 +234,16 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
                 conversationRef.current = nextConversation;
                 setConversation(nextConversation);
                 mergeServerMessages(page.messages);
+                if (activityResult.status === 'fulfilled') {
+                    mergeMealActivityProjection(activityResult.value);
+                    setMealActivityError(null);
+                } else {
+                    setMealActivityError(getSafeErrorMessage(activityResult.reason, 'Öğün aktiviteleri şu anda yüklenemiyor.'));
+                }
                 setReadStates((current) => mergeChatReadStates(current, nextReadStates));
                 setNextCursor(page.nextCursor);
                 historyConversationIdRef.current = nextConversation.id;
-                setBottomScrollToken((token) => token + 1);
+                setInitialPositionToken((token) => token + 1);
                 return nextConversation;
             } catch (error) {
                 if (isMountedRef.current && requestGenerationRef.current === generation
@@ -232,7 +264,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
 
         initialRequestsRef.current.set(relationKey, request);
         return request;
-    }, [mergeServerMessages, relationId, relationKey, resetForRelation, validCurrentUserId]);
+    }, [mergeMealActivityProjection, mergeServerMessages, relationId, relationKey, resetForRelation, validCurrentUserId]);
 
     useEffect(() => {
         // React development Strict Mode can run the effect setup twice for the
@@ -560,18 +592,27 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
                 conversationRef.current = refreshedConversation;
                 setConversation(refreshedConversation);
 
-                const [page, nextReadStates] = await Promise.all([
+                const [page, nextReadStates, activityResult] = await Promise.all([
                     fetchChatMessagesPage({
                         conversationId: refreshedConversation.id,
                         currentUserId: validCurrentUserId,
                     }),
                     fetchChatReadStates({ conversationId: refreshedConversation.id }),
+                    fetchMealActivities({ conversation: refreshedConversation, currentUserId: validCurrentUserId })
+                        .then((value) => ({ status: 'fulfilled', value }))
+                        .catch((reason) => ({ status: 'rejected', reason })),
                 ]);
                 if (!isMountedRef.current || requestGenerationRef.current !== generation
                     || activeRelationKeyRef.current !== relationKey) return null;
 
                 if (conversationRef.current?.id !== refreshedConversation.id) return null;
                 const addedMessages = mergeServerMessages(page.messages);
+                if (activityResult.status === 'fulfilled') {
+                    mergeMealActivityProjection(activityResult.value);
+                    setMealActivityError(null);
+                } else {
+                    setMealActivityError(getSafeErrorMessage(activityResult.reason, 'Öğün aktiviteleri şu anda yüklenemiyor.'));
+                }
                 setReadStates((current) => mergeChatReadStates(current, nextReadStates));
                 if (historyConversationIdRef.current !== refreshedConversation.id) {
                     setNextCursor(page.nextCursor);
@@ -590,7 +631,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
 
         latestRefreshRef.current = request;
         return request;
-    }, [mergeServerMessages, relationId, relationKey, validCurrentUserId]);
+    }, [mergeMealActivityProjection, mergeServerMessages, relationId, relationKey, validCurrentUserId]);
 
     const { connectionStatus: realtimeStatus } = useChatRealtime({
         currentUserId: validCurrentUserId,
@@ -603,6 +644,24 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
         onReadState: applyRealtimeReadState,
         onRefetchRequired: refreshLatestChatState,
     });
+
+    useEffect(() => {
+        const activityClientId = conversation?.clientId;
+        if (!isScreenFocused
+            || !isValidUuid(activityClientId)
+            || activityClientId !== validCurrentUserId) return undefined;
+
+        const unsubscribe = subscribeMealPlanChanges({
+            clientId: activityClientId,
+            onChange: () => {
+                void refreshLatestChatState();
+            },
+        });
+
+        return () => {
+            unsubscribe?.();
+        };
+    }, [conversation?.clientId, isScreenFocused, refreshLatestChatState, validCurrentUserId]);
 
     const { ownReadState, peerReadState } = useMemo(() => selectParticipantReadStates({
         readStates,
@@ -630,8 +689,8 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
     });
 
     const timelineMessages = useMemo(() => (
-        buildChatTimeline(serverMessages, optimisticMessages, relationId)
-    ), [optimisticMessages, relationId, serverMessages]);
+        buildChatTimeline(serverMessages, optimisticMessages, relationId, mealActivities)
+    ), [mealActivities, optimisticMessages, relationId, serverMessages]);
 
     // Image reads remain available independently of the send feature flag. The
     // generation guard prevents an old conversation/foreground request from
@@ -680,6 +739,8 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
         relationId,
         conversation,
         serverMessages,
+        mealActivities,
+        mealActivityError,
         optimisticMessages,
         timelineMessages,
         draft,
@@ -705,6 +766,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
         deliveryStateError,
         canSend: Boolean(relationId && validCurrentUserId),
         bottomScrollToken,
+        initialPositionToken,
         realtimeScrollToken,
         realtimeStatus,
         imageUpload,

@@ -97,6 +97,7 @@ function ActiveChatContent({ activeConnection, activeDietitian, isScreenFocused 
       <View style={styles.listArea}>
         <ChatMessageList
           messages={viewModel.timelineMessages}
+          mealActivityError={viewModel.mealActivityError}
           isInitialLoading={viewModel.isInitialLoading}
           initialError={viewModel.initialError}
           onRetryInitial={viewModel.retryInitialLoad}
@@ -109,6 +110,7 @@ function ActiveChatContent({ activeConnection, activeDietitian, isScreenFocused 
           onRequestDeleteMessage={confirmDeleteMessage}
           deletingMessageIds={viewModel.deletingMessageIds}
           peerReadState={viewModel.peerReadState}
+          initialPositionToken={viewModel.initialPositionToken}
           bottomScrollToken={viewModel.bottomScrollToken}
           realtimeScrollToken={viewModel.realtimeScrollToken}
           conversationId={viewModel.conversation?.id ?? null}

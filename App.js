@@ -14,6 +14,8 @@ import RootNavigator from './apps/mobile/src/navigation/RootNavigator';
 import AuthNavigator from './apps/mobile/src/navigation/AuthNavigator';
 import { MealsProvider } from './apps/mobile/src/features/meals/context/MealsContext'; // Updated path
 import { DietitianConnectionProvider } from './apps/mobile/src/features/dietitianConnection/context/DietitianConnectionContext';
+import { NotificationProvider } from './apps/mobile/src/features/notifications/context/NotificationContext';
+import PushLifecycleController from './apps/mobile/src/features/push/components/PushLifecycleController';
 import './apps/mobile/src/shared/theme/fonts'; // Updated path
 import {
   ensureClientSession,
@@ -113,11 +115,16 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <MealsProvider>
-        <DietitianConnectionProvider userId={authState.user?.id}>
+      <PushLifecycleController session={canOpenClientRoutes ? authState.session : null} />
+      <MealsProvider userId={authState.user?.id || null}>
+        <DietitianConnectionProvider userId={authState.user?.id || null}>
           <StatusBar barStyle="dark-content" backgroundColor="#F4F5F7" />
           <NavigationContainer>
-            {canOpenClientRoutes ? <RootNavigator /> : <AuthNavigator />}
+            {canOpenClientRoutes ? (
+              <NotificationProvider userId={authState.user?.id || null}>
+                <RootNavigator />
+              </NotificationProvider>
+            ) : <AuthNavigator />}
           </NavigationContainer>
         </DietitianConnectionProvider>
       </MealsProvider>

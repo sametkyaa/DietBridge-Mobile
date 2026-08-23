@@ -1,7 +1,11 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Alert, AppState } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { getLocalWeekDateKey, getLocalWeekDayOptions } from '../../../shared/utils/localDate';
+import {
+    getLocalWeekDateKey,
+    getLocalWeekDayIndex,
+    getLocalWeekDayOptions,
+} from '../../../shared/utils/localDate';
 import { useMeals } from '../../meals/context/MealsContext';
 import { submitMealChangeRequest } from '../services/mealChangeRequestService';
 import { getDailyMealPlan } from '../services/mealService';
@@ -22,7 +26,7 @@ const REALTIME_REFRESH_DEBOUNCE_MS = 350;
 
 export const useMealsViewModel = () => {
     const dayOptions = useMemo(() => getLocalWeekDayOptions(), []);
-    const [selectedDay, setSelectedDay] = useState(() => (new Date().getDay() + 6) % 7);
+    const [selectedDay, setSelectedDay] = useState(() => getLocalWeekDayIndex());
     const [selectedMeal, setSelectedMeal] = useState(null);
     const [groceryModalVisible, setGroceryModalVisible] = useState(false);
     const [groceryItems, setGroceryItems] = useState([]);

@@ -1,5 +1,6 @@
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { updateMealCompletion } from '../services/mealService';
+const { hasMealSessionChanged, normalizeSessionUserId } = require('./mealSessionIsolation.cjs');
 
 const defaultContext = {
     completedMeals: {},
@@ -9,10 +10,25 @@ const defaultContext = {
 
 const MealsContext = createContext(defaultContext);
 
-export const MealsProvider = ({ children }) => {
+export const MealsProvider = ({ children, userId = null }) => {
     const [completedMeals, setCompletedMeals] = useState({});
     const completedMealsRef = useRef({});
     const completionRequestVersionsRef = useRef({});
+    const sessionGenerationRef = useRef(0);
+    const previousUserIdRef = useRef(normalizeSessionUserId(userId));
+
+    useEffect(() => {
+        const nextUserId = normalizeSessionUserId(userId);
+        if (!hasMealSessionChanged(previousUserIdRef.current, nextUserId)) return;
+
+        // This provider remains mounted while App switches between the Auth
+        // and client navigators. Never carry protected A state into B.
+        previousUserIdRef.current = nextUserId;
+        sessionGenerationRef.current += 1;
+        completedMealsRef.current = {};
+        completionRequestVersionsRef.current = {};
+        setCompletedMeals({});
+    }, [userId]);
 
     const setCompletedMealsState = useCallback((nextCompletedMeals) => {
         const currentCompletedMeals = completedMealsRef.current;
@@ -75,6 +91,7 @@ export const MealsProvider = ({ children }) => {
         const wasCompleted = !!previousCompletion?.completed;
         const shouldComplete = normalizedOptions.completed ?? !wasCompleted;
         const requestVersion = (completionRequestVersionsRef.current[mealId] || 0) + 1;
+        const requestGeneration = sessionGenerationRef.current;
 
         completionRequestVersionsRef.current[mealId] = requestVersion;
         updateMealCompletionState(mealId, shouldComplete
@@ -89,7 +106,8 @@ export const MealsProvider = ({ children }) => {
         try {
             return await updateMealCompletion(mealId, shouldComplete);
         } catch (error) {
-            if (completionRequestVersionsRef.current[mealId] === requestVersion) {
+            if (sessionGenerationRef.current === requestGeneration
+                && completionRequestVersionsRef.current[mealId] === requestVersion) {
                 updateMealCompletionState(mealId, previousCompletion);
             }
 

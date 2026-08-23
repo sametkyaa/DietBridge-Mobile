@@ -9,6 +9,7 @@ const {
     isValidUuid,
     mergeCanonicalChatMessages,
 } = require('./chatMessageUtils');
+const { mergeMealActivities } = require('./mealActivityUtils');
 
 const getClientMessageKey = (message) => (
     typeof message?.clientMessageId === 'string' && message.clientMessageId
@@ -35,7 +36,7 @@ const compareTimelineMessages = (left, right) => {
 
 // A canonical server message always wins over an optimistic message that has
 // the same non-empty clientMessageId. Null ids are never used as a dedupe key.
-const buildChatTimeline = (serverMessages, optimisticMessages, relationId) => {
+const buildChatTimeline = (serverMessages, optimisticMessages, relationId, mealActivities = []) => {
     const canonicalMessages = mergeCanonicalChatMessages([], serverMessages);
     const serverClientMessageIds = new Set(
         canonicalMessages.map(getClientMessageKey).filter(Boolean),
@@ -45,7 +46,10 @@ const buildChatTimeline = (serverMessages, optimisticMessages, relationId) => {
         .filter((message) => !relationId || message.relationId === relationId)
         .filter((message) => !serverClientMessageIds.has(getClientMessageKey(message)));
 
-    return [...canonicalMessages, ...optimistic].sort(compareTimelineMessages);
+    const activities = mergeMealActivities([], mealActivities)
+        .filter((activity) => !relationId || activity.relationId === relationId);
+
+    return [...canonicalMessages, ...optimistic, ...activities].sort(compareTimelineMessages);
 };
 
 // Latest-history refreshes return only the newest page. Merge that page into

@@ -1,6 +1,7 @@
 const CANONICAL_TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 const POSTGRES_TIME_PATTERN = /^(([01]\d|2[0-3]):[0-5]\d)(?::00(?:\.0+)?)?$/;
 const CANONICAL_MACRO_KEYS = ['protein', 'carbs', 'fat'];
+const CANONICAL_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 const MACRO_KEY_ALIASES = {
     protein: ['protein', 'protein_g', 'proteinGrams'],
     carbs: ['carbs', 'carbohydrate', 'carbohydrates', 'carbs_g'],
@@ -123,17 +124,19 @@ const validateSortOrder = (value) => {
 };
 
 const normalizeMealSource = (source) => {
-    if (typeof source !== 'string' || !source.trim()) return 'manual';
-
-    const normalizedSource = source.trim().toLowerCase();
-    return normalizedSource === 'manual' || normalizedSource === 'recipe'
-        ? normalizedSource
-        : 'manual';
+    if (source === 'manual' || source === 'recipe') return source;
+    throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz meal.source alanı bulundu.');
 };
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const normalizeRecipeId = (value) => {
     if (value === null || value === undefined) return null;
-    return requireString(value, 'meal.recipe_id');
+    const recipeId = requireString(value, 'meal.recipe_id');
+    if (!UUID_PATTERN.test(recipeId)) {
+        throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz meal.recipe_id alanı bulundu.');
+    }
+    return recipeId;
 };
 
 const normalizeDescription = (value) => {
@@ -169,6 +172,14 @@ export const normalizeCanonicalMeal = (meal, plan) => {
     const source = normalizeMealSource(meal.source);
     const recipeId = normalizeRecipeId(meal.recipe_id);
     const description = normalizeDescription(meal.description);
+
+    if (!CANONICAL_MEAL_TYPES.includes(meal.type)) {
+        throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz öğün türü bulundu.');
+    }
+
+    if (source === 'manual' && recipeId !== null) {
+        throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Manuel öğün recipe_id içeremez.');
+    }
 
     return {
         id,

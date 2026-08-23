@@ -1,4 +1,11 @@
 {
   "compilerOptions": {},
-  "extends": "expo/tsconfig.base"
+  "extends": "expo/tsconfig.base",
+  "exclude": [
+    ".expo",
+    "dist",
+    "lib_backup",
+    "node_modules",
+    "src_backup"
+  ]
 }

@@ -18,11 +18,14 @@ import {
 } from '../components/dashboard';
 import { mapDashboardMeal } from '../mappers/dashboardUiMapper';
 import { useDashboardViewModel } from '../viewmodels/useDashboardViewModel';
+import { toLocalDateKey } from '../../../shared/utils/localDate';
 import DietitianConnectionRequestCard from '../../dietitianConnection/components/DietitianConnectionRequestCard';
+import { useNotifications } from '../../notifications/context/NotificationContext';
 
 const DashboardScreen = () => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
+    const { unseenCount } = useNotifications();
     const {
         water,
         waterInput,
@@ -74,7 +77,7 @@ const DashboardScreen = () => {
     const [isPhotoPickerActive, setIsPhotoPickerActive] = useState(false);
     const completionButtonRef = useRef(null);
 
-    const dateLabel = useMemo(() => new Date().toLocaleDateString('tr-TR', {
+    const dateLabel = useMemo(() => new Date(`${toLocalDateKey()}T12:00:00Z`).toLocaleDateString('tr-TR', {
         weekday: 'long',
         day: 'numeric',
         month: 'long',
@@ -216,6 +219,8 @@ const DashboardScreen = () => {
                     dateLabel={dateLabel}
                     avatarUrl={avatarUrl}
                     onAvatarPress={() => setIsSidebarVisible(true)}
+                    unseenCount={unseenCount}
+                    onNotificationPress={() => navigation.navigate('NotificationCenter')}
                 />
 
                 <DietitianConnectionRequestCard

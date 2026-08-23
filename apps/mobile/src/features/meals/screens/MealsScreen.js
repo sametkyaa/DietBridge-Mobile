@@ -10,6 +10,7 @@ import {
     InlineAlert,
 } from '../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
+import { getLocalWeekDayIndex } from '../../../shared/utils/localDate';
 import { MealDetailSheet } from '../components/MealDetailSheet';
 import {
     GroceryListSheet,
@@ -88,7 +89,9 @@ const MealsScreen = () => {
     const selectedCompletion = selectedMeal ? completedMeals[selectedMeal.id] : null;
     const showLoading = isLoadingMeals || (isLoadingConnection && mealPlanStatus === 'loading');
     const listData = mealPlanStatus === 'success' ? meals : [];
-    const todayIndex = useMemo(() => (new Date().getDay() + 6) % 7, []);
+    const todayIndex = useMemo(() => {
+        return getLocalWeekDayIndex();
+    }, []);
 
     useEffect(() => {
         if (!hasActiveDietitian && photoPreviewUri) closePhotoPreview();

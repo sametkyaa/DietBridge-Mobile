@@ -4,7 +4,7 @@ import { BottomSheetView, EmptyState, InlineAlert } from '../../../shared/compon
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 
 const formatDate = (value) => {
-    const dateValue = /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? `${value}T12:00:00` : value;
+    const dateValue = /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? `${value}T12:00:00Z` : value;
     const date = new Date(dateValue);
     return Number.isNaN(date.getTime()) ? 'Tarih bilinmiyor' : date.toLocaleDateString('tr-TR', {
         day: 'numeric', month: 'long', year: 'numeric',
