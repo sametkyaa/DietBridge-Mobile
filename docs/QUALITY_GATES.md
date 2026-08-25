@@ -18,4 +18,4 @@ npm run export:ios
 
 GitHub Actions job/check adı `Mobile Quality Gate` olarak sabittir. Workflow Node 24 kullanır, token yetkisini `contents: read` ile sınırlar ve yalnız local sentaktik Supabase placeholder'ları tanımlar; Production secret/veri kullanılmaz.
 
-`npm audit` mevcut Expo SDK 54/Metro toolchain'inde transitive borç raporlar. MVP-11 içinde major Expo yükseltmesi veya `npm audit fix --force` yapılmaz; bu bulgular ayrı dependency-upgrade aşamasında ele alınır.
+MVP-12'de Expo SDK 54'ün son patch'i ve uyumlu transitif güvenlik patch'leri uygulanmıştır. `npm audit` kritik bulgu raporlamaz; kalan dokuz high kayıt Metro `image-size` ve PostCSS build-time zincirinden türemektedir ve desteklenen çözüm major Expo SDK yükseltmesidir. Bu zincir runtime kullanıcı girdisini işlemez; ayrı kontrollü dependency-upgrade aşamasında ele alınır. `npm audit fix --force` kullanılmaz.
