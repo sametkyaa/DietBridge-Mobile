@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppInput } from '../../../shared/components/ui';
+import LegalLinks from '../../../shared/components/legal/LegalLinks';
 import { colors, spacing, typography } from '../../../shared/theme';
 import PasswordToggle from './PasswordToggle';
 
@@ -115,6 +116,9 @@ export default function RegisterView({
         loading={loading}
         onPress={onSubmit}
       />
+      <View style={styles.legal}>
+        <LegalLinks />
+      </View>
       <View style={styles.footer}>
         <Text style={styles.footerText}>Zaten hesabın var mı?</Text>
         <Pressable
@@ -137,6 +141,7 @@ const styles = StyleSheet.create({
   subtitle: { ...typography.supporting, color: colors.textSecondary, marginTop: spacing.x2 },
   form: { gap: spacing.x4, marginTop: spacing.x6 },
   spacer: { flex: 1, minHeight: spacing.x6 },
+  legal: { marginTop: spacing.x4 },
   footer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
