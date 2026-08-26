@@ -10,6 +10,7 @@ export default function InfoPlaceholderScreen({
   icon,
   emptyTitle,
   description,
+  children,
 }) {
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -32,7 +33,7 @@ export default function InfoPlaceholderScreen({
         )}
         contentStyle={styles.content}
       >
-        <EmptyState icon={icon} title={emptyTitle} description={description} />
+        {children || <EmptyState icon={icon} title={emptyTitle} description={description} />}
       </AppScreen>
     </SafeAreaView>
   );
