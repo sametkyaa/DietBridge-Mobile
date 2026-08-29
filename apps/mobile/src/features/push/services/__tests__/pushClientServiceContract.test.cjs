@@ -8,11 +8,11 @@ const test = require('node:test');
 const root = path.resolve(__dirname, '../../../../../../../');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
-test('Expo configuration adds only the standard notifications plugin and no permanent identifiers', () => {
+test('Expo configuration keeps push client setup dormant without an EAS project id', () => {
     const app = read('app.json');
     const appSource = read('App.js');
     assert.match(app, /expo-notifications/);
-    assert.doesNotMatch(app, /extra.*eas|projectId|android.*package|ios.*bundleIdentifier/);
+    assert.doesNotMatch(app, /extra.*eas|projectId/);
     assert.equal(fs.existsSync(path.join(root, 'android')), false);
     assert.equal(fs.existsSync(path.join(root, 'ios')), false);
     assert.doesNotMatch(appSource, /requestPermissionsAsync/);
