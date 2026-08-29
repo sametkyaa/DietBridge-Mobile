@@ -1,5 +1,6 @@
 import { supabase } from '../../../lib/supabaseClient';
 import { revokePushInstallationBestEffort } from '../../push/services/pushRegistrationService';
+import { resolvePasswordResetRedirectUrl } from '../utils/passwordResetPolicy.cjs';
 
 export const CLIENT_ONLY_ERROR_MESSAGE =
     'Bu uygulama danışan kullanımı içindir. Diyetisyen paneline web uygulamasından giriş yapabilirsiniz.';
@@ -133,9 +134,10 @@ export const signOut = async () => {
 };
 
 export const sendPasswordResetEmail = async (email) => {
-    const redirectUrl =
-        process.env.EXPO_PUBLIC_WEB_RESET_PASSWORD_URL ||
-        'http://localhost:5173/reset-password';
+    const redirectUrl = resolvePasswordResetRedirectUrl({
+        configuredUrl: process.env.EXPO_PUBLIC_WEB_RESET_PASSWORD_URL,
+        isDevelopment: __DEV__,
+    });
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,

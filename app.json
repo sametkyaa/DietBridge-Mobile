@@ -1,8 +1,38 @@
 {
   "expo": {
-    "name": "dietbridge",
+    "name": "DietBridge",
     "slug": "dietbridge",
     "version": "1.0.0",
-    "plugins": ["expo-font", "expo-notifications"]
+    "scheme": "dietbridge",
+    "icon": "./assets/meal_icon.png",
+    "splash": {
+      "image": "./assets/meal_icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "android": {
+      "package": "com.dietbridge.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/meal_icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.dietbridge.app",
+      "buildNumber": "1"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "DietBridge fotoğraf seçebilmek için fotoğraflarınıza erişim izni ister.",
+          "cameraPermission": "DietBridge fotoğraf çekebilmek için kamera izni ister.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-notifications"
+    ]
   }
 }
