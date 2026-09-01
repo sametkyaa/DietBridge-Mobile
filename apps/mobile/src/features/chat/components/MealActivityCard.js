@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 import { Icon } from '../../../shared/components/ui';
 import { formatMealType } from '../../../shared/utils/mealType';
 import { MealPhotoPreviewModal } from '../../meals/components/plan/MealPhotoPreviewModal';
 import { MealPhotoThumbnail } from '../../meals/components/MealPhotoThumbnail';
+import { getMealActivityPhotoPath } from '../utils/mealActivityUtils';
 
 const ISTANBUL_TIME_ZONE = 'Europe/Istanbul';
 
@@ -23,6 +24,7 @@ export default function MealActivityCard({ activity }) {
     const [previewUri, setPreviewUri] = useState(null);
     const mealLabel = formatMealType(activity?.mealType);
     const completionTime = formatCompletionTime(activity?.completedAt);
+    const photoPath = getMealActivityPhotoPath(activity);
 
     return (
         <View style={styles.row} accessibilityRole="summary" accessibilityLabel={`${mealLabel} tamamlandı öğün aktivitesi`}>
@@ -37,9 +39,10 @@ export default function MealActivityCard({ activity }) {
                         <Text style={styles.meta}>{completionTime || 'Tamamlandı'} · {activity?.mealTime}</Text>
                     </View>
                 </View>
-                {activity?.photoPath ? (
+                {photoPath ? (
                     <MealPhotoThumbnail
-                        photoPath={activity.photoPath}
+                        completionPhotoPath={activity.completionPhotoPath}
+                        photoPath={activity.mealPhotoPath}
                         imageStyle={styles.photo}
                         wrapperStyle={styles.photoButton}
                         onPress={setPreviewUri}

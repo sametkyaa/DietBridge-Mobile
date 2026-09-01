@@ -17,7 +17,8 @@ export function MealPlanItem({ meal, completion, onPress }) {
             >
                 <MealPhotoThumbnail
                     photoPath={meal.photoPath}
-                    completionPhotoUri={completion?.completionPhotoUri}
+                    completionPhotoPath={completion?.completionPhotoPath}
+                    localCompletionPhotoUri={completion?.localCompletionPhotoUri}
                     imageStyle={styles.photo}
                     fallback={(
                         <View style={styles.photoFallback}>

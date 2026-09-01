@@ -265,8 +265,8 @@ export const useDashboardViewModel = () => {
         || firstIncompleteMeal
     );
     const isMealCompleted = !!displayedMeal?.isEaten;
-    const displayedCompletionPhotoUri = displayedMeal?.id
-        ? completedMeals[displayedMeal.id]?.completionPhotoUri || null
+    const displayedCompletion = displayedMeal?.id
+        ? completedMeals[displayedMeal.id] || null
         : null;
 
     const addWater = async (amountMl) => {
@@ -323,7 +323,7 @@ export const useDashboardViewModel = () => {
         }
     };
 
-    const completeMealById = async (mealId, completionPhotoUri = null) => {
+    const completeMealById = async (mealId, completionPhotoSource = null) => {
         const targetMeal = meals.find((meal) => meal.id === mealId);
         if (!targetMeal?.id) {
             Alert.alert('Hata', 'Geçerli öğün ID bulunamadı.');
@@ -332,32 +332,39 @@ export const useDashboardViewModel = () => {
 
         if (mealMutationsRef.current.has(mealId)) return;
         const previousIsEaten = !!targetMeal.isEaten;
+        const previousMeal = targetMeal;
         const nextIsEaten = !previousIsEaten;
         const requestVersion = (mealRequestVersionsRef.current[mealId] || 0) + 1;
         mealRequestVersionsRef.current[mealId] = requestVersion;
         mealMutationsRef.current.add(mealId);
         setUpdatingMealId(mealId);
         setMeals((currentMeals) => currentMeals.map((meal) => (
-            meal.id === mealId ? { ...meal, isEaten: nextIsEaten } : meal
+            meal.id === mealId
+                ? { ...meal, isEaten: nextIsEaten, completionPhotoPath: null }
+                : meal
         )));
         setFocusedMealId(mealId);
 
         try {
             const updatedMeal = await toggleMealCompletion(mealId, {
                 completed: nextIsEaten,
-                completionPhotoUri: nextIsEaten ? completionPhotoUri : null,
+                completionPhotoSource: nextIsEaten ? completionPhotoSource : null,
             });
             if (mealRequestVersionsRef.current[mealId] !== requestVersion) return;
 
             setMeals((currentMeals) => currentMeals.map((meal) => (
                 meal.id === mealId
-                    ? { ...meal, isEaten: updatedMeal?.isEaten ?? nextIsEaten }
+                    ? {
+                        ...meal,
+                        isEaten: updatedMeal?.isEaten ?? nextIsEaten,
+                        completionPhotoPath: updatedMeal?.completionPhotoPath || null,
+                    }
                     : meal
             )));
         } catch (error) {
             if (mealRequestVersionsRef.current[mealId] === requestVersion) {
                 setMeals((currentMeals) => currentMeals.map((meal) => (
-                    meal.id === mealId ? { ...meal, isEaten: previousIsEaten } : meal
+                    meal.id === mealId ? previousMeal : meal
                 )));
             }
             Alert.alert('Hata', 'Öğün durumu güncellenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.');
@@ -369,12 +376,12 @@ export const useDashboardViewModel = () => {
         }
     };
 
-    const completeMeal = async (completionPhotoUri = null) => {
+    const completeMeal = async (completionPhotoSource = null) => {
         if (!displayedMeal?.id) {
             Alert.alert('Hata', 'Geçerli öğün ID bulunamadı.');
             return;
         }
-        await completeMealById(displayedMeal.id, completionPhotoUri);
+        await completeMealById(displayedMeal.id, completionPhotoSource);
     };
 
     const handleSaveWeight = async () => {
@@ -470,7 +477,7 @@ export const useDashboardViewModel = () => {
         waterProgress,
         nutrition,
         displayedMeal,
-        displayedCompletionPhotoUri,
+        displayedCompletion,
         isMealCompleted,
         addWater,
         removeWater,

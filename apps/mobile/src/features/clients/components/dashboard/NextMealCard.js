@@ -62,7 +62,8 @@ export function NextMealCard({
                     <View style={styles.mealRow}>
                         <MealPhotoThumbnail
                             photoPath={meal.photoPath}
-                            completionPhotoUri={meal.completionPhotoUri}
+                            completionPhotoPath={meal.completionPhotoPath}
+                            localCompletionPhotoUri={meal.localCompletionPhotoUri}
                             imageStyle={styles.photo}
                             fallback={(
                                 <View style={styles.photoFallback}>

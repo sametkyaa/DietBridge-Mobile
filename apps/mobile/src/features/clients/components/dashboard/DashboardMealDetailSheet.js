@@ -7,7 +7,8 @@ export function DashboardMealDetailSheet({ meal, visible, onClose, bottomInset }
             meal={meal}
             completion={{
                 completed: meal?.status === 'completed' || !!meal?.isEaten,
-                completionPhotoUri: meal?.completionPhotoUri || null,
+                completionPhotoPath: meal?.completionPhotoPath || null,
+                localCompletionPhotoUri: meal?.localCompletionPhotoUri || null,
             }}
             visible={visible}
             onClose={onClose}

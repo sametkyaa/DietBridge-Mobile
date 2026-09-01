@@ -13,7 +13,7 @@ const formatMacro = (value, unit) => {
 
 export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPress, bottomInset = 0 }) {
     if (!meal) return null;
-    const completed = !!completion?.completed || !!meal.isEaten;
+    const completed = typeof completion?.completed === 'boolean' ? completion.completed : !!meal.isEaten;
     const macros = [
         { label: 'Kalori', value: formatMacro(meal.calories, 'kcal') },
         { label: 'Protein', value: formatMacro(meal.protein, 'g') },
@@ -33,7 +33,12 @@ export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPre
             <Text style={styles.title}>{meal.title || formatMealType(meal.type)}</Text>
             <MealPhotoThumbnail
                 photoPath={meal.photoPath}
-                completionPhotoUri={completion?.completionPhotoUri || meal.completionPhotoUri}
+                completionPhotoPath={completed
+                    ? completion?.completionPhotoPath || meal.completionPhotoPath
+                    : null}
+                localCompletionPhotoUri={completed
+                    ? completion?.localCompletionPhotoUri || meal.localCompletionPhotoUri
+                    : null}
                 imageStyle={styles.photo}
                 wrapperStyle={styles.photoButton}
                 onPress={onPhotoPress}

@@ -6,27 +6,37 @@ const toFiniteNumber = (value) => {
     return Number.isFinite(number) ? number : null;
 };
 
-export const mapDashboardMeal = (meal, completionPhotoUri = null) => ({
-    id: meal.id,
-    title: meal.title || formatMealType(meal.type),
-    type: meal.type,
-    time: meal.time,
-    status: meal.isEaten ? 'completed' : 'upcoming',
-    badgeLabel: meal.isEaten ? 'Tamamlandı' : 'Planlandı',
-    isEaten: !!meal.isEaten,
-    photoPath: meal.photoPath || null,
-    completionPhotoUri,
-    calories: meal.calories,
-    carbohydrate: toFiniteNumber(meal.carbohydrate),
-    protein: toFiniteNumber(meal.protein),
-    fat: toFiniteNumber(meal.fat),
-    description: meal.description || null,
-    source: meal.source,
-    recipeId: meal.recipeId,
-    note: meal.note || '',
-    ingredients: Array.isArray(meal.ingredients) ? meal.ingredients : [],
-    steps: Array.isArray(meal.steps) ? meal.steps : [],
-});
+export const mapDashboardMeal = (meal, completion = null) => {
+    const hasCompletionState = completion && typeof completion === 'object';
+    const isEaten = hasCompletionState && typeof completion.completed === 'boolean'
+        ? completion.completed
+        : !!meal.isEaten;
+
+    return {
+        id: meal.id,
+        title: meal.title || formatMealType(meal.type),
+        type: meal.type,
+        time: meal.time,
+        status: isEaten ? 'completed' : 'upcoming',
+        badgeLabel: isEaten ? 'Tamamlandı' : 'Planlandı',
+        isEaten,
+        photoPath: meal.photoPath || null,
+        completionPhotoPath: isEaten
+            ? completion?.completionPhotoPath || meal.completionPhotoPath || null
+            : null,
+        localCompletionPhotoUri: isEaten ? completion?.localCompletionPhotoUri || null : null,
+        calories: meal.calories,
+        carbohydrate: toFiniteNumber(meal.carbohydrate),
+        protein: toFiniteNumber(meal.protein),
+        fat: toFiniteNumber(meal.fat),
+        description: meal.description || null,
+        source: meal.source,
+        recipeId: meal.recipeId,
+        note: meal.note || '',
+        ingredients: Array.isArray(meal.ingredients) ? meal.ingredients : [],
+        steps: Array.isArray(meal.steps) ? meal.steps : [],
+    };
+};
 
 export const buildDashboardNutrition = (meals = []) => {
     const completedMeals = meals.filter((meal) => meal.isEaten);

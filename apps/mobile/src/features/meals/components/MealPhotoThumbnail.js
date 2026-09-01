@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Image, TouchableOpacity } from 'react-native';
 import { useMealPhotoUri } from '../hooks/useMealPhotoUri';
+import {
+    isCanonicalMealCompletionPhotoPath,
+    MealPhotoResolveStatus,
+} from '../services/mealPhotoResolver';
 
 export const MealPhotoThumbnail = ({
     photoPath,
-    completionPhotoUri,
+    completionPhotoPath,
+    localCompletionPhotoUri,
     imageStyle,
     wrapperStyle,
     onPress,
@@ -12,7 +17,20 @@ export const MealPhotoThumbnail = ({
     fallback,
 }) => {
     const { photoUri, retryAfterImageError } = useMealPhotoUri(photoPath);
-    const activeUri = completionPhotoUri || photoUri;
+    const {
+        photoUri: resolvedCompletionPhotoUri,
+        photoStatus: completionPhotoStatus,
+        retryAfterImageError: retryCompletionPhotoAfterImageError,
+    } = useMealPhotoUri(completionPhotoPath);
+    const hasValidCompletionPhotoPath = isCanonicalMealCompletionPhotoPath(completionPhotoPath);
+    const activeUri = localCompletionPhotoUri
+        || resolvedCompletionPhotoUri
+        || (hasValidCompletionPhotoPath && completionPhotoStatus !== MealPhotoResolveStatus.ERROR ? null : photoUri);
+    const activeSource = localCompletionPhotoUri
+        ? 'local'
+        : resolvedCompletionPhotoUri
+            ? 'completion'
+            : 'meal';
     const [failedUri, setFailedUri] = useState(null);
 
     useEffect(() => {
@@ -28,7 +46,8 @@ export const MealPhotoThumbnail = ({
             resizeMode="cover"
             onError={() => {
                 setFailedUri(activeUri);
-                if (!completionPhotoUri) retryAfterImageError();
+                if (activeSource === 'completion') retryCompletionPhotoAfterImageError();
+                if (activeSource === 'meal') retryAfterImageError();
             }}
             accessible={false}
         />
