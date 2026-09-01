@@ -1,7 +1,12 @@
 import { supabase } from '../../../lib/supabaseClient';
+const {
+    MEAL_COMPLETION_PHOTO_BUCKET,
+    isCanonicalMealCompletionPhotoPath,
+} = require('./mealCompletionPhotoContract.cjs');
 
 export const MEAL_PHOTO_BUCKET = 'meal-photos';
 export const RECIPE_PHOTO_BUCKET = 'recipe-images';
+export { MEAL_COMPLETION_PHOTO_BUCKET, isCanonicalMealCompletionPhotoPath };
 export const MEAL_PHOTO_SIGNED_URL_SECONDS = 5 * 60;
 export const MEAL_PHOTO_CACHE_MS = 4 * 60 * 1000;
 export const MEAL_PHOTO_CACHE_MAX_ENTRIES = 100;
@@ -22,6 +27,9 @@ export const getMealPhotoSource = (value) => {
     const photoPath = value.trim();
     if (!photoPath) return null;
     if (EXTERNAL_URL_PATTERN.test(photoPath)) return { kind: 'external', photoPath };
+    if (isCanonicalMealCompletionPhotoPath(photoPath)) {
+        return { kind: 'storage', bucket: MEAL_COMPLETION_PHOTO_BUCKET, photoPath };
+    }
     if (photoPath.startsWith(RECIPE_PHOTO_PATH_PREFIX)) {
         return { kind: 'storage', bucket: RECIPE_PHOTO_BUCKET, photoPath };
     }

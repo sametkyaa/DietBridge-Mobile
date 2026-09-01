@@ -7,6 +7,7 @@ const MACRO_KEY_ALIASES = {
     carbs: ['carbs', 'carbohydrate', 'carbohydrates', 'carbs_g'],
     fat: ['fat', 'fats', 'fat_g'],
 };
+const { isCanonicalMealCompletionPhotoPath } = require('./mealCompletionPhotoContract.cjs');
 
 export const MealPlanReadErrorCode = {
     AUTHORIZATION: 'authorization',
@@ -149,6 +150,14 @@ const normalizeDescription = (value) => {
     return normalized || null;
 };
 
+const normalizeCompletionPhotoPath = (value) => {
+    if (value === null || value === undefined) return null;
+    if (!isCanonicalMealCompletionPhotoPath(value)) {
+        throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz completion fotoğraf yolu bulundu.');
+    }
+    return value;
+};
+
 export const normalizeCanonicalMeal = (meal, plan) => {
     if (!meal || typeof meal !== 'object') {
         throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz öğün bulundu.');
@@ -172,6 +181,7 @@ export const normalizeCanonicalMeal = (meal, plan) => {
     const source = normalizeMealSource(meal.source);
     const recipeId = normalizeRecipeId(meal.recipe_id);
     const description = normalizeDescription(meal.description);
+    const completionPhotoPath = normalizeCompletionPhotoPath(meal.completion_photo_url);
 
     if (!CANONICAL_MEAL_TYPES.includes(meal.type)) {
         throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz öğün türü bulundu.');
@@ -194,6 +204,7 @@ export const normalizeCanonicalMeal = (meal, plan) => {
         time: normalizeCanonicalMealTime(meal.time),
         sortOrder: validateSortOrder(meal.sort_order),
         photoPath: meal.photo_url,
+        completionPhotoPath,
         description,
         source,
         recipeId,

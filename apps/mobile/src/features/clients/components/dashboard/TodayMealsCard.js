@@ -24,7 +24,8 @@ export function TodayMealsCard({ meals, updatingMealId, onMealPress, onToggle })
                             >
                                 <MealPhotoThumbnail
                                     photoPath={meal.photoPath}
-                                    completionPhotoUri={meal.completionPhotoUri}
+                                    completionPhotoPath={meal.completionPhotoPath}
+                                    localCompletionPhotoUri={meal.localCompletionPhotoUri}
                                     imageStyle={styles.photo}
                                     fallback={(
                                         <View style={styles.photoFallback}>

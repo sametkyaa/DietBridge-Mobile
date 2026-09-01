@@ -2,7 +2,6 @@ import React, { useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Alert, findNodeHandle, Platform, ScrollView, StyleSheet, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
 import { AppCard } from '../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../shared/theme';
 import {
@@ -21,6 +20,7 @@ import { useDashboardViewModel } from '../viewmodels/useDashboardViewModel';
 import { toLocalDateKey } from '../../../shared/utils/localDate';
 import DietitianConnectionRequestCard from '../../dietitianConnection/components/DietitianConnectionRequestCard';
 import { useNotifications } from '../../notifications/context/NotificationContext';
+import { pickMealCompletionPhoto } from '../../meals/services/mealCompletionPhotoPicker';
 
 const DashboardScreen = () => {
     const navigation = useNavigation();
@@ -51,7 +51,7 @@ const DashboardScreen = () => {
         mealPlanError,
         retryMealPlan,
         displayedMeal,
-        displayedCompletionPhotoUri,
+        displayedCompletion,
         isMealCompleted,
         addWater,
         removeWater,
@@ -85,14 +85,14 @@ const DashboardScreen = () => {
 
     const uiMeals = useMemo(() => meals.map((meal) => mapDashboardMeal(
         meal,
-        completedMeals[meal.id]?.completionPhotoUri || null,
+        completedMeals[meal.id] || null,
     )), [completedMeals, meals]);
     const displayedUiMeal = useMemo(() => (
-        displayedMeal ? mapDashboardMeal(displayedMeal, displayedCompletionPhotoUri) : null
-    ), [displayedCompletionPhotoUri, displayedMeal]);
+        displayedMeal ? mapDashboardMeal(displayedMeal, displayedCompletion) : null
+    ), [displayedCompletion, displayedMeal]);
     const selectedUiMeal = useMemo(() => (
         selectedMeal
-            ? mapDashboardMeal(selectedMeal, completedMeals[selectedMeal.id]?.completionPhotoUri || null)
+            ? mapDashboardMeal(selectedMeal, completedMeals[selectedMeal.id] || null)
             : null
     ), [completedMeals, selectedMeal]);
     const isDisplayedMealUpdating = !!displayedMeal?.id && updatingMealId === displayedMeal.id;
@@ -114,37 +114,8 @@ const DashboardScreen = () => {
         if (!displayedMeal || !hasActiveDietitian || isDisplayedMealUpdating) return;
 
         try {
-            const pickers = {
-                camera: async () => {
-                    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-                    if (status !== 'granted') {
-                        Alert.alert('İzin gerekli', 'Kamera izni verilmedi.');
-                        return null;
-                    }
-                    const result = await ImagePicker.launchCameraAsync({
-                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                        allowsEditing: true,
-                        quality: 0.7,
-                    });
-                    return result.canceled ? null : result.assets?.[0]?.uri || null;
-                },
-                gallery: async () => {
-                    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                    if (status !== 'granted') {
-                        Alert.alert('İzin gerekli', 'Galeri izni verilmedi.');
-                        return null;
-                    }
-                    const result = await ImagePicker.launchImageLibraryAsync({
-                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                        allowsEditing: true,
-                        quality: 0.8,
-                    });
-                    return result.canceled ? null : result.assets?.[0]?.uri || null;
-                },
-            };
-
-            const uri = await pickers[source]?.();
-            if (uri) await completeMeal(uri);
+            const picked = await pickMealCompletionPhoto(source);
+            if (picked) await completeMeal(picked);
         } catch (error) {
             console.warn('Fotoğraf ekleme hatası', error);
             Alert.alert('Fotoğraf eklenemedi', 'Lütfen tekrar deneyin.');

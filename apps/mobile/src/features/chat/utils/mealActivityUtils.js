@@ -23,9 +23,14 @@ const isMealActivity = (value) => Boolean(value)
     && typeof value.mealTime === 'string'
     && normalizeIsoTimestamp(value.completedAt) !== null
     && value.createdAt === value.completedAt
-    && (value.photoPath === null || typeof value.photoPath === 'string')
+    && (value.completionPhotoPath === null || typeof value.completionPhotoPath === 'string')
+    && (value.mealPhotoPath === null || typeof value.mealPhotoPath === 'string')
     && value.isHumanMessage === false
     && value.requiresRead === false;
+
+const getMealActivityPhotoPath = (activity) => (
+    activity?.completionPhotoPath || activity?.mealPhotoPath || null
+);
 
 const compareMealActivities = (left, right) => {
     const timeDifference = Date.parse(left.createdAt) - Date.parse(right.createdAt);
@@ -45,6 +50,7 @@ module.exports = {
     MEAL_ACTIVITY_KIND,
     createMealActivityId,
     isMealActivity,
+    getMealActivityPhotoPath,
     compareMealActivities,
     mergeMealActivities,
 };

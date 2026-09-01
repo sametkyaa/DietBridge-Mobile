@@ -1,6 +1,15 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { updateMealCompletion } from '../services/mealService';
-const { hasMealSessionChanged, normalizeSessionUserId } = require('./mealSessionIsolation.cjs');
+import { completeMealWithPhoto } from '../services/mealCompletionPhotoService';
+const {
+    hasMealSessionChanged,
+    normalizeSessionUserId,
+} = require('./mealSessionIsolation.cjs');
+const {
+    createFinalMealCompletionState,
+    createOptimisticMealCompletionState,
+    hydrateMealCompletionState,
+} = require('./mealCompletionState.cjs');
 
 const defaultContext = {
     completedMeals: {},
@@ -64,12 +73,9 @@ export const MealsProvider = ({ children, userId = null }) => {
 
                 if (meal.isEaten) {
                     const current = next[meal.id];
-                    next[meal.id] = {
-                        completed: true,
-                        // Canonical photoPath is a private DB path. Only a device completion
-                        // photo may be rendered here until WP5.3C2 resolves signed URLs.
-                        completionPhotoUri: current?.completionPhotoUri || null,
-                    };
+                    // The persisted path and the local picker URI are separate
+                    // resources. A refetch must not discard an in-flight draft.
+                    next[meal.id] = hydrateMealCompletionState(meal, current);
                 } else {
                     delete next[meal.id];
                 }
@@ -86,25 +92,36 @@ export const MealsProvider = ({ children, userId = null }) => {
 
         const normalizedOptions = typeof options === 'object' && options !== null
             ? options
-            : { completionPhotoUri: options };
+            : { completionPhotoSource: options };
         const previousCompletion = completedMealsRef.current[mealId];
         const wasCompleted = !!previousCompletion?.completed;
         const shouldComplete = normalizedOptions.completed ?? !wasCompleted;
+        const completionPhotoSource = normalizedOptions.completionPhotoSource || null;
         const requestVersion = (completionRequestVersionsRef.current[mealId] || 0) + 1;
         const requestGeneration = sessionGenerationRef.current;
 
         completionRequestVersionsRef.current[mealId] = requestVersion;
-        updateMealCompletionState(mealId, shouldComplete
-            ? {
-                completed: true,
-                completionPhotoUri: normalizedOptions.completionPhotoUri
-                    ?? previousCompletion?.completionPhotoUri
-                    ?? null,
-            }
-            : null);
+        updateMealCompletionState(
+            mealId,
+            createOptimisticMealCompletionState(shouldComplete, {
+                uri: normalizedOptions.localCompletionPhotoUri || completionPhotoSource?.uri || null,
+            }),
+        );
 
         try {
-            return await updateMealCompletion(mealId, shouldComplete);
+            const result = shouldComplete && completionPhotoSource
+                ? await completeMealWithPhoto(mealId, completionPhotoSource)
+                : await updateMealCompletion(mealId, shouldComplete);
+
+            if (sessionGenerationRef.current === requestGeneration
+                && completionRequestVersionsRef.current[mealId] === requestVersion) {
+                updateMealCompletionState(
+                    mealId,
+                    createFinalMealCompletionState(shouldComplete, result?.completionPhotoPath),
+                );
+            }
+
+            return result;
         } catch (error) {
             if (sessionGenerationRef.current === requestGeneration
                 && completionRequestVersionsRef.current[mealId] === requestVersion) {

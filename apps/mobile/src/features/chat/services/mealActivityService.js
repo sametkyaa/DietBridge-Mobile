@@ -6,11 +6,12 @@ import {
     createMealActivityId,
     mergeMealActivities,
 } from '../utils/mealActivityUtils';
+const { isCanonicalMealCompletionPhotoPath } = require('../../meals/services/mealCompletionPhotoContract.cjs');
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d(?:\.\d+)?)?$/;
 const MEAL_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
-const MEAL_ACTIVITY_SELECT = `id, client_id, dietitian_id, plan_date, meals (id, plan_id, type, title, time, sort_order, is_eaten, completed_at, photo_url)`;
+const MEAL_ACTIVITY_SELECT = `id, client_id, dietitian_id, plan_date, meals (id, plan_id, type, title, time, sort_order, is_eaten, completed_at, photo_url, completion_photo_url)`;
 
 const invalidPayload = (field) => new ChatServiceError(
     CHAT_ERROR_CODES.UNKNOWN,
@@ -25,11 +26,19 @@ const normalizeMealTime = (value) => {
     return `${match[1]}:${match[2]}`;
 };
 
-const normalizePhotoPath = (value) => {
+const normalizeMealPhotoPath = (value) => {
     if (value === null || value === undefined) return null;
     if (typeof value !== 'string' || !value.trim()) throw invalidPayload('meal.photo_url');
     if (!value.startsWith('meal-plans/') && !value.startsWith('recipes/') && !/^https:\/\/images\.unsplash\.com\//.test(value)) {
         throw invalidPayload('meal.photo_url');
+    }
+    return value;
+};
+
+const normalizeCompletionPhotoPath = (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value !== 'string' || !isCanonicalMealCompletionPhotoPath(value)) {
+        throw invalidPayload('meal.completion_photo_url');
     }
     return value;
 };
@@ -80,7 +89,8 @@ const normalizeActivities = ({ data, relationId, conversationId, clientId, dieti
                 mealTime: normalizeMealTime(meal.time),
                 completedAt,
                 createdAt: completedAt,
-                photoPath: normalizePhotoPath(meal.photo_url),
+                completionPhotoPath: normalizeCompletionPhotoPath(meal.completion_photo_url),
+                mealPhotoPath: normalizeMealPhotoPath(meal.photo_url),
                 isHumanMessage: false,
                 requiresRead: false,
             });
