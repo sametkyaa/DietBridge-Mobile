@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import { useMeals } from '../../meals/context/MealsContext';
 import { getClientProfile, getDailyQuote } from '../services/clientService';
 import { getDailyLog, upsertWaterIntake, upsertDailyWeight } from '../services/dailyLogService';
@@ -13,6 +13,17 @@ import {
     CONNECTION_REQUIRED_MESSAGE,
 } from '../../dietitianConnection/services/dietitianConnectionService';
 const { hasSessionChanged, normalizeSessionUserId } = require('./sessionDataIsolation.cjs');
+const {
+    INVALID_PERSISTED_WATER_MESSAGE,
+    WATER_INPUT_VALIDATION_MESSAGE,
+    addWaterLiters,
+    getWaterProgress,
+    isWaterLoadCurrent: isWaterLoadCurrentContract,
+    isWaterMutationCurrent: isWaterMutationCurrentContract,
+    normalizePersistedWaterLiters,
+    parseWaterInputMl,
+    removeWaterLiters,
+} = require('../../../shared/utils/waterTrackingContract.cjs');
 
 const toFiniteNumber = (value) => {
     if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) return null;
@@ -85,6 +96,7 @@ export const useDashboardViewModel = () => {
     } = useDietitianConnection();
     const [water, setWater] = useState(0);
     const [waterInput, setWaterInput] = useState('200');
+    const [waterDateKey, setWaterDateKey] = useState(null);
     const [dailyLogStatus, setDailyLogStatus] = useState('loading');
     const [dailyLogError, setDailyLogError] = useState(null);
     const [isAddingWater, setIsAddingWater] = useState(false);
@@ -105,12 +117,20 @@ export const useDashboardViewModel = () => {
     const mealRequestVersionsRef = useRef({});
     const mealMutationsRef = useRef(new Set());
     const waterMutationRef = useRef(null);
+    const waterDateKeyRef = useRef(null);
+    const waterLoadSequenceRef = useRef(0);
+    const waterMutationSequenceRef = useRef(0);
     const weightMutationRef = useRef(false);
     const planRequestSequenceRef = useRef(0);
     const inFlightPlanRequestsRef = useRef(new Map());
     const isMountedRef = useRef(true);
     const previousUserIdRef = useRef(normalizeSessionUserId(userId));
     const sessionGenerationRef = useRef(0);
+
+    const updateWaterDateKey = useCallback((dateKey) => {
+        waterDateKeyRef.current = dateKey;
+        setWaterDateKey(dateKey);
+    }, []);
 
     useEffect(() => {
         const nextUserId = normalizeSessionUserId(userId);
@@ -122,9 +142,13 @@ export const useDashboardViewModel = () => {
         mealRequestVersionsRef.current = {};
         mealMutationsRef.current.clear();
         waterMutationRef.current = null;
+        waterLoadSequenceRef.current += 1;
+        waterMutationSequenceRef.current += 1;
+        waterDateKeyRef.current = null;
         weightMutationRef.current = false;
         if (!isMountedRef.current) return;
         setWater(0);
+        updateWaterDateKey(null);
         setWeight(null);
         setWeightInput('');
         setMeals([]);
@@ -134,12 +158,17 @@ export const useDashboardViewModel = () => {
         setMealPlanError(null);
         setDailyLogStatus('loading');
         setDailyLogError(null);
-    }, [userId]);
+        setIsAddingWater(false);
+        setIsUndoingWater(false);
+    }, [updateWaterDateKey, userId]);
 
     useEffect(() => () => {
         isMountedRef.current = false;
         planRequestSequenceRef.current += 1;
         inFlightPlanRequestsRef.current.clear();
+        waterLoadSequenceRef.current += 1;
+        waterMutationSequenceRef.current += 1;
+        waterMutationRef.current = null;
     }, []);
 
     const loadTodayMeals = useCallback((now = new Date(), { retry = false, force = false } = {}) => {
@@ -203,28 +232,61 @@ export const useDashboardViewModel = () => {
         return 'İyi geceler';
     }, []);
 
-    const loadWaterIntake = useCallback(async () => {
-        setDailyLogStatus('loading');
+    const loadWaterIntake = useCallback(async ({
+        now = new Date(),
+        retry = false,
+        allowDuringMutation = false,
+    } = {}) => {
+        if (!isMountedRef.current) return { ok: false, stale: true };
+        if (waterMutationRef.current && !allowDuringMutation) return { ok: false, busy: true };
+
+        const dateKey = toLocalDateKey(now);
+        const requestSequence = waterLoadSequenceRef.current + 1;
+        waterLoadSequenceRef.current = requestSequence;
+        const requestGeneration = sessionGenerationRef.current;
+        const previousDateKey = waterDateKeyRef.current;
+        if (previousDateKey !== dateKey) setWater(0);
+        updateWaterDateKey(dateKey);
+        setDailyLogStatus(retry ? 'retrying' : 'loading');
         setDailyLogError(null);
+
+        const isCurrentRequest = () => isMountedRef.current && isWaterLoadCurrentContract({
+            requestGeneration,
+            currentGeneration: sessionGenerationRef.current,
+            requestSequence,
+            currentSequence: waterLoadSequenceRef.current,
+            requestDateKey: dateKey,
+            activeDateKey: waterDateKeyRef.current,
+        });
+
         try {
-            const log = await getDailyLog(toLocalDateKey());
-            if (!isMountedRef.current) return;
-            if (log?.water_intake !== undefined && log?.water_intake !== null) {
-                setWater(log.water_intake);
-                setDailyLogStatus('ready');
-            } else {
+            const log = await getDailyLog(dateKey);
+            if (!isCurrentRequest()) return { ok: false, stale: true, dateKey };
+
+            const normalizedWater = normalizePersistedWaterLiters(log?.water_intake);
+            if (Number.isNaN(normalizedWater)) {
                 setWater(0);
-                setDailyLogStatus('empty');
+                setDailyLogStatus('error');
+                setDailyLogError(INVALID_PERSISTED_WATER_MESSAGE);
+                return { ok: false, invalid: true, dateKey };
             }
+
+            const nextWater = normalizedWater ?? 0;
+            const nextStatus = normalizedWater === null ? 'empty' : 'ready';
+            setWater(nextWater);
+            setDailyLogStatus(nextStatus);
+            setDailyLogError(null);
+            return { ok: true, dateKey, water: nextWater, status: nextStatus, error: null };
         } catch (error) {
-            if (!isMountedRef.current) return;
-            console.warn('Daily log load failed:', error?.message || 'unknown error');
+            if (!isCurrentRequest()) return { ok: false, stale: true, dateKey };
+            setWater(0);
             setDailyLogStatus('error');
             setDailyLogError(error?.message || 'Günlük kayıt bilgileri yüklenemedi.');
+            return { ok: false, dateKey, error };
         }
-    }, []);
+    }, [updateWaterDateKey]);
 
-    const retryDailyLog = useCallback(() => loadWaterIntake(), [loadWaterIntake]);
+    const retryDailyLog = useCallback(() => loadWaterIntake({ retry: true }), [loadWaterIntake]);
 
     useFocusEffect(
         useCallback(() => {
@@ -247,17 +309,27 @@ export const useDashboardViewModel = () => {
 
             refreshConnectionStatus();
             loadProfile();
-            loadWaterIntake();
+            const focusNow = new Date();
+            loadWaterIntake({ now: focusNow });
             loadTodayMeals();
 
+            const appStateSubscription = AppState.addEventListener('change', (nextState) => {
+                if (nextState !== 'active') return;
+                const now = new Date();
+                const dateKey = toLocalDateKey(now);
+                if (waterDateKeyRef.current !== dateKey) loadWaterIntake({ now });
+            });
+
             return () => {
+                appStateSubscription.remove();
                 planRequestSequenceRef.current += 1;
                 inFlightPlanRequestsRef.current.clear();
+                waterLoadSequenceRef.current += 1;
             };
         }, [loadTodayMeals, loadWaterIntake, refreshConnectionStatus]),
     );
 
-    const waterProgress = Math.min(water / 3, 1);
+    const waterProgress = getWaterProgress(water);
     const firstIncompleteMeal = useMemo(() => getNextIncompleteMeal(meals), [meals]);
     const nutrition = useMemo(() => buildNutritionSummary(meals), [meals]);
     const displayedMeal = (
@@ -269,59 +341,127 @@ export const useDashboardViewModel = () => {
         ? completedMeals[displayedMeal.id] || null
         : null;
 
-    const addWater = async (amountMl) => {
+    const runWaterMutation = async (direction, amountMl) => {
         if (waterMutationRef.current) return;
-        const amount = parseInt(amountMl ?? waterInput, 10) || 200;
-        const previousWater = water;
-        const previousStatus = dailyLogStatus;
-        const previousError = dailyLogError;
-        const nextWater = Math.min(water + amount / 1000, 5);
-        waterMutationRef.current = 'add';
-        setIsAddingWater(true);
-        setWater(nextWater);
+        if (['loading', 'retrying', 'error'].includes(dailyLogStatus)) return;
+
+        const parsedAmountMl = parseWaterInputMl(amountMl ?? waterInput);
+        if (parsedAmountMl === null) {
+            Alert.alert('Hata', WATER_INPUT_VALIDATION_MESSAGE);
+            return;
+        }
+
+        const mutationStart = new Date();
+        const mutationDateKey = toLocalDateKey(mutationStart);
+        const mutationId = waterMutationSequenceRef.current + 1;
+        waterMutationSequenceRef.current = mutationId;
+        const mutationGeneration = sessionGenerationRef.current;
+        const mutation = {
+            id: mutationId,
+            direction,
+            generation: mutationGeneration,
+            dateKey: mutationDateKey,
+        };
+        waterMutationRef.current = mutation;
+        if (direction === 'add') setIsAddingWater(true);
+        else setIsUndoingWater(true);
+
+        let rollbackState = null;
+        const isCurrentMutation = () => isMountedRef.current && isWaterMutationCurrentContract({
+            mutationGeneration,
+            currentGeneration: sessionGenerationRef.current,
+            mutationId,
+            activeMutationId: waterMutationRef.current?.id,
+            mutationDateKey,
+            activeDateKey: waterDateKeyRef.current,
+        });
+
         try {
-            await upsertWaterIntake(toLocalDateKey(), nextWater);
-            if (isMountedRef.current) {
-                setDailyLogStatus('ready');
-                setDailyLogError(null);
+            if (waterDateKeyRef.current !== mutationDateKey
+                || dailyLogStatus === 'loading'
+                || dailyLogStatus === 'retrying') {
+                const resolved = await loadWaterIntake({ now: mutationStart, allowDuringMutation: true });
+                if (!resolved?.ok) return;
+                rollbackState = {
+                    water: resolved.water,
+                    status: resolved.status,
+                    error: resolved.error,
+                    dateKey: resolved.dateKey,
+                };
+            } else {
+                const normalizedCurrentWater = normalizePersistedWaterLiters(water);
+                if (Number.isNaN(normalizedCurrentWater)) {
+                    if (isCurrentMutation()) {
+                        setWater(0);
+                        updateWaterDateKey(mutationDateKey);
+                        setDailyLogStatus('error');
+                        setDailyLogError(INVALID_PERSISTED_WATER_MESSAGE);
+                    }
+                    return;
+                }
+                rollbackState = {
+                    water: normalizedCurrentWater ?? 0,
+                    status: dailyLogStatus,
+                    error: dailyLogError,
+                    dateKey: waterDateKeyRef.current,
+                };
             }
+
+            if (!isCurrentMutation() || waterDateKeyRef.current !== mutationDateKey) return;
+
+            const nextWater = direction === 'add'
+                ? addWaterLiters(rollbackState.water, parsedAmountMl)
+                : removeWaterLiters(rollbackState.water, parsedAmountMl);
+            if (!Number.isFinite(nextWater) || nextWater < 0) {
+                setWater(0);
+                updateWaterDateKey(mutationDateKey);
+                setDailyLogStatus('error');
+                setDailyLogError(INVALID_PERSISTED_WATER_MESSAGE);
+                return;
+            }
+
+            // Invalidate any load that started before this optimistic mutation.
+            waterLoadSequenceRef.current += 1;
+            setWater(nextWater);
+            updateWaterDateKey(mutationDateKey);
+            setDailyLogStatus('ready');
+            setDailyLogError(null);
+
+            const persistedWater = await upsertWaterIntake(mutationDateKey, nextWater);
+            const canonicalWater = normalizePersistedWaterLiters(persistedWater);
+            if (canonicalWater === null || Number.isNaN(canonicalWater)) {
+                throw new Error(INVALID_PERSISTED_WATER_MESSAGE);
+            }
+            if (!isCurrentMutation()) return;
+
+            setWater(canonicalWater);
+            updateWaterDateKey(mutationDateKey);
+            setDailyLogStatus('ready');
+            setDailyLogError(null);
         } catch (error) {
-            setWater(previousWater);
-            setDailyLogStatus(previousStatus);
-            setDailyLogError(previousError);
+            if (!isCurrentMutation()) return;
+            if (rollbackState) {
+                setWater(rollbackState.water);
+                updateWaterDateKey(rollbackState.dateKey);
+                setDailyLogStatus(rollbackState.status);
+                setDailyLogError(rollbackState.error);
+            }
             Alert.alert('Hata', 'Su miktarı kaydedilemedi. Lütfen tekrar deneyin.');
         } finally {
+            if (waterMutationRef.current?.id !== mutationId) return;
             waterMutationRef.current = null;
-            if (isMountedRef.current) setIsAddingWater(false);
+            if (!isMountedRef.current || sessionGenerationRef.current !== mutationGeneration) return;
+            if (direction === 'add') setIsAddingWater(false);
+            else setIsUndoingWater(false);
+
+            const currentDateKey = toLocalDateKey();
+            if (currentDateKey !== waterDateKeyRef.current) loadWaterIntake({ now: new Date() });
         }
     };
 
-    const removeWater = async (amountMl) => {
-        if (waterMutationRef.current) return;
-        const amount = parseInt(amountMl ?? waterInput, 10) || 200;
-        const previousWater = water;
-        const previousStatus = dailyLogStatus;
-        const previousError = dailyLogError;
-        const nextWater = Math.max(water - amount / 1000, 0);
-        waterMutationRef.current = 'remove';
-        setIsUndoingWater(true);
-        setWater(nextWater);
-        try {
-            await upsertWaterIntake(toLocalDateKey(), nextWater);
-            if (isMountedRef.current) {
-                setDailyLogStatus('ready');
-                setDailyLogError(null);
-            }
-        } catch (error) {
-            setWater(previousWater);
-            setDailyLogStatus(previousStatus);
-            setDailyLogError(previousError);
-            Alert.alert('Hata', 'Su miktarı kaydedilemedi. Lütfen tekrar deneyin.');
-        } finally {
-            waterMutationRef.current = null;
-            if (isMountedRef.current) setIsUndoingWater(false);
-        }
-    };
+    const addWater = (amountMl) => runWaterMutation('add', amountMl);
+
+    const removeWater = (amountMl) => runWaterMutation('remove', amountMl);
 
     const completeMealById = async (mealId, completionPhotoSource = null) => {
         const targetMeal = meals.find((meal) => meal.id === mealId);
@@ -461,6 +601,7 @@ export const useDashboardViewModel = () => {
         water,
         waterInput,
         setWaterInput,
+        waterDateKey,
         dailyLogStatus,
         dailyLogError,
         retryDailyLog,

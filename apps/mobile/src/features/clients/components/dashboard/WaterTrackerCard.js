@@ -16,7 +16,7 @@ export function WaterTrackerCard({
     onRemove,
     onRetry,
 }) {
-    const disabled = isAdding || isUndoing || status === 'loading' || status === 'error';
+    const disabled = isAdding || isUndoing || status === 'loading' || status === 'retrying' || status === 'error';
 
     return (
         <AppCard>
@@ -27,7 +27,7 @@ export function WaterTrackerCard({
                 </View>
                 <Text style={styles.amount}>{water.toFixed(2)} L</Text>
             </View>
-            {status === 'loading' ? (
+            {status === 'loading' || status === 'retrying' ? (
                 <View
                     style={styles.stateRow}
                     accessible
