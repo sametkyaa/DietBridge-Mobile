@@ -42,7 +42,7 @@ function LoadingState({ retrying }) {
     );
 }
 
-const MealsScreen = () => {
+const MealsScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const {
         dayOptions,
@@ -71,7 +71,6 @@ const MealsScreen = () => {
         closeMealModal,
         closePhotoPreview,
         toggleGroceryItem,
-        handleGenerateGroceryList,
         openMealModal,
         openPhotoPreview,
         meals,
@@ -135,10 +134,10 @@ const MealsScreen = () => {
             selectedDay={selectedDay}
             todayIndex={todayIndex}
             onSelectDay={setSelectedDay}
-            onOpenGrocery={handleGenerateGroceryList}
-            groceryDisabled={!hasActiveDietitian}
+            onOpenGrocery={() => navigation.navigate('GroceryList')}
+            groceryDisabled={false}
         />
-    ), [dayOptions, handleGenerateGroceryList, hasActiveDietitian, selectedDay, setSelectedDay]);
+    ), [dayOptions, navigation, selectedDay, setSelectedDay, todayIndex]);
 
     const footer = (
         <View style={screenStyles.footer}>

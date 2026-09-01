@@ -7,7 +7,6 @@ import { colors, radius, shadows, spacing, typography } from '../../../../shared
 const ITEMS = [
     { key: 'Profile', label: 'Profil', icon: 'person' },
     { key: 'Appointments', label: 'Randevular', icon: 'calendar' },
-    { key: 'GroceryList', label: 'Alışveriş listesi', icon: 'cart' },
     { key: 'Settings', label: 'Ayarlar', icon: 'settings' },
     { key: 'Support', label: 'Destek', icon: 'support' },
 ];
