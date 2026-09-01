@@ -5,6 +5,10 @@ import {
 } from '../../dietitianConnection/services/dietitianConnectionService';
 import { saveCurrentWeight } from '../../clients/services/clientService';
 import { addLocalDateDays, toLocalDateKey } from '../../../shared/utils/localDate';
+const {
+    INVALID_PERSISTED_WATER_MESSAGE,
+    normalizePersistedWaterLiters,
+} = require('../../../shared/utils/waterTrackingContract.cjs');
 
 const getAuthorizedAnalyticsClientId = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -184,14 +188,20 @@ const getWaterHistory = async (clientId) => {
     }
     if (!data || data.length === 0) return [];
 
+    const normalizedData = data.map((log) => {
+        const amount = normalizePersistedWaterLiters(log.water_intake);
+        if (Number.isNaN(amount)) throw new Error(INVALID_PERSISTED_WATER_MESSAGE);
+        return { ...log, amount };
+    }).filter((log) => log.amount !== null);
+
     const days = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
-    return data.map((log) => {
+    return normalizedData.map((log) => {
         const [year, month, day] = log.date.split('-').map(Number);
         const localDate = new Date(Date.UTC(year, month - 1, day));
         return {
             dateKey: log.date,
             day: days[localDate.getUTCDay()],
-            amount: Number(log.water_intake),
+            amount: log.amount,
         };
     });
 };

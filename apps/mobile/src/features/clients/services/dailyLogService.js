@@ -1,5 +1,9 @@
 import { supabase } from '../../../lib/supabaseClient';
 import { saveCurrentWeight } from './clientService';
+const {
+    INVALID_PERSISTED_WATER_MESSAGE,
+    normalizePersistedWaterLiters,
+} = require('../../../shared/utils/waterTrackingContract.cjs');
 
 export const DAILY_LOG_NETWORK_ERROR_MESSAGE = 'Günlük kayıt bilgilerine ulaşılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.';
 export const DAILY_LOG_REQUEST_ERROR_MESSAGE = 'Günlük kayıt bilgileri şu anda yüklenemedi.';
@@ -55,32 +59,38 @@ export const getDailyLog = async (dateStr) => {
 };
 
 export const upsertWaterIntake = async (dateStr, waterAmount) => {
+    const normalizedWater = normalizePersistedWaterLiters(waterAmount);
+    if (normalizedWater === null || Number.isNaN(normalizedWater)) {
+        throw new Error(INVALID_PERSISTED_WATER_MESSAGE);
+    }
+
     const user = await getCurrentUserOrThrow();
-    const existingLog = await getDailyLog(dateStr);
+    let response = null;
 
     try {
-        if (existingLog) {
-            const { error, status } = await supabase
-                .from('daily_logs')
-                .update({ water_intake: waterAmount })
-                .eq('id', existingLog.id);
-            if (error) throw createDailyLogError({ error, status, action: 'save' });
-        } else {
-            const { error, status } = await supabase
-                .from('daily_logs')
-                .insert({
-                    client_id: user.id,
-                    date: dateStr,
-                    water_intake: waterAmount,
-                });
-            if (error) throw createDailyLogError({ error, status, action: 'save' });
-        }
+        response = await supabase
+            .from('daily_logs')
+            .upsert({
+                client_id: user.id,
+                date: dateStr,
+                water_intake: normalizedWater,
+            }, { onConflict: 'client_id,date' })
+            .select('client_id,date,water_intake')
+            .single();
     } catch (error) {
         if (error?.code?.startsWith('DAILY_LOG_')) throw error;
         throw createDailyLogError({ error, action: 'save' });
     }
 
-    return true;
+    const { data, error, status } = response || {};
+    if (error) throw createDailyLogError({ error, status, action: 'save' });
+
+    const persistedWater = normalizePersistedWaterLiters(data?.water_intake);
+    if (persistedWater === null || Number.isNaN(persistedWater)) {
+        throw new Error(INVALID_PERSISTED_WATER_MESSAGE);
+    }
+
+    return persistedWater;
 };
 
 export const upsertDailyWeight = async (_dateStr, weight) => {
