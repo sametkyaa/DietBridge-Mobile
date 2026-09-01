@@ -16,6 +16,15 @@ const normalizePersistedWaterLiters = (value) => {
     return Number.isFinite(number) && number >= 0 ? number : Number.NaN;
 };
 
+const normalizeWaterTargetLitersFromMl = (value) => {
+    const normalizedMilliliters = normalizePersistedWaterLiters(value);
+    return normalizedMilliliters !== null
+        && !Number.isNaN(normalizedMilliliters)
+        && normalizedMilliliters > 0
+        ? normalizedMilliliters / 1000
+        : WATER_TARGET_LITERS;
+};
+
 const parseWaterInputMl = (value) => {
     if (typeof value !== 'string' && typeof value !== 'number') return null;
 
@@ -92,6 +101,7 @@ module.exports = {
     isWaterLoadCurrent,
     isWaterMutationCurrent,
     normalizePersistedWaterLiters,
+    normalizeWaterTargetLitersFromMl,
     parseWaterInputMl,
     removeWaterLiters,
     waterMlToLiters,
