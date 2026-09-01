@@ -5,43 +5,28 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const {
-    PRODUCTION_PASSWORD_RESET_URL,
+    NATIVE_PASSWORD_RECOVERY_URL,
     resolvePasswordResetRedirectUrl,
 } = require('../../utils/passwordResetPolicy.cjs');
 
 const root = path.resolve(__dirname, '../../../../../../../');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
-const LOCAL_DEVELOPMENT_PASSWORD_RESET_URL = 'http://localhost:5173/reset-password';
-
-test('production reset redirect uses the exact canonical HTTPS URL', () => {
+test('password reset email uses the native recovery redirect', () => {
     assert.equal(
-        resolvePasswordResetRedirectUrl({
-            configuredUrl: PRODUCTION_PASSWORD_RESET_URL,
-            isDevelopment: false,
-        }),
-        'https://app.dietbridge.com.tr/reset-password',
+        resolvePasswordResetRedirectUrl(),
+        NATIVE_PASSWORD_RECOVERY_URL,
     );
 });
 
-test('missing production reset configuration fails closed without a localhost fallback', () => {
-    assert.throws(
-        () => resolvePasswordResetRedirectUrl({ configuredUrl: undefined, isDevelopment: false }),
-        (error) => error.code === 'PASSWORD_RESET_URL_MISSING',
-    );
-    assert.throws(
-        () => resolvePasswordResetRedirectUrl({ configuredUrl: LOCAL_DEVELOPMENT_PASSWORD_RESET_URL, isDevelopment: false }),
-        (error) => error.code === 'PASSWORD_RESET_URL_INVALID_FOR_PRODUCTION',
-    );
-});
+test('legacy web redirect configuration is absent from the mobile reset flow', () => {
+    const legacyRedirectEnvironmentName = ['EXPO_PUBLIC', 'WEB_RESET_PASSWORD_URL'].join('_');
+    const mobileEnv = read('.env.example');
+    const service = read('apps/mobile/src/features/auth/services/authService.js');
+    const policy = read('apps/mobile/src/features/auth/utils/passwordResetPolicy.cjs');
 
-test('development can use the explicit local reset URL while production cannot', () => {
-    assert.equal(
-        resolvePasswordResetRedirectUrl({
-            configuredUrl: LOCAL_DEVELOPMENT_PASSWORD_RESET_URL,
-            isDevelopment: true,
-        }),
-        LOCAL_DEVELOPMENT_PASSWORD_RESET_URL,
-    );
+    assert.doesNotMatch(mobileEnv, new RegExp(legacyRedirectEnvironmentName));
+    assert.doesNotMatch(service, new RegExp(legacyRedirectEnvironmentName));
+    assert.doesNotMatch(policy, /https?:\/\//);
 });
 
 test('Supabase reset failures cannot report success in the existing ViewModel flow', () => {
@@ -51,6 +36,7 @@ test('Supabase reset failures cannot report success in the existing ViewModel fl
     const catchStart = viewModel.indexOf('} catch (error) {', submitStart);
     const successIndex = viewModel.indexOf('setSuccessMessage(SUCCESS_MESSAGE)', submitStart);
 
+    assert.match(service, /const redirectUrl = resolvePasswordResetRedirectUrl\(\);/);
     assert.match(service, /resetPasswordForEmail\(email, \{[\s\S]*redirectTo: redirectUrl/);
     assert.match(service, /const \{ error \} = await supabase\.auth\.resetPasswordForEmail/);
     assert.match(service, /if \(error\) throw error/);
