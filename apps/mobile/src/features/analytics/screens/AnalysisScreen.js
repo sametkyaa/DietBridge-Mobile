@@ -4,7 +4,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppCard, AppSkeleton, ErrorState, InlineAlert } from '../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../shared/theme';
 import {
-    BadgesCard,
     BodyMeasurementsCard,
     MeasurementHistorySheet,
     MeasurementSheet,
@@ -40,7 +39,6 @@ const AnalysisScreen = () => {
         maxChangeMagnitude,
         measurements,
         waterHistory,
-        badges,
         monthLabel,
         currentWeight,
         startWeight,
@@ -129,7 +127,6 @@ const AnalysisScreen = () => {
                 />
                 <BodyMeasurementsCard measurements={measurements} onEdit={handleEditMeasurementsToggle} onHistory={handleOpenMeasurementHistory} />
                 <WaterHistoryCard history={waterHistory} total={totalWater} />
-                <BadgesCard badges={badges} />
             </ScrollView>
             <MeasurementSheet
                 visible={isEditingMeasurements && hasActiveDietitian}

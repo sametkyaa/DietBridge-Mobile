@@ -50,7 +50,6 @@ export const useAnalyticsViewModel = () => {
     const [monthlyWeightTrend, setMonthlyWeightTrend] = useState([]);
     const [measurements, setMeasurements] = useState([]);
     const [waterHistory, setWaterHistory] = useState([]);
-    const [badges, setBadges] = useState([]);
     const [selectedWeekIndex, setSelectedWeekIndex] = useState(0);
     const [analyticsStatus, setAnalyticsStatus] = useState('loading');
     const [analyticsError, setAnalyticsError] = useState(null);
@@ -84,7 +83,6 @@ export const useAnalyticsViewModel = () => {
         setMonthlyWeightTrend([]);
         setMeasurements([]);
         setWaterHistory([]);
-        setBadges([]);
         setSelectedWeekIndex(0);
         setMeasurementForm({ ...EMPTY_FORM });
         setMeasurementHistory([]);
@@ -108,7 +106,6 @@ export const useAnalyticsViewModel = () => {
                 weights,
                 measurements: currentMeasurements,
                 waterHistory: currentWaterHistory,
-                badges: currentBadges,
             } = await getAnalyticsOverview();
             if (!isMountedRef.current || loadSequenceRef.current !== sequence) return false;
 
@@ -117,11 +114,9 @@ export const useAnalyticsViewModel = () => {
             setMeasurements(currentMeasurements);
             setMeasurementForm(buildMeasurementForm(currentMeasurements));
             setWaterHistory(currentWaterHistory);
-            setBadges(currentBadges);
             const hasMeaningfulData = weights.length > 0
                 || currentMeasurements.length > 0
-                || currentWaterHistory.length > 0
-                || currentBadges.length > 0;
+                || currentWaterHistory.length > 0;
             setAnalyticsStatus(hasMeaningfulData ? 'ready' : 'empty');
             setAnalyticsError(null);
             return true;
@@ -309,7 +304,6 @@ export const useAnalyticsViewModel = () => {
         maxChangeMagnitude,
         measurements,
         waterHistory,
-        badges,
         monthLabel: 'Son kayıtlar',
         currentWeight,
         startWeight,
