@@ -53,7 +53,7 @@ export function WaterTrackerCard({
             )}
             <View style={styles.controls}>
                 <Pressable
-                    onPress={disabled ? undefined : onRemove}
+                    onPress={disabled ? undefined : () => onRemove()}
                     disabled={disabled}
                     accessibilityRole="button"
                     accessibilityLabel="Su miktarını azalt"
@@ -74,7 +74,7 @@ export function WaterTrackerCard({
                     rightAccessory={<Text style={styles.unit}>ml</Text>}
                 />
                 <Pressable
-                    onPress={disabled ? undefined : onAdd}
+                    onPress={disabled ? undefined : () => onAdd()}
                     disabled={disabled}
                     accessibilityRole="button"
                     accessibilityLabel="Su miktarı ekle"

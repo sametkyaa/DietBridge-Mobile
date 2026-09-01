@@ -277,6 +277,27 @@ test('Contract wiring: retrying water loads keep controls disabled', () => {
     assert.match(waterTracker, /status === 'loading' \|\| status === 'retrying'/);
 });
 
+test('UI wiring: Pressable water controls do not forward the press event', () => {
+    assert.match(waterTracker, /onPress=\{disabled \? undefined : \(\) => onRemove\(\)\}/);
+    assert.match(waterTracker, /onPress=\{disabled \? undefined : \(\) => onAdd\(\)\}/);
+    assert.doesNotMatch(waterTracker, /onPress=\{onRemove\}/);
+    assert.doesNotMatch(waterTracker, /onPress=\{onAdd\}/);
+    assert.doesNotMatch(waterTracker, /onPress=\{disabled \? undefined : onRemove\}/);
+    assert.doesNotMatch(waterTracker, /onPress=\{disabled \? undefined : onAdd\}/);
+
+    const calls = [];
+    const onAdd = (...args) => calls.push(['add', args]);
+    const onRemove = (...args) => calls.push(['remove', args]);
+    const addPressHandler = () => onAdd();
+    const removePressHandler = () => onRemove();
+    const pressEvent = { nativeEvent: { pageX: 1, pageY: 2 } };
+
+    addPressHandler(pressEvent);
+    removePressHandler(pressEvent);
+
+    assert.deepEqual(calls, [['add', []], ['remove', []]]);
+});
+
 test('Date boundary 33: the Istanbul date changes at the canonical midnight', () => {
     const beforeMidnight = new Date('2026-09-01T20:59:59.999Z');
     const afterMidnight = new Date('2026-09-01T21:00:00.001Z');
