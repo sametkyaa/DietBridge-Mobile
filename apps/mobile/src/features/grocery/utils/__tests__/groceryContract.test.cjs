@@ -21,6 +21,8 @@ const service = read('apps/mobile/src/features/grocery/services/groceryService.j
 const viewModel = read('apps/mobile/src/features/grocery/viewmodels/useGroceryListViewModel.js');
 const rootNavigator = read('apps/mobile/src/navigation/RootNavigator.js');
 const sidebar = read('apps/mobile/src/features/clients/components/dashboard/DashboardSidebar.js');
+const mealsScreen = read('apps/mobile/src/features/meals/screens/MealsScreen.js');
+const mealPlanHeader = read('apps/mobile/src/features/meals/components/plan/MealPlanHeader.js');
 const mainTabs = read('apps/mobile/src/navigation/MainTabs.js');
 
 const clientA = '11111111-1111-4111-8111-111111111111';
@@ -203,11 +205,18 @@ test('Navigation 25: GroceryList is registered on the root stack', () => {
     assert.match(rootNavigator, /Stack\.Screen name="GroceryList" component=\{GroceryListScreen\}/);
 });
 
-test('Navigation 26: Dashboard sidebar exposes the Turkish grocery entry', () => {
-    assert.match(sidebar, /key: 'GroceryList', label: 'Alışveriş listesi', icon: 'cart'/);
+test('Navigation 26: the meal-plan cart navigates to the persistent grocery screen', () => {
+    assert.match(mealPlanHeader, /onPress=\{onOpenGrocery\}/);
+    assert.match(mealsScreen, /onOpenGrocery=\{\(\) => navigation\.navigate\('GroceryList'\)\}/);
+    assert.match(mealsScreen, /groceryDisabled=\{false\}/);
+    assert.doesNotMatch(mealsScreen, /onOpenGrocery=\{handleGenerateGroceryList\}/);
 });
 
-test('Navigation 27: the existing four bottom tabs remain unchanged', () => {
+test('Navigation 27: Dashboard sidebar no longer exposes the grocery entry', () => {
+    assert.doesNotMatch(sidebar, /key:\s*['"]GroceryList['"]|Alışveriş listesi/);
+});
+
+test('Navigation 28: the existing four bottom tabs remain unchanged', () => {
     assert.equal((mainTabs.match(/<Tab\.Screen\s/g) || []).length, 4);
     for (const label of ['Ana Sayfa', 'Öğünler', 'Analiz', 'Sohbet']) assert.match(mainTabs, new RegExp(`name="${label}"`));
     assert.doesNotMatch(mainTabs, /GroceryList|Alışveriş/);
