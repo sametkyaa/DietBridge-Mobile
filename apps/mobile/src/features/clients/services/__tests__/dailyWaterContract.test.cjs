@@ -13,8 +13,10 @@ const {
     isWaterLoadCurrent,
     isWaterMutationCurrent,
     normalizePersistedWaterLiters,
+    normalizeWaterTargetLitersFromMl,
     parseWaterInputMl,
     removeWaterLiters,
+    WATER_TARGET_LITERS,
     waterMlToLiters,
 } = require(path.join(root, 'apps/mobile/src/shared/utils/waterTrackingContract.cjs'));
 const {
@@ -118,6 +120,26 @@ test('Persisted 20: malformed strings, objects, and arrays fail safely', () => {
     assert.ok(Number.isNaN(normalizePersistedWaterLiters('')));
     assert.ok(Number.isNaN(normalizePersistedWaterLiters({ value: 1 })));
     assert.ok(Number.isNaN(normalizePersistedWaterLiters([1])));
+});
+
+test('Target conversion: profile millilitres normalize to dashboard litres', () => {
+    assert.equal(normalizeWaterTargetLitersFromMl(4000), 4);
+    assert.equal(normalizeWaterTargetLitersFromMl('4000'), 4);
+    assert.equal(normalizeWaterTargetLitersFromMl(3500), 3.5);
+    assert.equal(normalizeWaterTargetLitersFromMl(500), 0.5);
+});
+
+test('Target fallback: invalid profile targets use the canonical 3 L fallback', () => {
+    for (const value of [null, undefined, 'malformed', Number.NaN, Number.POSITIVE_INFINITY, 0, -1]) {
+        assert.equal(normalizeWaterTargetLitersFromMl(value), WATER_TARGET_LITERS);
+    }
+});
+
+test('Target progress: progress uses the saved target and still saturates at 100 percent', () => {
+    assert.equal(getWaterProgress(2, 4), 0.5);
+    assert.equal(getWaterProgress(3, 4), 0.75);
+    assert.equal(getWaterProgress(4, 4), 1);
+    assert.equal(getWaterProgress(5, 4), 1);
 });
 
 test('Lifecycle 21: an old load cannot overwrite a newer mutation sequence', () => {
@@ -252,7 +274,18 @@ test('Contract wiring: dashboard validates input and does not use fallback parsi
     assert.match(dashboardViewModel, /WATER_INPUT_VALIDATION_MESSAGE/);
     assert.doesNotMatch(dashboardViewModel, /parseInt\(amountMl/);
     assert.doesNotMatch(dashboardViewModel, /Math\.min\(water \+ amount \/ 1000, 5\)/);
-    assert.match(dashboardViewModel, /getWaterProgress\(water\)/);
+    assert.match(dashboardViewModel, /getWaterProgress\(water,\s*waterTargetLiters\)/);
+});
+
+test('Contract wiring: dashboard synchronizes the profile water target safely', () => {
+    assert.match(dashboardViewModel, /const \[waterTargetLiters, setWaterTargetLiters\] = useState\(WATER_TARGET_LITERS\)/);
+    assert.match(dashboardViewModel, /profile\?\.dailyWaterGoalMl/);
+    assert.match(dashboardViewModel, /setWaterTargetLiters\(normalizeWaterTargetLitersFromMl\(profile\?\.dailyWaterGoalMl\)\)/);
+    assert.match(dashboardViewModel, /setWaterTargetLiters\(WATER_TARGET_LITERS\)/);
+    assert.match(dashboardViewModel, /profileRequestGeneration/);
+    assert.match(dashboardViewModel, /sessionGenerationRef\.current === profileRequestGeneration/);
+    assert.match(dashboardViewModel, /profileRequestSequenceRef\.current === profileRequestSequence/);
+    assert.match(dashboardViewModel, /profileRequestSequenceRef\.current \+= 1/);
 });
 
 test('Contract wiring: dashboard protects load, mutation, session, and date lifecycles', () => {

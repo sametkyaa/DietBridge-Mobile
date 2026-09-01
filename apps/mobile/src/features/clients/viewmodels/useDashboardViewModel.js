@@ -16,11 +16,13 @@ const { hasSessionChanged, normalizeSessionUserId } = require('./sessionDataIsol
 const {
     INVALID_PERSISTED_WATER_MESSAGE,
     WATER_INPUT_VALIDATION_MESSAGE,
+    WATER_TARGET_LITERS,
     addWaterLiters,
     getWaterProgress,
     isWaterLoadCurrent: isWaterLoadCurrentContract,
     isWaterMutationCurrent: isWaterMutationCurrentContract,
     normalizePersistedWaterLiters,
+    normalizeWaterTargetLitersFromMl,
     parseWaterInputMl,
     removeWaterLiters,
 } = require('../../../shared/utils/waterTrackingContract.cjs');
@@ -95,6 +97,7 @@ export const useDashboardViewModel = () => {
         rejectPendingRequest,
     } = useDietitianConnection();
     const [water, setWater] = useState(0);
+    const [waterTargetLiters, setWaterTargetLiters] = useState(WATER_TARGET_LITERS);
     const [waterInput, setWaterInput] = useState('200');
     const [waterDateKey, setWaterDateKey] = useState(null);
     const [dailyLogStatus, setDailyLogStatus] = useState('loading');
@@ -123,6 +126,7 @@ export const useDashboardViewModel = () => {
     const weightMutationRef = useRef(false);
     const planRequestSequenceRef = useRef(0);
     const inFlightPlanRequestsRef = useRef(new Map());
+    const profileRequestSequenceRef = useRef(0);
     const isMountedRef = useRef(true);
     const previousUserIdRef = useRef(normalizeSessionUserId(userId));
     const sessionGenerationRef = useRef(0);
@@ -142,12 +146,14 @@ export const useDashboardViewModel = () => {
         mealRequestVersionsRef.current = {};
         mealMutationsRef.current.clear();
         waterMutationRef.current = null;
+        profileRequestSequenceRef.current += 1;
         waterLoadSequenceRef.current += 1;
         waterMutationSequenceRef.current += 1;
         waterDateKeyRef.current = null;
         weightMutationRef.current = false;
         if (!isMountedRef.current) return;
         setWater(0);
+        setWaterTargetLiters(WATER_TARGET_LITERS);
         updateWaterDateKey(null);
         setWeight(null);
         setWeightInput('');
@@ -166,6 +172,7 @@ export const useDashboardViewModel = () => {
         isMountedRef.current = false;
         planRequestSequenceRef.current += 1;
         inFlightPlanRequestsRef.current.clear();
+        profileRequestSequenceRef.current += 1;
         waterLoadSequenceRef.current += 1;
         waterMutationSequenceRef.current += 1;
         waterMutationRef.current = null;
@@ -292,17 +299,27 @@ export const useDashboardViewModel = () => {
         useCallback(() => {
             setDailyQuote(getDailyQuote());
 
+            const profileRequestGeneration = sessionGenerationRef.current;
+            const profileRequestSequence = profileRequestSequenceRef.current + 1;
+            profileRequestSequenceRef.current = profileRequestSequence;
+            const isCurrentProfileRequest = () => isMountedRef.current
+                && sessionGenerationRef.current === profileRequestGeneration
+                && profileRequestSequenceRef.current === profileRequestSequence;
+
             const loadProfile = async () => {
                 try {
                     const profile = await getClientProfile();
+                    if (!isCurrentProfileRequest()) return;
                     const fullName = profile?.fullName?.trim();
                     if (fullName) setUserName(fullName.split(' ')[0]);
                     setAvatarUrl(profile?.avatarUrl || null);
+                    setWaterTargetLiters(normalizeWaterTargetLitersFromMl(profile?.dailyWaterGoalMl));
                     if (profile?.currentWeight !== null && profile?.currentWeight !== undefined) {
                         setWeight(profile.currentWeight);
                         setWeightInput(String(profile.currentWeight));
                     }
                 } catch (error) {
+                    if (!isCurrentProfileRequest()) return;
                     console.error('Failed to load dashboard profile:', error);
                 }
             };
@@ -322,6 +339,7 @@ export const useDashboardViewModel = () => {
 
             return () => {
                 appStateSubscription.remove();
+                profileRequestSequenceRef.current += 1;
                 planRequestSequenceRef.current += 1;
                 inFlightPlanRequestsRef.current.clear();
                 waterLoadSequenceRef.current += 1;
@@ -329,7 +347,7 @@ export const useDashboardViewModel = () => {
         }, [loadTodayMeals, loadWaterIntake, refreshConnectionStatus]),
     );
 
-    const waterProgress = getWaterProgress(water);
+    const waterProgress = getWaterProgress(water, waterTargetLiters);
     const firstIncompleteMeal = useMemo(() => getNextIncompleteMeal(meals), [meals]);
     const nutrition = useMemo(() => buildNutritionSummary(meals), [meals]);
     const displayedMeal = (
@@ -599,6 +617,7 @@ export const useDashboardViewModel = () => {
         mealPlanError,
         retryMealPlan,
         water,
+        waterTargetLiters,
         waterInput,
         setWaterInput,
         waterDateKey,
