@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StatusBar, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Linking, StatusBar, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
@@ -18,10 +18,18 @@ import { NotificationProvider } from './apps/mobile/src/features/notifications/c
 import PushLifecycleController from './apps/mobile/src/features/push/components/PushLifecycleController';
 import './apps/mobile/src/shared/theme/fonts'; // Updated path
 import {
+  establishPasswordRecoverySession,
   ensureClientSession,
   getCurrentClientAuthState,
+  isPasswordRecoverySessionActive,
+  restorePasswordRecoverySession,
+  signOut,
   subscribeToAuthChanges,
 } from './apps/mobile/src/features/auth/services/authService';
+import {
+  isNativePasswordRecoveryDestination,
+  PASSWORD_RECOVERY_INVALID_MESSAGE,
+} from './apps/mobile/src/features/auth/utils/passwordRecoveryContract.cjs';
 
 const EMPTY_AUTH_STATE = {
   session: null,
@@ -29,6 +37,11 @@ const EMPTY_AUTH_STATE = {
   profile: null,
   role: null,
   isClient: false,
+};
+
+const INITIAL_RECOVERY_STATE = {
+  status: 'idle',
+  errorMessage: null,
 };
 
 export default function App() {
@@ -41,31 +54,183 @@ export default function App() {
   });
   const [authState, setAuthState] = useState(EMPTY_AUTH_STATE);
   const [authLoading, setAuthLoading] = useState(true);
+  const [recoveryState, setRecoveryState] = useState(INITIAL_RECOVERY_STATE);
+  const [authEntryRoute, setAuthEntryRoute] = useState('Login');
+  const recoveryModeRef = useRef(false);
+  const recoveryOperationRef = useRef(0);
+  const appMountedRef = useRef(true);
+
+  const exitRecoveryFlow = async (nextRoute = 'Login') => {
+    const operationVersion = ++recoveryOperationRef.current;
+    setAuthLoading(true);
+
+    let cleanupResult;
+    try {
+      cleanupResult = await signOut();
+    } catch (_error) {
+      cleanupResult = { ok: false };
+    } finally {
+      if (!appMountedRef.current || operationVersion !== recoveryOperationRef.current) return;
+
+      if (cleanupResult?.ok === false) {
+        recoveryModeRef.current = true;
+        setAuthState(EMPTY_AUTH_STATE);
+        setRecoveryState({
+          status: 'invalid',
+          errorMessage: PASSWORD_RECOVERY_INVALID_MESSAGE,
+        });
+        setAuthLoading(false);
+        return;
+      }
+
+      recoveryModeRef.current = false;
+      setAuthState(EMPTY_AUTH_STATE);
+      setAuthEntryRoute(nextRoute);
+      setRecoveryState(INITIAL_RECOVERY_STATE);
+      setAuthLoading(false);
+    }
+  };
 
   useEffect(() => {
+    appMountedRef.current = true;
     let isMounted = true;
     let validationVersion = 0;
+    const initialUrlCheckedRef = { current: false };
+
+    const processRecoveryUrl = async (url) => {
+      if (!isMounted) return { handled: true, stale: true };
+
+      if (!isNativePasswordRecoveryDestination(url)) {
+        return { handled: false };
+      }
+
+      initialUrlCheckedRef.current = true;
+      const operationVersion = ++recoveryOperationRef.current;
+      validationVersion += 1;
+      recoveryModeRef.current = true;
+      setRecoveryState({ status: 'processing', errorMessage: null });
+      setAuthState(EMPTY_AUTH_STATE);
+      setAuthLoading(true);
+
+      let result;
+      try {
+        result = await establishPasswordRecoverySession(url);
+      } catch (_error) {
+        result = {
+          ok: false,
+          message: PASSWORD_RECOVERY_INVALID_MESSAGE,
+        };
+      }
+
+      if (!isMounted || operationVersion !== recoveryOperationRef.current) {
+        return { handled: true, stale: true };
+      }
+
+      if (result.ok) {
+        setRecoveryState({ status: 'ready', errorMessage: null });
+        setAuthState(EMPTY_AUTH_STATE);
+        setAuthLoading(false);
+        return { handled: true, ok: true };
+      }
+
+      setRecoveryState({
+        status: 'invalid',
+        errorMessage: result.message || PASSWORD_RECOVERY_INVALID_MESSAGE,
+      });
+      setAuthState(EMPTY_AUTH_STATE);
+      setAuthLoading(false);
+      return { handled: true, ok: false };
+    };
 
     const init = async () => {
       setAuthLoading(true);
+
+      let initialUrl = null;
+      try {
+        initialUrl = await Linking.getInitialURL();
+      } catch (_error) {
+        initialUrl = null;
+      }
+
+      if (initialUrl) {
+        const recoveryResult = await processRecoveryUrl(initialUrl);
+        initialUrlCheckedRef.current = true;
+        if (recoveryResult.handled) return;
+      }
+
+      if (!isMounted || recoveryModeRef.current) return;
+
+      let recoveryRestoration;
+      try {
+        recoveryRestoration = await restorePasswordRecoverySession();
+      } catch (_error) {
+        recoveryRestoration = { ok: false };
+      }
+
+      if (!isMounted || recoveryModeRef.current) return;
+
+      initialUrlCheckedRef.current = true;
+      if (!recoveryRestoration?.ok) {
+        recoveryModeRef.current = true;
+        setRecoveryState({
+          status: 'invalid',
+          errorMessage: PASSWORD_RECOVERY_INVALID_MESSAGE,
+        });
+        setAuthState(EMPTY_AUTH_STATE);
+        setAuthLoading(false);
+        return;
+      }
+
+      if (recoveryRestoration.status === 'active') {
+        recoveryModeRef.current = true;
+        setRecoveryState({ status: 'ready', errorMessage: null });
+        setAuthState(EMPTY_AUTH_STATE);
+        setAuthLoading(false);
+        return;
+      }
+
       try {
         const currentAuthState = await getCurrentClientAuthState();
-        if (isMounted) {
+        if (isMounted && !recoveryModeRef.current) {
           setAuthState(currentAuthState);
         }
       } catch (err) {
         console.warn('Auth init role validation error:', err?.message || err);
-        if (isMounted) {
+        if (isMounted && !recoveryModeRef.current) {
           setAuthState(EMPTY_AUTH_STATE);
         }
       } finally {
-        if (isMounted) {
+        if (isMounted && !recoveryModeRef.current) {
           setAuthLoading(false);
         }
       }
     };
 
-    const handleAuthChange = async (_event, newSession) => {
+    const handleAuthChange = async (event, newSession) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        if (!recoveryModeRef.current) {
+          initialUrlCheckedRef.current = true;
+          recoveryModeRef.current = true;
+          recoveryOperationRef.current += 1;
+          setRecoveryState({
+            status: 'invalid',
+            errorMessage: PASSWORD_RECOVERY_INVALID_MESSAGE,
+          });
+        } else if (isPasswordRecoverySessionActive()) {
+          setRecoveryState((currentState) => (
+            currentState.status === 'processing'
+              ? { status: 'ready', errorMessage: null }
+              : currentState
+          ));
+        }
+
+        setAuthState(EMPTY_AUTH_STATE);
+        setAuthLoading(false);
+        return;
+      }
+
+      if (!initialUrlCheckedRef.current || recoveryModeRef.current) return;
+
       const currentVersion = ++validationVersion;
 
       if (!newSession) {
@@ -94,12 +259,18 @@ export default function App() {
       }
     };
 
-    init();
+    const urlSubscription = Linking.addEventListener('url', ({ url }) => {
+      void processRecoveryUrl(url);
+    });
     const { data: listener } = subscribeToAuthChanges(handleAuthChange);
+    void init();
 
     return () => {
       isMounted = false;
+      appMountedRef.current = false;
+      recoveryOperationRef.current += 1;
       listener?.subscription?.unsubscribe();
+      urlSubscription?.remove();
     };
   }, []);
 
@@ -111,7 +282,11 @@ export default function App() {
     );
   }
 
-  const canOpenClientRoutes = authState.session && authState.isClient;
+  const canOpenClientRoutes = !recoveryModeRef.current
+    && recoveryState.status === 'idle'
+    && authState.session
+    && authState.isClient;
+  const isRecoveryFlow = recoveryState.status !== 'idle';
 
   return (
     <SafeAreaProvider>
@@ -124,7 +299,17 @@ export default function App() {
               <NotificationProvider userId={authState.user?.id || null}>
                 <RootNavigator />
               </NotificationProvider>
-            ) : <AuthNavigator />}
+            ) : (
+              <AuthNavigator
+                key={`${isRecoveryFlow ? 'recovery' : 'auth'}:${authEntryRoute}`}
+                initialRouteName={isRecoveryFlow ? 'ResetPassword' : authEntryRoute}
+                recoveryStatus={recoveryState.status}
+                recoveryError={recoveryState.errorMessage}
+                onRecoverySuccess={() => exitRecoveryFlow('Login')}
+                onRecoveryCancel={() => exitRecoveryFlow('Login')}
+                onRequestAnotherLink={() => exitRecoveryFlow('ForgotPassword')}
+              />
+            )}
           </NavigationContainer>
         </DietitianConnectionProvider>
       </MealsProvider>
