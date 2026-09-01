@@ -206,11 +206,6 @@ const getWaterHistory = async (clientId) => {
     });
 };
 
-const getBadges = async () => {
-    // Persisted badge data is not available in the current MVP contract.
-    return [];
-};
-
 export const getAnalyticsOverview = async () => {
     const clientId = await getAuthorizedAnalyticsClientId();
     if (!clientId) {
@@ -218,16 +213,14 @@ export const getAnalyticsOverview = async () => {
             weights: [],
             measurements: [],
             waterHistory: [],
-            badges: [],
         };
     }
 
-    const [weights, measurements, waterHistory, badges] = await Promise.all([
+    const [weights, measurements, waterHistory] = await Promise.all([
         getWeightHistory(clientId),
         fetchMeasurements(clientId),
         getWaterHistory(clientId),
-        getBadges(),
     ]);
 
-    return { weights, measurements, waterHistory, badges };
+    return { weights, measurements, waterHistory };
 };
