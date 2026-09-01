@@ -64,6 +64,7 @@ test('native recovery parser rejects unrelated, malformed, empty, wrong-type, an
 test('auth service establishes and validates a recovery session without exposing token state', () => {
     const service = read('apps/mobile/src/features/auth/services/authService.js');
     const client = read('apps/mobile/src/lib/supabaseClient.js');
+    const store = read('apps/mobile/src/features/auth/services/passwordRecoveryStateStore.js');
 
     assert.match(service, /parsePasswordRecoveryUrl\(url\)/);
     assert.match(
@@ -74,12 +75,21 @@ test('auth service establishes and validates a recovery session without exposing
     assert.match(service, /!session\?\.user\?\.id/);
     assert.match(service, /activePasswordRecoveryUserId = session\.user\.id/);
     assert.match(service, /supabase\.auth\.signOut\(\{ scope: 'local' \}\)/);
+    assert.match(service, /savePasswordRecoveryState\(session\.user\.id\)/);
+    assert.match(service, /restorePasswordRecoverySession/);
     assert.doesNotMatch(service, /AsyncStorage/);
     assert.doesNotMatch(service, /console\.(log|warn|error)[^\n]*(access|refresh|token)/i);
     assert.match(client, /persistSession:\s*true/);
     assert.match(client, /autoRefreshToken:\s*true/);
     assert.match(client, /detectSessionInUrl:\s*false/);
     assert.doesNotMatch(client, /flowType:\s*['"]pkce['"]/i);
+    assert.match(store, /AsyncStorage\.setItem/);
+    assert.match(store, /AsyncStorage\.getItem/);
+    assert.match(store, /AsyncStorage\.removeItem/);
+    assert.match(store, /version: PASSWORD_RECOVERY_STATE_VERSION/);
+    assert.match(store, /active: true/);
+    assert.match(store, /userId/);
+    assert.doesNotMatch(store, /access_token|refresh_token|reset-password|recovery_url/i);
 });
 
 test('password update is recovery-session scoped and clears through the existing local sign-out path', () => {
@@ -90,6 +100,48 @@ test('password update is recovery-session scoped and clears through the existing
     assert.match(service, /supabase\.auth\.updateUser\(\{ password: newPassword \}\)/);
     assert.match(service, /export const signOut = async \(\) =>/);
     assert.match(service, /await safeSignOut\(\);/);
+});
+
+test('persisted recovery restoration distinguishes normal, matching, missing, and mismatched sessions', () => {
+    const service = read('apps/mobile/src/features/auth/services/authService.js');
+    const app = read('App.js');
+
+    assert.match(service, /let storedState;/);
+    assert.match(service, /getPasswordRecoveryState\(\{[\s\S]*isCurrent:/);
+    assert.match(service, /if \(!storedState\?\.ok\)/);
+    assert.match(service, /if \(!storedState\.state\)/);
+    assert.match(service, /return \{ ok: true, status: 'none' \}/);
+    assert.match(service, /return \{ ok: true, status: 'active' \}/);
+    assert.match(service, /PASSWORD_RECOVERY_SESSION_MISSING/);
+    assert.match(service, /PASSWORD_RECOVERY_SESSION_MISMATCH/);
+    assert.match(service, /clearPasswordRecoveryState\(\)/);
+    assert.match(service, /await safeSignOut\(\)/);
+    const store = read('apps/mobile/src/features/auth/services/passwordRecoveryStateStore.js');
+    assert.match(store, /JSON\.parse/);
+    assert.match(store, /isValidStoredState/);
+    assert.match(store, /USER_ID_PATTERN/);
+    assert.match(store, /PASSWORD_RECOVERY_STATE_MALFORMED/);
+
+    const restoreIndex = app.indexOf('restorePasswordRecoverySession()');
+    const normalAuthIndex = app.indexOf('getCurrentClientAuthState()');
+    assert.ok(restoreIndex >= 0);
+    assert.ok(normalAuthIndex > restoreIndex);
+    assert.match(app, /recoveryRestoration\.status === 'active'/);
+    assert.match(app, /recoveryModeRef\.current = true/);
+    assert.match(app, /initialRouteName=\{isRecoveryFlow \? 'ResetPassword' : authEntryRoute\}/);
+});
+
+test('recovery cleanup stays fail-closed until both marker and local session cleanup succeed', () => {
+    const service = read('apps/mobile/src/features/auth/services/authService.js');
+    const app = read('App.js');
+    const store = read('apps/mobile/src/features/auth/services/passwordRecoveryStateStore.js');
+
+    assert.match(service, /activePasswordRecoveryUserId = null/);
+    assert.match(service, /markerCleared: Boolean\(markerResult\?\.ok\)/);
+    assert.match(service, /sessionCleared: !signOutError/);
+    assert.match(app, /cleanupResult\?\.ok === false/);
+    assert.match(app, /status: 'invalid'/);
+    assert.doesNotMatch(store, /JSON\.stringify\([\s\S]*(access_token|refresh_token)/i);
 });
 
 test('App handles the same recovery URL path on cold start and runtime events with stale guards', () => {

@@ -22,6 +22,7 @@ import {
   ensureClientSession,
   getCurrentClientAuthState,
   isPasswordRecoverySessionActive,
+  restorePasswordRecoverySession,
   signOut,
   subscribeToAuthChanges,
 } from './apps/mobile/src/features/auth/services/authService';
@@ -60,13 +61,27 @@ export default function App() {
   const appMountedRef = useRef(true);
 
   const exitRecoveryFlow = async (nextRoute = 'Login') => {
-    recoveryOperationRef.current += 1;
+    const operationVersion = ++recoveryOperationRef.current;
     setAuthLoading(true);
 
+    let cleanupResult;
     try {
-      await signOut();
+      cleanupResult = await signOut();
+    } catch (_error) {
+      cleanupResult = { ok: false };
     } finally {
-      if (!appMountedRef.current) return;
+      if (!appMountedRef.current || operationVersion !== recoveryOperationRef.current) return;
+
+      if (cleanupResult?.ok === false) {
+        recoveryModeRef.current = true;
+        setAuthState(EMPTY_AUTH_STATE);
+        setRecoveryState({
+          status: 'invalid',
+          errorMessage: PASSWORD_RECOVERY_INVALID_MESSAGE,
+        });
+        setAuthLoading(false);
+        return;
+      }
 
       recoveryModeRef.current = false;
       setAuthState(EMPTY_AUTH_STATE);
@@ -89,6 +104,7 @@ export default function App() {
         return { handled: false };
       }
 
+      initialUrlCheckedRef.current = true;
       const operationVersion = ++recoveryOperationRef.current;
       validationVersion += 1;
       recoveryModeRef.current = true;
@@ -140,11 +156,38 @@ export default function App() {
         const recoveryResult = await processRecoveryUrl(initialUrl);
         initialUrlCheckedRef.current = true;
         if (recoveryResult.handled) return;
-      } else {
-        initialUrlCheckedRef.current = true;
       }
 
       if (!isMounted || recoveryModeRef.current) return;
+
+      let recoveryRestoration;
+      try {
+        recoveryRestoration = await restorePasswordRecoverySession();
+      } catch (_error) {
+        recoveryRestoration = { ok: false };
+      }
+
+      if (!isMounted || recoveryModeRef.current) return;
+
+      initialUrlCheckedRef.current = true;
+      if (!recoveryRestoration?.ok) {
+        recoveryModeRef.current = true;
+        setRecoveryState({
+          status: 'invalid',
+          errorMessage: PASSWORD_RECOVERY_INVALID_MESSAGE,
+        });
+        setAuthState(EMPTY_AUTH_STATE);
+        setAuthLoading(false);
+        return;
+      }
+
+      if (recoveryRestoration.status === 'active') {
+        recoveryModeRef.current = true;
+        setRecoveryState({ status: 'ready', errorMessage: null });
+        setAuthState(EMPTY_AUTH_STATE);
+        setAuthLoading(false);
+        return;
+      }
 
       try {
         const currentAuthState = await getCurrentClientAuthState();
@@ -166,6 +209,7 @@ export default function App() {
     const handleAuthChange = async (event, newSession) => {
       if (event === 'PASSWORD_RECOVERY') {
         if (!recoveryModeRef.current) {
+          initialUrlCheckedRef.current = true;
           recoveryModeRef.current = true;
           recoveryOperationRef.current += 1;
           setRecoveryState({
