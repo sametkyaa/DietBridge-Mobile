@@ -33,6 +33,12 @@
         }
       ],
       "expo-notifications"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "51259ad9-2efb-4393-9e40-8c22238a5cf8"
+      }
+    },
+    "owner": "samet_app"
   }
 }
