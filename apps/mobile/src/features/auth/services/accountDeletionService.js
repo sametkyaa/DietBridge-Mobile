@@ -1,8 +1,10 @@
 import { supabase } from '../../../lib/supabaseClient';
 import {
+    ACCOUNT_DELETION_PHASES,
     clearAccountDeletionState,
     getAccountDeletionState as readAccountDeletionState,
     saveAccountDeletionState,
+    setAccountDeletionPhase,
 } from './accountDeletionStateStore';
 
 export const ACCOUNT_DELETION_OUTCOMES = Object.freeze({
@@ -11,6 +13,7 @@ export const ACCOUNT_DELETION_OUTCOMES = Object.freeze({
     FORBIDDEN: 'FORBIDDEN',
     RETRYABLE: 'RETRYABLE',
     AMBIGUOUS_FAILURE: 'AMBIGUOUS_FAILURE',
+    LOCAL_CLEANUP_PENDING: 'LOCAL_CLEANUP_PENDING',
 });
 
 export const ACCOUNT_DELETION_MESSAGES = Object.freeze({
@@ -21,6 +24,7 @@ export const ACCOUNT_DELETION_MESSAGES = Object.freeze({
     FORBIDDEN: 'Bu hesap silme işlemi şu anda gerçekleştirilemiyor.',
     RETRYABLE: 'Hesap silme işlemi henüz tamamlanamadı. Lütfen tekrar deneyin.',
     AMBIGUOUS_FAILURE: 'Hesap silme işlemi doğrulanamadı. Lütfen tekrar deneyin.',
+    LOCAL_CLEANUP_PENDING: 'Hesabınız silindi. Bu cihazdaki oturum temizliğini tamamlayın.',
 });
 
 const getCurrentSession = async () => {
@@ -110,6 +114,14 @@ export const requestAccountDeletion = async ({ expectedUserId } = {}) => {
         );
     }
 
+    if (storedState.state?.phase === ACCOUNT_DELETION_PHASES.LOCAL_CLEANUP_PENDING) {
+        return createFailure(
+            ACCOUNT_DELETION_OUTCOMES.LOCAL_CLEANUP_PENDING,
+            ACCOUNT_DELETION_MESSAGES.LOCAL_CLEANUP_PENDING,
+            { markerPreserved: true, remoteInvoked: false },
+        );
+    }
+
     const hadPendingMarker = Boolean(storedState.state);
     if (storedState.state && storedState.state.userId !== userId) {
         return createFailure(
@@ -119,7 +131,10 @@ export const requestAccountDeletion = async ({ expectedUserId } = {}) => {
         );
     }
 
-    const markerResult = await saveAccountDeletionState(userId);
+    const markerResult = await saveAccountDeletionState(
+        userId,
+        ACCOUNT_DELETION_PHASES.REMOTE_PENDING,
+    );
     if (!markerResult?.ok) {
         return createFailure(
             ACCOUNT_DELETION_OUTCOMES.AMBIGUOUS_FAILURE,
@@ -145,10 +160,17 @@ export const requestAccountDeletion = async ({ expectedUserId } = {}) => {
 
     const { data, error } = response || {};
     if (!error && data?.data?.deleted === true) {
+        const phaseResult = await setAccountDeletionPhase(
+            userId,
+            ACCOUNT_DELETION_PHASES.LOCAL_CLEANUP_PENDING,
+        );
         return {
             ok: true,
             outcome: ACCOUNT_DELETION_OUTCOMES.DELETED,
             userId,
+            serverDeleted: true,
+            phasePersisted: Boolean(phaseResult?.ok),
+            phaseErrorCode: phaseResult?.ok ? null : (phaseResult?.code || 'ACCOUNT_DELETION_PHASE_SAVE_FAILED'),
             markerPreserved: true,
             remoteInvoked: true,
         };

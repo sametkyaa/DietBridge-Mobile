@@ -11,7 +11,11 @@ import {
     getAccountDeletionState,
     requestAccountDeletion,
 } from './accountDeletionService';
-import { clearAccountDeletionState } from './accountDeletionStateStore';
+import {
+    ACCOUNT_DELETION_PHASES,
+    clearAccountDeletionState,
+    setAccountDeletionPhase,
+} from './accountDeletionStateStore';
 import {
     clearPasswordRecoveryState,
     getPasswordRecoveryState,
@@ -48,7 +52,6 @@ export const ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE =
 
 let activePasswordRecoveryUserId = null;
 let passwordRecoveryOperationId = 0;
-let pendingLocalAccountDeletionCleanup = null;
 
 const createAuthState = ({ session = null, profile = null } = {}) => {
     const user = session?.user || null;
@@ -144,6 +147,10 @@ const assertNoPendingAccountDeletion = async (session) => {
         throw new Error(ACCOUNT_DELETION_SESSION_MISMATCH_MESSAGE);
     }
 
+    if (storedState.state.phase === ACCOUNT_DELETION_PHASES.LOCAL_CLEANUP_PENDING) {
+        throw new Error(ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE);
+    }
+
     throw new Error(ACCOUNT_DELETION_PENDING_ERROR_MESSAGE);
 };
 
@@ -170,27 +177,43 @@ export const getCurrentAuthenticatedUser = async () => {
     }
 };
 
-export const markAccountDeletionServerDeleted = (userId) => {
-    if (!userId) return { ok: false, message: ACCOUNT_DELETION_SESSION_MISMATCH_MESSAGE };
+export const getAccountDeletionCleanupState = async ({ userId } = {}) => {
+    const storedState = await readPendingAccountDeletionState();
+    const isMatchingUser = !userId || storedState?.state?.userId === userId;
+    const isPendingCleanup = storedState?.state?.phase === ACCOUNT_DELETION_PHASES.LOCAL_CLEANUP_PENDING;
 
-    pendingLocalAccountDeletionCleanup = {
-        serverDeleted: true,
-        userId,
+    return {
+        serverDeleted: Boolean(storedState?.ok && isMatchingUser && isPendingCleanup),
+        retryAvailable: Boolean(storedState?.ok && isMatchingUser && isPendingCleanup),
+        stateAvailable: Boolean(storedState?.ok),
     };
-
-    return { ok: true, serverDeleted: true };
 };
 
-export const getAccountDeletionCleanupState = ({ userId } = {}) => ({
-    serverDeleted: pendingLocalAccountDeletionCleanup?.serverDeleted === true
-        && (!userId || pendingLocalAccountDeletionCleanup.userId === userId),
-    retryAvailable: pendingLocalAccountDeletionCleanup?.serverDeleted === true
-        && (!userId || pendingLocalAccountDeletionCleanup.userId === userId),
-});
+export const completeLocalAccountDeletionCleanup = async ({ userId, serverDeletionConfirmed = false } = {}) => {
+    const storedState = await readPendingAccountDeletionState();
+    if (!storedState?.ok) {
+        return {
+            ok: false,
+            serverDeleted: false,
+            code: storedState?.code || 'ACCOUNT_DELETION_STATE_READ_FAILED',
+            message: ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE,
+        };
+    }
 
-export const completeLocalAccountDeletionCleanup = async ({ userId } = {}) => {
-    const pendingState = pendingLocalAccountDeletionCleanup;
-    if (!pendingState?.serverDeleted) {
+    const pendingState = storedState.state;
+    if (userId && pendingState?.userId && pendingState.userId !== userId) {
+        return {
+            ok: false,
+            serverDeleted: pendingState?.phase === ACCOUNT_DELETION_PHASES.LOCAL_CLEANUP_PENDING,
+            code: 'ACCOUNT_DELETION_CLEANUP_SESSION_MISMATCH',
+            message: ACCOUNT_DELETION_SESSION_MISMATCH_MESSAGE,
+        };
+    }
+
+    if (
+        (!pendingState || pendingState.phase !== ACCOUNT_DELETION_PHASES.LOCAL_CLEANUP_PENDING)
+        && !serverDeletionConfirmed
+    ) {
         return {
             ok: false,
             serverDeleted: false,
@@ -199,13 +222,13 @@ export const completeLocalAccountDeletionCleanup = async ({ userId } = {}) => {
         };
     }
 
-    if (userId && pendingState.userId !== userId) {
-        return {
-            ok: false,
-            serverDeleted: true,
-            code: 'ACCOUNT_DELETION_CLEANUP_SESSION_MISMATCH',
-            message: ACCOUNT_DELETION_SESSION_MISMATCH_MESSAGE,
-        };
+    let phasePersisted = pendingState?.phase === ACCOUNT_DELETION_PHASES.LOCAL_CLEANUP_PENDING;
+    if (serverDeletionConfirmed && pendingState?.phase !== ACCOUNT_DELETION_PHASES.LOCAL_CLEANUP_PENDING) {
+        const phaseResult = await setAccountDeletionPhase(
+            pendingState?.userId || userId,
+            ACCOUNT_DELETION_PHASES.LOCAL_CLEANUP_PENDING,
+        );
+        phasePersisted = Boolean(phaseResult?.ok);
     }
 
     const signOutResult = await safeSignOut();
@@ -213,6 +236,7 @@ export const completeLocalAccountDeletionCleanup = async ({ userId } = {}) => {
         return {
             ok: false,
             serverDeleted: true,
+            phasePersisted,
             sessionCleared: Boolean(signOutResult?.sessionCleared),
             passwordRecoveryMarkerCleared: Boolean(signOutResult?.markerCleared),
             accountDeletionMarkerCleared: false,
@@ -226,6 +250,7 @@ export const completeLocalAccountDeletionCleanup = async ({ userId } = {}) => {
         return {
             ok: false,
             serverDeleted: true,
+            phasePersisted,
             sessionCleared: Boolean(signOutResult.sessionCleared),
             passwordRecoveryMarkerCleared: Boolean(signOutResult.markerCleared),
             accountDeletionMarkerCleared: false,
@@ -234,19 +259,17 @@ export const completeLocalAccountDeletionCleanup = async ({ userId } = {}) => {
         };
     }
 
-    pendingLocalAccountDeletionCleanup = null;
     return {
         ok: true,
         serverDeleted: true,
+        phasePersisted,
         sessionCleared: Boolean(signOutResult.sessionCleared),
         passwordRecoveryMarkerCleared: Boolean(signOutResult.markerCleared),
         accountDeletionMarkerCleared: true,
     };
 };
 
-export const retryLocalAccountDeletionCleanup = async () => (
-    completeLocalAccountDeletionCleanup({ userId: pendingLocalAccountDeletionCleanup?.userId })
-);
+export const retryLocalAccountDeletionCleanup = async () => completeLocalAccountDeletionCleanup();
 
 const createAccountDeletionSignInResult = (data, cleanupResult) => {
     if (cleanupResult.ok) {
@@ -391,6 +414,17 @@ export const subscribeToAuthChanges = (callback) => {
 };
 
 export const signIn = async (email, password) => {
+    const preflightDeletionState = await readPendingAccountDeletionState();
+    if (!preflightDeletionState?.ok) {
+        await safeSignOut();
+        throw new Error(ACCOUNT_DELETION_STATE_ERROR_MESSAGE);
+    }
+
+    if (preflightDeletionState.state?.phase === ACCOUNT_DELETION_PHASES.LOCAL_CLEANUP_PENDING) {
+        await safeSignOut();
+        throw new Error(ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE);
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -413,24 +447,28 @@ export const signIn = async (email, password) => {
     }
 
     if (pendingDeletionState.state) {
+        if (pendingDeletionState.state.phase === ACCOUNT_DELETION_PHASES.LOCAL_CLEANUP_PENDING) {
+            await safeSignOut();
+            throw new Error(ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE);
+        }
+
         if (pendingDeletionState.state.userId !== data.user.id) {
             await safeSignOut();
             throw new Error(ACCOUNT_DELETION_SESSION_MISMATCH_MESSAGE);
         }
 
-        if (
-            pendingLocalAccountDeletionCleanup?.serverDeleted
-            && pendingLocalAccountDeletionCleanup.userId === data.user.id
-        ) {
-            const cleanupResult = await completeLocalAccountDeletionCleanup({ userId: data.user.id });
+        const deletionResult = await requestAccountDeletion({ expectedUserId: data.user.id });
+        if (deletionResult.outcome === ACCOUNT_DELETION_OUTCOMES.DELETED) {
+            const cleanupResult = await completeLocalAccountDeletionCleanup({
+                userId: data.user.id,
+                serverDeletionConfirmed: deletionResult.phasePersisted !== true,
+            });
             return createAccountDeletionSignInResult(data, cleanupResult);
         }
 
-        const deletionResult = await requestAccountDeletion({ expectedUserId: data.user.id });
-        if (deletionResult.outcome === ACCOUNT_DELETION_OUTCOMES.DELETED) {
-            markAccountDeletionServerDeleted(data.user.id);
-            const cleanupResult = await completeLocalAccountDeletionCleanup({ userId: data.user.id });
-            return createAccountDeletionSignInResult(data, cleanupResult);
+        if (deletionResult.outcome === ACCOUNT_DELETION_OUTCOMES.LOCAL_CLEANUP_PENDING) {
+            await safeSignOut();
+            throw new Error(ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE);
         }
 
         await safeSignOut();

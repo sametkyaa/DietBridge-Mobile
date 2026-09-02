@@ -39,6 +39,8 @@ test('Settings 3: app version comes from Expo runtime configuration', () => {
     assert.match(screen, /import Constants from 'expo-constants'/);
     assert.match(screen, /Constants\.expoConfig\?\.version \?\? Constants\.nativeAppVersion \?\? '—'/);
     assert.doesNotMatch(screen, /Sürüm 1\.0\.0/);
+    assert.doesNotMatch(screen, /Sürüm \{appVersion\}/);
+    assert.match(screen, /<Text style=\{styles\.value\}>\{appVersion\}<\/Text>/);
     assert.match(appConfig, /"version"\s*:\s*"1\.0\.0"/);
 });
 
@@ -108,6 +110,9 @@ test('Settings 10: pending deletion disables password and logout actions and off
 test('Settings 11: local cleanup failure offers only a local cleanup retry', () => {
     assert.match(viewModel, /DELETION_PHASES\.CLEANUP_FAILED/);
     assert.match(viewModel, /retryLocalAccountDeletionCleanup\(\)/);
+    assert.match(viewModel, /getAccountDeletionCleanupState\(\{ userId: authUser\.user\.id \}\)/);
+    assert.match(viewModel, /storedState\.state\?\.phase === ACCOUNT_DELETION_PHASES\.LOCAL_CLEANUP_PENDING/);
+    assert.match(viewModel, /serverDeletionConfirmed: result\.phasePersisted !== true/);
     assert.match(authService, /Hesabınız silindi ancak bu cihazdaki oturum temizliği tamamlanamadı\./);
     assert.match(screen, /Oturumu temizlemeyi tekrar dene/);
     assert.match(screen, /deletionPhase === 'cleanup_failed' \? retryLocalCleanup : retryAccountDeletion/);

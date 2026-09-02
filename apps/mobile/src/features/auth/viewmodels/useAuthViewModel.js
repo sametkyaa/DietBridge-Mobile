@@ -16,6 +16,7 @@ import {
     signUp,
 } from '../services/authService';
 import { getAccountDeletionState } from '../services/accountDeletionService';
+import { ACCOUNT_DELETION_PHASES } from '../services/accountDeletionStateStore';
 
 const KNOWN_AUTH_MESSAGES = [
     CLIENT_ONLY_ERROR_MESSAGE,
@@ -52,12 +53,23 @@ export const useAuthViewModel = () => {
         const loadAccountDeletionState = async () => {
             const [storedState, cleanupState] = await Promise.all([
                 getAccountDeletionState(),
-                Promise.resolve(getAccountDeletionCleanupState()),
+                getAccountDeletionCleanupState(),
             ]);
 
             if (!mounted) return;
-            setHasPendingAccountDeletion(Boolean(storedState?.ok && storedState.state?.active));
-            setAccountDeletionCleanupAvailable(Boolean(cleanupState?.retryAvailable));
+            const isRemotePending = storedState?.ok
+                && storedState.state?.active
+                && storedState.state.phase === ACCOUNT_DELETION_PHASES.REMOTE_PENDING;
+            const isLocalCleanupPending = storedState?.ok
+                && storedState.state?.active
+                && storedState.state.phase === ACCOUNT_DELETION_PHASES.LOCAL_CLEANUP_PENDING;
+            const cleanupRetryAvailable = Boolean(isLocalCleanupPending || cleanupState?.retryAvailable);
+
+            setHasPendingAccountDeletion(Boolean(isRemotePending));
+            setAccountDeletionCleanupAvailable(cleanupRetryAvailable);
+            setAccountDeletionCleanupError(
+                cleanupRetryAvailable ? ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE : null,
+            );
         };
 
         loadAccountDeletionState().catch(() => {

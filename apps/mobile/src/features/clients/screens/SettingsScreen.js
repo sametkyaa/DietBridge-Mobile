@@ -262,7 +262,7 @@ const SettingsScreen = ({ navigation }) => {
                     <Text style={styles.sectionTitle} accessibilityRole="header">Uygulama</Text>
                     <View style={styles.emailRow}>
                         <Text style={styles.label}>Sürüm</Text>
-                        <Text style={styles.value}>Sürüm {appVersion}</Text>
+                        <Text style={styles.value}>{appVersion}</Text>
                     </View>
                 </AppCard>
 

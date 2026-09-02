@@ -10,7 +10,6 @@ import {
     completeLocalAccountDeletionCleanup,
     getAccountDeletionCleanupState,
     getCurrentAuthenticatedUser,
-    markAccountDeletionServerDeleted,
     retryLocalAccountDeletionCleanup,
     signOut,
 } from '../../auth/services/authService';
@@ -20,6 +19,7 @@ import {
     getAccountDeletionState,
     requestAccountDeletion,
 } from '../../auth/services/accountDeletionService';
+import { ACCOUNT_DELETION_PHASES } from '../../auth/services/accountDeletionStateStore';
 
 const DELETION_PHASES = Object.freeze({
     IDLE: 'idle',
@@ -115,8 +115,12 @@ export const useSettingsViewModel = () => {
             return;
         }
 
-        const cleanupState = getAccountDeletionCleanupState({ userId: authUser.user.id });
-        if (cleanupState.serverDeleted) {
+        const cleanupState = await getAccountDeletionCleanupState({ userId: authUser.user.id });
+        if (!mountedRef.current || generation !== loadGenerationRef.current) return;
+
+        const isLocalCleanupPending = storedState.state?.phase === ACCOUNT_DELETION_PHASES.LOCAL_CLEANUP_PENDING
+            || cleanupState?.serverDeleted;
+        if (isLocalCleanupPending) {
             setDeletionPhase(DELETION_PHASES.CLEANUP_FAILED);
             setDeletionError(ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE);
         } else if (storedState.state) {
@@ -199,8 +203,10 @@ export const useSettingsViewModel = () => {
             const result = await requestAccountDeletion({ expectedUserId: userId });
 
             if (result?.outcome === ACCOUNT_DELETION_OUTCOMES.DELETED) {
-                markAccountDeletionServerDeleted(userId);
-                const cleanupResult = await completeLocalAccountDeletionCleanup({ userId });
+                const cleanupResult = await completeLocalAccountDeletionCleanup({
+                    userId,
+                    serverDeletionConfirmed: result.phasePersisted !== true,
+                });
                 if (cleanupResult?.ok) {
                     setDeletionPhase(DELETION_PHASES.IDLE);
                     setDeletionError(null);
@@ -210,6 +216,12 @@ export const useSettingsViewModel = () => {
                 setDeletionPhase(DELETION_PHASES.CLEANUP_FAILED);
                 setDeletionError(ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE);
                 return cleanupResult;
+            }
+
+            if (result?.outcome === ACCOUNT_DELETION_OUTCOMES.LOCAL_CLEANUP_PENDING) {
+                setDeletionPhase(DELETION_PHASES.CLEANUP_FAILED);
+                setDeletionError(ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE);
+                return result;
             }
 
             if (
