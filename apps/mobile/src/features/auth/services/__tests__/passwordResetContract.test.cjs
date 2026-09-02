@@ -46,7 +46,7 @@ test('Supabase reset failures cannot report success in the existing ViewModel fl
     assert.match(viewModel.slice(catchStart), /setErrorMessage\(GENERIC_ERROR_MESSAGE\)/);
 });
 
-test('Expo/EAS production-readiness contract is explicit and does not fabricate a project id', () => {
+test('Expo/EAS production-readiness contract uses the canonical EAS project id', () => {
     const app = JSON.parse(read('app.json'));
     const eas = JSON.parse(read('eas.json'));
     const plugins = app.expo.plugins;
