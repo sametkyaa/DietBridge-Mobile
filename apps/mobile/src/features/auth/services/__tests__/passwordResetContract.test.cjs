@@ -66,7 +66,11 @@ test('Expo/EAS production-readiness contract is explicit and does not fabricate 
     assert.equal(imagePickerPlugin[1].microphonePermission, false);
     assert.deepEqual(Object.keys(eas.build).sort(), ['development', 'preview', 'production']);
     assert.equal(eas.build.development.distribution, 'internal');
+    assert.equal(eas.build.development.developmentClient, true);
+    assert.equal(eas.build.development.node, '24.17.0');
     assert.equal(eas.build.preview.distribution, 'internal');
-    assert.deepEqual(eas.build.production, {});
-    assert.doesNotMatch(read('app.json'), /projectId/);
+    assert.equal(eas.build.preview.node, '24.17.0');
+    assert.equal(eas.build.production.node, '24.17.0');
+    assert.equal(app.expo.owner, 'samet_app');
+    assert.equal(app.expo.extra.eas.projectId, '51259ad9-2efb-4393-9e40-8c22238a5cf8');
 });

@@ -8,11 +8,12 @@ const test = require('node:test');
 const root = path.resolve(__dirname, '../../../../../../../');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
-test('Expo configuration keeps push client setup dormant without an EAS project id', () => {
+test('Expo configuration keeps push client setup non-interactive with the canonical EAS project id', () => {
     const app = read('app.json');
+    const config = JSON.parse(app);
     const appSource = read('App.js');
     assert.match(app, /expo-notifications/);
-    assert.doesNotMatch(app, /extra.*eas|projectId/);
+    assert.equal(config.expo.extra.eas.projectId, '51259ad9-2efb-4393-9e40-8c22238a5cf8');
     assert.equal(fs.existsSync(path.join(root, 'android')), false);
     assert.equal(fs.existsSync(path.join(root, 'ios')), false);
     assert.doesNotMatch(appSource, /requestPermissionsAsync/);
