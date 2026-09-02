@@ -6,6 +6,13 @@ import {
     parsePasswordRecoveryUrl,
 } from '../utils/passwordRecoveryContract.cjs';
 import {
+    ACCOUNT_DELETION_MESSAGES,
+    ACCOUNT_DELETION_OUTCOMES,
+    getAccountDeletionState,
+    requestAccountDeletion,
+} from './accountDeletionService';
+import { clearAccountDeletionState } from './accountDeletionStateStore';
+import {
     clearPasswordRecoveryState,
     getPasswordRecoveryState,
     savePasswordRecoveryState,
@@ -18,9 +25,30 @@ export const LOGIN_FAILED_ERROR_MESSAGE = 'E-posta veya şifre hatalı.';
 export const GENERIC_AUTH_ERROR_MESSAGE = 'Bir sorun oluştu. Lütfen tekrar deneyin.';
 export const PASSWORD_UPDATE_ERROR_MESSAGE =
     'Şifreniz güncellenemedi. Lütfen yeni bir sıfırlama bağlantısı isteyin.';
+export const PASSWORD_CHANGE_ERROR_MESSAGE =
+    'Şifreniz güncellenemedi. Lütfen tekrar deneyin.';
+export const PASSWORD_CURRENT_INVALID_MESSAGE =
+    'Mevcut şifreniz hatalı.';
+export const PASSWORD_WEAK_MESSAGE =
+    'Yeni şifreniz yeterince güçlü değil. Lütfen daha güçlü bir şifre deneyin.';
+export const PASSWORD_SAME_MESSAGE =
+    'Yeni şifreniz mevcut şifrenizden farklı olmalıdır.';
+export const PASSWORD_SESSION_MISMATCH_MESSAGE =
+    'Oturum doğrulanamadı. Lütfen tekrar giriş yapın.';
+export const ACCOUNT_DELETION_PENDING_ERROR_MESSAGE =
+    'Bekleyen hesap silme işlemi tamamlanmadan uygulamaya devam edilemez.';
+export const ACCOUNT_DELETION_SESSION_MISMATCH_MESSAGE =
+    'Hesap doğrulanamadı. Lütfen tekrar giriş yapın.';
+export const ACCOUNT_DELETION_STATE_ERROR_MESSAGE =
+    'Hesap silme durumu doğrulanamadı. Lütfen tekrar deneyin.';
+export const ACCOUNT_DELETION_RETRY_MESSAGE =
+    'Hesap silme işlemi henüz tamamlanamadı. Aynı hesapla tekrar giriş yaparak yeniden deneyebilirsiniz.';
+export const ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE =
+    'Hesabınız silindi ancak bu cihazdaki oturum temizliği tamamlanamadı.';
 
 let activePasswordRecoveryUserId = null;
 let passwordRecoveryOperationId = 0;
+let pendingLocalAccountDeletionCleanup = null;
 
 const createAuthState = ({ session = null, profile = null } = {}) => {
     const user = session?.user || null;
@@ -93,6 +121,219 @@ const safeSignOut = async ({ operationId = null } = {}) => {
     };
 };
 
+const readPendingAccountDeletionState = async () => {
+    try {
+        return await getAccountDeletionState();
+    } catch (_error) {
+        return { ok: false, code: 'ACCOUNT_DELETION_STATE_READ_FAILED' };
+    }
+};
+
+const assertNoPendingAccountDeletion = async (session) => {
+    const storedState = await readPendingAccountDeletionState();
+
+    if (!storedState?.ok) {
+        await safeSignOut();
+        throw new Error(ACCOUNT_DELETION_STATE_ERROR_MESSAGE);
+    }
+
+    if (!storedState.state) return null;
+
+    if (storedState.state.userId !== session.user.id) {
+        await safeSignOut();
+        throw new Error(ACCOUNT_DELETION_SESSION_MISMATCH_MESSAGE);
+    }
+
+    throw new Error(ACCOUNT_DELETION_PENDING_ERROR_MESSAGE);
+};
+
+export const getCurrentAuthenticatedUser = async () => {
+    try {
+        const {
+            data: { user } = {},
+            error,
+        } = await supabase.auth.getUser();
+
+        if (error || !user?.id) {
+            return { ok: false, message: PASSWORD_SESSION_MISMATCH_MESSAGE };
+        }
+
+        return {
+            ok: true,
+            user: {
+                id: user.id,
+                email: user.email || null,
+            },
+        };
+    } catch (_error) {
+        return { ok: false, message: PASSWORD_SESSION_MISMATCH_MESSAGE };
+    }
+};
+
+export const markAccountDeletionServerDeleted = (userId) => {
+    if (!userId) return { ok: false, message: ACCOUNT_DELETION_SESSION_MISMATCH_MESSAGE };
+
+    pendingLocalAccountDeletionCleanup = {
+        serverDeleted: true,
+        userId,
+    };
+
+    return { ok: true, serverDeleted: true };
+};
+
+export const getAccountDeletionCleanupState = ({ userId } = {}) => ({
+    serverDeleted: pendingLocalAccountDeletionCleanup?.serverDeleted === true
+        && (!userId || pendingLocalAccountDeletionCleanup.userId === userId),
+    retryAvailable: pendingLocalAccountDeletionCleanup?.serverDeleted === true
+        && (!userId || pendingLocalAccountDeletionCleanup.userId === userId),
+});
+
+export const completeLocalAccountDeletionCleanup = async ({ userId } = {}) => {
+    const pendingState = pendingLocalAccountDeletionCleanup;
+    if (!pendingState?.serverDeleted) {
+        return {
+            ok: false,
+            serverDeleted: false,
+            code: 'ACCOUNT_DELETION_CLEANUP_NOT_PENDING',
+            message: ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE,
+        };
+    }
+
+    if (userId && pendingState.userId !== userId) {
+        return {
+            ok: false,
+            serverDeleted: true,
+            code: 'ACCOUNT_DELETION_CLEANUP_SESSION_MISMATCH',
+            message: ACCOUNT_DELETION_SESSION_MISMATCH_MESSAGE,
+        };
+    }
+
+    const signOutResult = await safeSignOut();
+    if (!signOutResult?.ok) {
+        return {
+            ok: false,
+            serverDeleted: true,
+            sessionCleared: Boolean(signOutResult?.sessionCleared),
+            passwordRecoveryMarkerCleared: Boolean(signOutResult?.markerCleared),
+            accountDeletionMarkerCleared: false,
+            code: 'ACCOUNT_DELETION_LOCAL_SIGNOUT_FAILED',
+            message: ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE,
+        };
+    }
+
+    const markerResult = await clearAccountDeletionState();
+    if (!markerResult?.ok) {
+        return {
+            ok: false,
+            serverDeleted: true,
+            sessionCleared: Boolean(signOutResult.sessionCleared),
+            passwordRecoveryMarkerCleared: Boolean(signOutResult.markerCleared),
+            accountDeletionMarkerCleared: false,
+            code: 'ACCOUNT_DELETION_MARKER_CLEAR_FAILED',
+            message: ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE,
+        };
+    }
+
+    pendingLocalAccountDeletionCleanup = null;
+    return {
+        ok: true,
+        serverDeleted: true,
+        sessionCleared: Boolean(signOutResult.sessionCleared),
+        passwordRecoveryMarkerCleared: Boolean(signOutResult.markerCleared),
+        accountDeletionMarkerCleared: true,
+    };
+};
+
+export const retryLocalAccountDeletionCleanup = async () => (
+    completeLocalAccountDeletionCleanup({ userId: pendingLocalAccountDeletionCleanup?.userId })
+);
+
+const createAccountDeletionSignInResult = (data, cleanupResult) => {
+    if (cleanupResult.ok) {
+        return {
+            ...data,
+            profile: null,
+            role: null,
+            isClient: false,
+            accountDeletionCompleted: true,
+        };
+    }
+
+    return {
+        ...data,
+        profile: null,
+        role: null,
+        isClient: false,
+        accountDeletionServerDeleted: true,
+        accountDeletionCleanupFailed: true,
+        accountDeletionCleanupMessage: ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE,
+    };
+};
+
+const getPasswordChangeFailure = (error) => {
+    const code = error?.code;
+    if (code === 'weak_password') {
+        return { ok: false, code: 'PASSWORD_WEAK', message: PASSWORD_WEAK_MESSAGE };
+    }
+    if (code === 'same_password') {
+        return { ok: false, code: 'PASSWORD_SAME', message: PASSWORD_SAME_MESSAGE };
+    }
+    return { ok: false, code: 'PASSWORD_CHANGE_FAILED', message: PASSWORD_CHANGE_ERROR_MESSAGE };
+};
+
+export const changeAuthenticatedPassword = async ({ currentPassword, newPassword } = {}) => {
+    if (typeof currentPassword !== 'string' || !currentPassword) {
+        return { ok: false, code: 'PASSWORD_CURRENT_INVALID', message: PASSWORD_CURRENT_INVALID_MESSAGE };
+    }
+    if (typeof newPassword !== 'string' || !newPassword) {
+        return { ok: false, code: 'PASSWORD_CHANGE_FAILED', message: PASSWORD_CHANGE_ERROR_MESSAGE };
+    }
+    if (currentPassword === newPassword) {
+        return { ok: false, code: 'PASSWORD_SAME', message: PASSWORD_SAME_MESSAGE };
+    }
+
+    try {
+        const {
+            data: { session } = {},
+            error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (sessionError || !session?.user?.id || !session.user.email) {
+            return { ok: false, code: 'PASSWORD_SESSION_INVALID', message: PASSWORD_SESSION_MISMATCH_MESSAGE };
+        }
+
+        const currentUser = await getCurrentAuthenticatedUser();
+        if (!currentUser.ok || currentUser.user.id !== session.user.id) {
+            return { ok: false, code: 'PASSWORD_SESSION_MISMATCH', message: PASSWORD_SESSION_MISMATCH_MESSAGE };
+        }
+
+        const { data: reauthData, error: reauthError } = await supabase.auth.signInWithPassword({
+            email: session.user.email,
+            password: currentPassword,
+        });
+
+        if (reauthError || !reauthData?.user?.id) {
+            return { ok: false, code: 'PASSWORD_CURRENT_INVALID', message: PASSWORD_CURRENT_INVALID_MESSAGE };
+        }
+
+        if (reauthData.user.id !== session.user.id) {
+            await safeSignOut();
+            return { ok: false, code: 'PASSWORD_SESSION_MISMATCH', message: PASSWORD_SESSION_MISMATCH_MESSAGE };
+        }
+
+        const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) return getPasswordChangeFailure(error);
+        if (data?.user?.id !== session.user.id) {
+            await safeSignOut();
+            return { ok: false, code: 'PASSWORD_SESSION_MISMATCH', message: PASSWORD_SESSION_MISMATCH_MESSAGE };
+        }
+
+        return { ok: true };
+    } catch (_error) {
+        return { ok: false, code: 'PASSWORD_CHANGE_FAILED', message: PASSWORD_CHANGE_ERROR_MESSAGE };
+    }
+};
+
 export const getUserProfile = async (userId) => {
     const { data: profile, error } = await supabase
         .from('profiles')
@@ -112,6 +353,8 @@ export const ensureClientSession = async (session) => {
     if (!session?.user?.id) {
         return createAuthState();
     }
+
+    await assertNoPendingAccountDeletion(session);
 
     const profile = await getUserProfile(session.user.id);
 
@@ -161,6 +404,43 @@ export const signIn = async (email, password) => {
     if (!data?.session || !data?.user?.id) {
         await safeSignOut();
         throw new Error(GENERIC_AUTH_ERROR_MESSAGE);
+    }
+
+    const pendingDeletionState = await readPendingAccountDeletionState();
+    if (!pendingDeletionState?.ok) {
+        await safeSignOut();
+        throw new Error(ACCOUNT_DELETION_STATE_ERROR_MESSAGE);
+    }
+
+    if (pendingDeletionState.state) {
+        if (pendingDeletionState.state.userId !== data.user.id) {
+            await safeSignOut();
+            throw new Error(ACCOUNT_DELETION_SESSION_MISMATCH_MESSAGE);
+        }
+
+        if (
+            pendingLocalAccountDeletionCleanup?.serverDeleted
+            && pendingLocalAccountDeletionCleanup.userId === data.user.id
+        ) {
+            const cleanupResult = await completeLocalAccountDeletionCleanup({ userId: data.user.id });
+            return createAccountDeletionSignInResult(data, cleanupResult);
+        }
+
+        const deletionResult = await requestAccountDeletion({ expectedUserId: data.user.id });
+        if (deletionResult.outcome === ACCOUNT_DELETION_OUTCOMES.DELETED) {
+            markAccountDeletionServerDeleted(data.user.id);
+            const cleanupResult = await completeLocalAccountDeletionCleanup({ userId: data.user.id });
+            return createAccountDeletionSignInResult(data, cleanupResult);
+        }
+
+        await safeSignOut();
+        const retryableDeletionFailure = deletionResult.outcome === ACCOUNT_DELETION_OUTCOMES.RETRYABLE
+            || deletionResult.outcome === ACCOUNT_DELETION_OUTCOMES.AMBIGUOUS_FAILURE;
+        throw new Error(
+            retryableDeletionFailure
+                ? ACCOUNT_DELETION_RETRY_MESSAGE
+                : (deletionResult.message || ACCOUNT_DELETION_MESSAGES.AMBIGUOUS_FAILURE),
+        );
     }
 
     const authState = await ensureClientSession(data.session);

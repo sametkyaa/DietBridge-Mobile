@@ -20,6 +20,12 @@ export default function AuthScreen({ navigation }) {
     togglePasswordVisibility,
     isConfirmPasswordVisible,
     toggleConfirmPasswordVisibility,
+    hasPendingAccountDeletion,
+    accountDeletionSuccessMessage,
+    accountDeletionCleanupError,
+    accountDeletionCleanupAvailable,
+    accountDeletionCleanupLoading,
+    handleRetryAccountDeletionCleanup,
     isSignIn,
     handleAuth,
   } = useAuthViewModel();
@@ -38,6 +44,12 @@ export default function AuthScreen({ navigation }) {
           onSubmit={handleAuth}
           onForgotPassword={() => navigation.navigate('ForgotPassword')}
           onRegister={() => setMode('signup')}
+          pendingAccountDeletion={hasPendingAccountDeletion}
+          accountDeletionSuccessMessage={accountDeletionSuccessMessage}
+          accountDeletionCleanupError={accountDeletionCleanupError}
+          accountDeletionCleanupAvailable={accountDeletionCleanupAvailable}
+          accountDeletionCleanupLoading={accountDeletionCleanupLoading}
+          onRetryAccountDeletionCleanup={handleRetryAccountDeletionCleanup}
         />
       ) : (
         <RegisterView

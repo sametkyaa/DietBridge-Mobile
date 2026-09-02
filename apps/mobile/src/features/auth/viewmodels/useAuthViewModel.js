@@ -1,19 +1,32 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import {
+    ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE,
+    ACCOUNT_DELETION_PENDING_ERROR_MESSAGE,
+    ACCOUNT_DELETION_RETRY_MESSAGE,
+    ACCOUNT_DELETION_SESSION_MISMATCH_MESSAGE,
+    ACCOUNT_DELETION_STATE_ERROR_MESSAGE,
     CLIENT_ONLY_ERROR_MESSAGE,
     GENERIC_AUTH_ERROR_MESSAGE,
     LOGIN_FAILED_ERROR_MESSAGE,
     PROFILE_NOT_FOUND_ERROR_MESSAGE,
+    getAccountDeletionCleanupState,
+    retryLocalAccountDeletionCleanup,
     signIn,
     signUp,
 } from '../services/authService';
+import { getAccountDeletionState } from '../services/accountDeletionService';
 
 const KNOWN_AUTH_MESSAGES = [
     CLIENT_ONLY_ERROR_MESSAGE,
     PROFILE_NOT_FOUND_ERROR_MESSAGE,
     LOGIN_FAILED_ERROR_MESSAGE,
     GENERIC_AUTH_ERROR_MESSAGE,
+    ACCOUNT_DELETION_PENDING_ERROR_MESSAGE,
+    ACCOUNT_DELETION_SESSION_MISMATCH_MESSAGE,
+    ACCOUNT_DELETION_STATE_ERROR_MESSAGE,
+    ACCOUNT_DELETION_RETRY_MESSAGE,
+    ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE,
 ];
 
 export const useAuthViewModel = () => {
@@ -26,6 +39,35 @@ export const useAuthViewModel = () => {
     const [loading, setLoading] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
+    const [hasPendingAccountDeletion, setHasPendingAccountDeletion] = useState(false);
+    const [accountDeletionSuccessMessage, setAccountDeletionSuccessMessage] = useState(null);
+    const [accountDeletionCleanupError, setAccountDeletionCleanupError] = useState(null);
+    const [accountDeletionCleanupAvailable, setAccountDeletionCleanupAvailable] = useState(false);
+    const [accountDeletionCleanupLoading, setAccountDeletionCleanupLoading] = useState(false);
+    const accountDeletionCleanupLockRef = useRef(false);
+
+    useEffect(() => {
+        let mounted = true;
+
+        const loadAccountDeletionState = async () => {
+            const [storedState, cleanupState] = await Promise.all([
+                getAccountDeletionState(),
+                Promise.resolve(getAccountDeletionCleanupState()),
+            ]);
+
+            if (!mounted) return;
+            setHasPendingAccountDeletion(Boolean(storedState?.ok && storedState.state?.active));
+            setAccountDeletionCleanupAvailable(Boolean(cleanupState?.retryAvailable));
+        };
+
+        loadAccountDeletionState().catch(() => {
+            if (mounted) setHasPendingAccountDeletion(false);
+        });
+
+        return () => {
+            mounted = false;
+        };
+    }, []);
 
     // Focus states
     const [isEmailFocused, setIsEmailFocused] = useState(false);
@@ -61,7 +103,24 @@ export const useAuthViewModel = () => {
         setLoading(true);
         try {
             if (isSignIn) {
-                await signIn(email, password);
+                const result = await signIn(email, password);
+                if (result?.accountDeletionCompleted) {
+                    setHasPendingAccountDeletion(false);
+                    setAccountDeletionCleanupAvailable(false);
+                    setAccountDeletionCleanupError(null);
+                    setAccountDeletionSuccessMessage('Hesabınız silindi.');
+                    setPassword('');
+                    Alert.alert('Başarılı', 'Hesabınız silindi.');
+                } else if (result?.accountDeletionCleanupFailed) {
+                    setAccountDeletionCleanupAvailable(true);
+                    setAccountDeletionCleanupError(
+                        result.accountDeletionCleanupMessage || ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE,
+                    );
+                    Alert.alert(
+                        'Bilgi',
+                        result.accountDeletionCleanupMessage || ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE,
+                    );
+                }
             } else {
                 if (!fullName.trim()) {
                     Alert.alert('Hata', 'Lütfen ad soyad alanını doldurun.');
@@ -84,6 +143,30 @@ export const useAuthViewModel = () => {
         }
     };
 
+    const handleRetryAccountDeletionCleanup = async () => {
+        if (loading || accountDeletionCleanupLoading || accountDeletionCleanupLockRef.current) return;
+
+        accountDeletionCleanupLockRef.current = true;
+        setAccountDeletionCleanupLoading(true);
+        try {
+            const result = await retryLocalAccountDeletionCleanup();
+            if (result?.ok) {
+                setAccountDeletionCleanupAvailable(false);
+                setAccountDeletionCleanupError(null);
+                setHasPendingAccountDeletion(false);
+                setAccountDeletionSuccessMessage('Hesabınız silindi.');
+                Alert.alert('Başarılı', 'Hesabınız silindi.');
+            } else {
+                setAccountDeletionCleanupError(
+                    result?.message || ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE,
+                );
+            }
+        } finally {
+            accountDeletionCleanupLockRef.current = false;
+            setAccountDeletionCleanupLoading(false);
+        }
+    };
+
     return {
         mode,
         setMode,
@@ -102,6 +185,12 @@ export const useAuthViewModel = () => {
         togglePasswordVisibility,
         isConfirmPasswordVisible,
         toggleConfirmPasswordVisibility,
+        hasPendingAccountDeletion,
+        accountDeletionSuccessMessage,
+        accountDeletionCleanupError,
+        accountDeletionCleanupAvailable,
+        accountDeletionCleanupLoading,
+        handleRetryAccountDeletionCleanup,
         isEmailFocused,
         setIsEmailFocused,
         isPasswordFocused,
