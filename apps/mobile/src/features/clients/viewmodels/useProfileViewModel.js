@@ -6,7 +6,6 @@ import {
     deleteProfileAvatar,
     getCurrentUserProfile,
     getProfileReferenceData,
-    signOut,
     updateChronicConditions,
     updateCurrentUserProfile,
     updateDislikedFoods,
@@ -154,9 +153,6 @@ export const useProfileViewModel = () => {
     const [avatarUrl, setAvatarUrl] = useState(null);
     const [clientData, setClientData] = useState(INITIAL_CLIENT_DATA);
 
-    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-    const [waterRemindersEnabled, setWaterRemindersEnabled] = useState(true);
-
     const [isEditing, setIsEditing] = useState(false);
     const [editingField, setEditingField] = useState(null);
     const [editingValue, setEditingValue] = useState('');
@@ -252,30 +248,6 @@ export const useProfileViewModel = () => {
 
     const updateField = (field, value) => {
         setEditForm((current) => ({ ...current, [field]: value }));
-    };
-
-    const handleLogout = async () => {
-        Alert.alert(
-            'Çıkış Yap',
-            'Hesabınızdan çıkış yapmak istediğinize emin misiniz?',
-            [
-                { text: 'İptal', style: 'cancel' },
-                {
-                    text: 'Çıkış Yap',
-                    style: 'destructive',
-                    onPress: async () => {
-                        setIsLoading(true);
-                        try {
-                            await signOut();
-                        } catch (logoutError) {
-                            Alert.alert('Hata', logoutError.message);
-                        } finally {
-                            setIsLoading(false);
-                        }
-                    },
-                },
-            ]
-        );
     };
 
     const handleRowEdit = (fieldKey) => {
@@ -604,11 +576,6 @@ export const useProfileViewModel = () => {
         userName,
         avatarUrl,
         clientData,
-        notificationsEnabled,
-        setNotificationsEnabled,
-        waterRemindersEnabled,
-        setWaterRemindersEnabled,
-        handleLogout,
         isEditing,
         startEditing,
         cancelEditing,

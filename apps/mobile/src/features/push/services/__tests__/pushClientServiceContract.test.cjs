@@ -38,9 +38,8 @@ test('revoke is installation-scoped, token-free, and best effort before local si
     assert.match(service, /p_installation_id/);
     assert.doesNotMatch(service, /(?:p_expo_push_token[\s\S]{0,120}revoke|revoke[\s\S]{0,120}expoPushToken)/);
     assert.match(auth, /revokePushInstallationBestEffort/);
-    assert.match(client, /revokePushInstallationBestEffort/);
     assert.match(auth, /revokePushInstallationBestEffort\(\);[\s\S]*supabase\.auth\.signOut/);
-    assert.match(client, /revokePushInstallationBestEffort\(\);[\s\S]*supabase\.auth\.signOut/);
+    assert.doesNotMatch(client, /revokePushInstallationBestEffort|export const signOut/);
 });
 
 test('lifecycle integration is separate from NotificationProvider and does not add Push navigation or badge state', () => {

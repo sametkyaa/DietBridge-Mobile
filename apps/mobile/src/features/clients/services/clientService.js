@@ -1,5 +1,4 @@
 import { supabase } from '../../../lib/supabaseClient';
-import { revokePushInstallationBestEffort } from '../../push/services/pushRegistrationService';
 import { toLocalDateKey } from '../../../shared/utils/localDate';
 import {
     getUniqueCaseInsensitiveValues,
@@ -692,12 +691,6 @@ export const saveMyWeightMeasurement = async ({ weight } = {}) => saveCurrentWei
 export const getBloodTypes = async () => (await getProfileReferenceData()).bloodTypes;
 export const getMedicalConditions = async () => [];
 export const getMedicationsCatalog = async () => [];
-
-export const signOut = async () => {
-    await revokePushInstallationBestEffort();
-    const { error } = await supabase.auth.signOut({ scope: 'local' });
-    if (error) throw error;
-};
 
 export const getDailyQuote = () => {
     const quotes = [

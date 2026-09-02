@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppButton, AppCard, AppSkeleton, ErrorState, Icon, InlineAlert } from '../../../shared/components/ui';
+import { AppCard, AppSkeleton, ErrorState, Icon, InlineAlert } from '../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../shared/theme';
 import {
     AvatarPreviewSheet,
@@ -39,8 +39,7 @@ const ProfileScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const vm = useProfileViewModel();
     const {
-        profile, loading, userName, avatarUrl, clientData, notificationsEnabled, setNotificationsEnabled,
-        waterRemindersEnabled, setWaterRemindersEnabled, handleLogout, isEditing, cancelEditing,
+        profile, loading, userName, avatarUrl, clientData, isEditing, cancelEditing,
         startEditing, editForm, updateField, handleSaveProfile, editingField, setEditingField, editingValue,
         setEditingValue, editingInitialValue, handleRowEdit, handleRowSave, waterGoalLiters, sleepHours, saveChronicConditions,
         saveMedications, saveFoodIntolerances, saveDislikedFoods, saveWaterGoalLiters, saveAverageSleepHours, handleAvatarUpload,
@@ -138,7 +137,6 @@ const ProfileScreen = ({ navigation }) => {
                     <DietitianProfileCard loading={isLoadingConnection} dietitian={activeDietitian} hasActive={hasActiveDietitian} error={connectionError} expanded={isDietitianCardExpanded} onToggle={handleDietitianCardToggle} />
                 )}
                 <ProfileSectionCard title="Kişisel bilgiler" icon="person" rows={[
-                    { key: 'email', label: 'E-posta', value: profile?.email },
                     { key: 'phone', label: 'Telefon', value: profile?.phone },
                     { key: 'current', label: 'Güncel kilo', value: display(clientData.currentWeight, 'kg') },
                     { key: 'target', label: 'Hedef kilo', value: display(clientData.targetWeight, 'kg') },
@@ -147,13 +145,6 @@ const ProfileScreen = ({ navigation }) => {
                 <ProfileSectionCard title="Sağlık bilgileri" icon="heartPulse" rows={medicalRows} />
                 <ProfileSectionCard title="Yaşam tarzı" icon="footprints" rows={lifestyleRows} />
                 <ProfileSectionCard title="Beslenme tercihleri" icon="leaf" rows={nutritionRows} />
-                <AppCard>
-                    <Text style={styles.sectionTitle} accessibilityRole="header">Bildirim tercihleri</Text>
-                    <Text style={styles.localNote}>Bu tercihler şu anda yalnızca bu cihaz oturumu için geçicidir.</Text>
-                    <ToggleRow label="Bildirimler" value={notificationsEnabled} onChange={setNotificationsEnabled} />
-                    <ToggleRow label="Su hatırlatıcıları" value={waterRemindersEnabled} onChange={setWaterRemindersEnabled} />
-                </AppCard>
-                <AppButton variant="secondary" label="Çıkış yap" onPress={handleLogout} icon={<Icon name="logout" size={18} color={colors.primaryDark} />} />
             </ScrollView>
 
             <ProfileEditSheet visible={isEditing} form={editForm} onChange={updateField} onSave={handleSaveProfile} onClose={closeGenericEditor} isSaving={isSaving} error={validationErrors.form} bottomInset={insets.bottom} />
@@ -177,10 +168,6 @@ const ProfileScreen = ({ navigation }) => {
     );
 };
 
-function ToggleRow({ label, value, onChange }) {
-    return <View style={styles.toggleRow}><Text style={styles.toggleLabel}>{label}</Text><Switch value={value} onValueChange={onChange} accessibilityLabel={label} accessibilityRole="switch" accessibilityState={{ checked: value }} trackColor={{ false: colors.borderSoft, true: colors.primarySoft }} thumbColor={value ? colors.primaryDark : colors.textTertiary} /></View>;
-}
-
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: colors.background },
     topBar: { minHeight: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.x3 },
@@ -195,9 +182,6 @@ const styles = StyleSheet.create({
     stat: { minWidth: 92, flexGrow: 1, flexBasis: '28%', backgroundColor: colors.surfaceMuted, padding: spacing.x3, borderRadius: 14 },
     statLabel: { ...typography.caption, color: colors.textSecondary },
     statValue: { ...typography.bodyMedium, color: colors.textPrimary, marginTop: 2 },
-    localNote: { ...typography.supporting, color: colors.textSecondary, marginTop: spacing.x1 },
-    toggleRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.borderSoft, marginTop: spacing.x2 },
-    toggleLabel: { ...typography.bodyMedium, color: colors.textPrimary, flex: 1 },
     pressed: { opacity: 0.8 },
 });
 

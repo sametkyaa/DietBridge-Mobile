@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { AppButton, AppInput, Icon } from '../../../shared/components/ui';
+import { AppButton, AppInput, Icon, InlineAlert } from '../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 import PasswordToggle from './PasswordToggle';
 
@@ -15,6 +15,12 @@ export default function LoginView({
   onSubmit,
   onForgotPassword,
   onRegister,
+  pendingAccountDeletion = false,
+  accountDeletionSuccessMessage = null,
+  accountDeletionCleanupError = null,
+  accountDeletionCleanupAvailable = false,
+  accountDeletionCleanupLoading = false,
+  onRetryAccountDeletionCleanup,
 }) {
   return (
     <>
@@ -23,6 +29,35 @@ export default function LoginView({
       </View>
       <Text accessibilityRole="header" style={styles.title}>Tekrar hoş geldin</Text>
       <Text style={styles.subtitle}>Hesabına giriş yap, kaldığın yerden devam et.</Text>
+
+      {pendingAccountDeletion ? (
+        <InlineAlert
+          variant="warning"
+          message="Bekleyen hesap silme işlemini tamamlamak için aynı hesapla giriş yapın."
+          style={styles.accountDeletionAlert}
+        />
+      ) : null}
+      {accountDeletionSuccessMessage ? (
+        <InlineAlert
+          variant="success"
+          message={accountDeletionSuccessMessage}
+          style={styles.accountDeletionAlert}
+        />
+      ) : null}
+      {accountDeletionCleanupError ? (
+        <View style={styles.accountDeletionCleanup}>
+          <InlineAlert variant="error" message={accountDeletionCleanupError} />
+          {accountDeletionCleanupAvailable ? (
+            <AppButton
+              variant="text"
+              label="Oturumu temizlemeyi tekrar dene"
+              loading={accountDeletionCleanupLoading}
+              disabled={loading}
+              onPress={onRetryAccountDeletionCleanup}
+            />
+          ) : null}
+        </View>
+      ) : null}
 
       <View style={styles.form}>
         <AppInput
@@ -105,6 +140,8 @@ const styles = StyleSheet.create({
   title: { ...typography.screenTitle, color: colors.textPrimary, marginTop: spacing.x5 },
   subtitle: { ...typography.supporting, color: colors.textSecondary, marginTop: spacing.x2 },
   form: { gap: spacing.x4, marginTop: spacing.x8 },
+  accountDeletionAlert: { marginTop: spacing.x4 },
+  accountDeletionCleanup: { gap: spacing.x1, marginTop: spacing.x4 },
   forgot: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.x2 },
   spacer: { flex: 1, minHeight: spacing.x8 },
   footer: {
