@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, StatusBar, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, StatusBar, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
@@ -58,6 +58,8 @@ export default function App() {
   const [authEntryRoute, setAuthEntryRoute] = useState('Login');
   const recoveryModeRef = useRef(false);
   const recoveryOperationRef = useRef(0);
+  const authRetryPendingRef = useRef(false);
+  const authRevalidationInFlightRef = useRef(null);
   const appMountedRef = useRef(true);
 
   const exitRecoveryFlow = async (nextRoute = 'Login') => {
@@ -97,6 +99,54 @@ export default function App() {
     let validationVersion = 0;
     const initialUrlCheckedRef = { current: false };
 
+    const retryPendingAuthValidation = async () => {
+      if (
+        !isMounted
+        || !initialUrlCheckedRef.current
+        || recoveryModeRef.current
+        || !authRetryPendingRef.current
+        || authRevalidationInFlightRef.current
+      ) return;
+
+      const request = { version: ++validationVersion };
+      authRevalidationInFlightRef.current = request;
+      setAuthLoading(true);
+
+      try {
+        const nextAuthState = await getCurrentClientAuthState();
+        if (
+          !isMounted
+          || request.version !== validationVersion
+          || recoveryModeRef.current
+        ) return;
+
+        authRetryPendingRef.current = false;
+        setAuthState(nextAuthState);
+      } catch (err) {
+        console.warn('Auth lifecycle role validation error:', err?.message || err);
+        if (
+          isMounted
+          && request.version === validationVersion
+          && !recoveryModeRef.current
+        ) {
+          authRetryPendingRef.current = true;
+          setAuthState(EMPTY_AUTH_STATE);
+        }
+      } finally {
+        if (
+          isMounted
+          && request.version === validationVersion
+          && !recoveryModeRef.current
+        ) {
+          setAuthLoading(false);
+        }
+
+        if (authRevalidationInFlightRef.current === request) {
+          authRevalidationInFlightRef.current = null;
+        }
+      }
+    };
+
     const processRecoveryUrl = async (url) => {
       if (!isMounted) return { handled: true, stale: true };
 
@@ -108,6 +158,7 @@ export default function App() {
       const operationVersion = ++recoveryOperationRef.current;
       validationVersion += 1;
       recoveryModeRef.current = true;
+      authRetryPendingRef.current = false;
       setRecoveryState({ status: 'processing', errorMessage: null });
       setAuthState(EMPTY_AUTH_STATE);
       setAuthLoading(true);
@@ -189,18 +240,33 @@ export default function App() {
         return;
       }
 
+      const currentVersion = ++validationVersion;
       try {
         const currentAuthState = await getCurrentClientAuthState();
-        if (isMounted && !recoveryModeRef.current) {
+        if (
+          isMounted
+          && currentVersion === validationVersion
+          && !recoveryModeRef.current
+        ) {
+          authRetryPendingRef.current = false;
           setAuthState(currentAuthState);
         }
       } catch (err) {
         console.warn('Auth init role validation error:', err?.message || err);
-        if (isMounted && !recoveryModeRef.current) {
+        if (
+          isMounted
+          && currentVersion === validationVersion
+          && !recoveryModeRef.current
+        ) {
+          authRetryPendingRef.current = true;
           setAuthState(EMPTY_AUTH_STATE);
         }
       } finally {
-        if (isMounted && !recoveryModeRef.current) {
+        if (
+          isMounted
+          && currentVersion === validationVersion
+          && !recoveryModeRef.current
+        ) {
           setAuthLoading(false);
         }
       }
@@ -225,6 +291,7 @@ export default function App() {
         }
 
         setAuthState(EMPTY_AUTH_STATE);
+        authRetryPendingRef.current = false;
         setAuthLoading(false);
         return;
       }
@@ -235,21 +302,25 @@ export default function App() {
 
       if (!newSession) {
         if (isMounted) {
+          authRetryPendingRef.current = false;
           setAuthState(EMPTY_AUTH_STATE);
           setAuthLoading(false);
         }
         return;
       }
 
+      authRetryPendingRef.current = false;
       setAuthLoading(true);
       try {
         const nextAuthState = await ensureClientSession(newSession);
         if (isMounted && currentVersion === validationVersion) {
+          authRetryPendingRef.current = false;
           setAuthState(nextAuthState);
         }
       } catch (err) {
         console.warn('Auth state role validation error:', err?.message || err);
         if (isMounted && currentVersion === validationVersion) {
+          authRetryPendingRef.current = true;
           setAuthState(EMPTY_AUTH_STATE);
         }
       } finally {
@@ -259,6 +330,18 @@ export default function App() {
       }
     };
 
+    const handleAppStateChange = (nextState) => {
+      if (nextState === 'active') {
+        void retryPendingAuthValidation();
+      }
+    };
+
+    const handleAppStateFocus = () => {
+      void retryPendingAuthValidation();
+    };
+
+    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+    const appFocusSubscription = AppState.addEventListener('focus', handleAppStateFocus);
     const urlSubscription = Linking.addEventListener('url', ({ url }) => {
       void processRecoveryUrl(url);
     });
@@ -271,6 +354,8 @@ export default function App() {
       recoveryOperationRef.current += 1;
       listener?.subscription?.unsubscribe();
       urlSubscription?.remove();
+      appStateSubscription?.remove();
+      appFocusSubscription?.remove();
     };
   }, []);
 
