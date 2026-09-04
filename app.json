@@ -4,9 +4,9 @@
     "slug": "dietbridge",
     "version": "1.0.0",
     "scheme": "dietbridge",
-    "icon": "./assets/meal_icon.png",
+    "icon": "./assets/app-icon.png",
     "splash": {
-      "image": "./assets/meal_icon.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#FFFFFF"
     },
@@ -14,7 +14,7 @@
       "package": "com.dietbridge.app",
       "versionCode": 1,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/meal_icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       }
     },

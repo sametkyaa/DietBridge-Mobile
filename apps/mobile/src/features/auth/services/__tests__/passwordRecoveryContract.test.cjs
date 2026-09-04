@@ -123,7 +123,7 @@ test('persisted recovery restoration distinguishes normal, matching, missing, an
     assert.match(store, /PASSWORD_RECOVERY_STATE_MALFORMED/);
 
     const restoreIndex = app.indexOf('restorePasswordRecoverySession()');
-    const normalAuthIndex = app.indexOf('getCurrentClientAuthState()');
+    const normalAuthIndex = app.indexOf('getCurrentClientAuthState()', restoreIndex);
     assert.ok(restoreIndex >= 0);
     assert.ok(normalAuthIndex > restoreIndex);
     assert.match(app, /recoveryRestoration\.status === 'active'/);
@@ -157,6 +157,124 @@ test('App handles the same recovery URL path on cold start and runtime events wi
     assert.match(app, /recoveryState\.status === 'idle'/);
     assert.match(app, /<RootNavigator \/>/);
     assert.match(app, /<AuthNavigator/);
+});
+
+test('offline startup validation stays fail-closed and arms lifecycle retry', () => {
+    const app = read('App.js');
+    const validationStart = app.indexOf('const currentVersion = ++validationVersion;');
+    const authChangeStart = app.indexOf('const handleAuthChange = async', validationStart);
+    const startupValidation = app.slice(validationStart, authChangeStart);
+
+    assert.ok(validationStart >= 0);
+    assert.ok(authChangeStart > validationStart);
+    assert.match(startupValidation, /authRetryPendingRef\.current = true/);
+    assert.match(startupValidation, /setAuthState\(EMPTY_AUTH_STATE\)/);
+    assert.match(app, /const canOpenClientRoutes = !recoveryModeRef\.current/);
+    assert.match(app, /authState\.session/);
+    assert.match(app, /authState\.isClient/);
+});
+
+test('lifecycle retry uses canonical auth validation and applies a successful state', () => {
+    const app = read('App.js');
+    const retryStart = app.indexOf('const retryPendingAuthValidation = async');
+    const recoveryStart = app.indexOf('const processRecoveryUrl = async', retryStart);
+    const retry = app.slice(retryStart, recoveryStart);
+
+    assert.match(retry, /const nextAuthState = await getCurrentClientAuthState\(\)/);
+    assert.match(retry, /authRetryPendingRef\.current = false/);
+    assert.match(retry, /setAuthState\(nextAuthState\)/);
+    assert.doesNotMatch(retry, /ensureClientSession/);
+});
+
+test('active and Android focus events share the lifecycle retry path', () => {
+    const app = read('App.js');
+
+    assert.match(app, /if \(nextState === 'active'\) \{\s*void retryPendingAuthValidation\(\);/);
+    assert.match(app, /AppState\.addEventListener\('change', handleAppStateChange\)/);
+    assert.match(app, /AppState\.addEventListener\('focus', handleAppStateFocus\)/);
+});
+
+test('rapid lifecycle events allow only one concurrent auth revalidation', () => {
+    const app = read('App.js');
+    const retryStart = app.indexOf('const retryPendingAuthValidation = async');
+    const recoveryStart = app.indexOf('const processRecoveryUrl = async', retryStart);
+    const retry = app.slice(retryStart, recoveryStart);
+    const guardIndex = retry.indexOf('authRevalidationInFlightRef.current');
+    const assignmentIndex = retry.indexOf('authRevalidationInFlightRef.current = request;');
+    const validationIndex = retry.indexOf('await getCurrentClientAuthState()');
+
+    assert.ok(guardIndex >= 0);
+    assert.ok(assignmentIndex > guardIndex);
+    assert.ok(validationIndex > assignmentIndex);
+    assert.match(retry, /if \(authRevalidationInFlightRef\.current === request\) \{[\s\S]*?authRevalidationInFlightRef\.current = null/);
+});
+
+test('failed lifecycle retry remains eligible for a later foreground event', () => {
+    const app = read('App.js');
+    const retryStart = app.indexOf('const retryPendingAuthValidation = async');
+    const catchStart = app.indexOf('} catch (err) {', retryStart);
+    const finallyStart = app.indexOf('} finally {', catchStart);
+    const retryEnd = app.indexOf('const processRecoveryUrl = async', retryStart);
+    const failure = app.slice(catchStart, finallyStart);
+
+    assert.match(failure, /authRetryPendingRef\.current = true/);
+    assert.match(failure, /setAuthState\(EMPTY_AUTH_STATE\)/);
+    assert.match(app.slice(retryStart, retryEnd), /authRevalidationInFlightRef\.current = null/);
+});
+
+test('canonical no-session validation clears retry eligibility and stays on auth routes', () => {
+    const app = read('App.js');
+    const retryStart = app.indexOf('const retryPendingAuthValidation = async');
+    const recoveryStart = app.indexOf('const processRecoveryUrl = async', retryStart);
+    const retry = app.slice(retryStart, recoveryStart);
+    const authChangeStart = app.indexOf('const handleAuthChange = async');
+    const authChange = app.slice(authChangeStart, app.indexOf('const handleAppStateChange', authChangeStart));
+
+    assert.match(retry, /authRetryPendingRef\.current = false/);
+    assert.match(retry, /setAuthState\(nextAuthState\)/);
+    assert.match(authChange, /if \(!newSession\) \{[\s\S]*?authRetryPendingRef\.current = false[\s\S]*?setAuthState\(EMPTY_AUTH_STATE\)/);
+});
+
+test('password recovery mode blocks lifecycle retry and invalidates normal auth work', () => {
+    const app = read('App.js');
+    const retryStart = app.indexOf('const retryPendingAuthValidation = async');
+    const recoveryStart = app.indexOf('const processRecoveryUrl = async', retryStart);
+    const retry = app.slice(retryStart, recoveryStart);
+    const recovery = app.slice(recoveryStart, app.indexOf('const init = async', recoveryStart));
+
+    assert.match(retry, /recoveryModeRef\.current/);
+    assert.match(recovery, /validationVersion \+= 1/);
+    assert.match(recovery, /recoveryModeRef\.current = true/);
+    assert.match(recovery, /authRetryPendingRef\.current = false/);
+    assert.match(app, /event === 'PASSWORD_RECOVERY'[\s\S]*?authRetryPendingRef\.current = false/);
+});
+
+test('stale lifecycle results and unmounted components cannot update auth state', () => {
+    const app = read('App.js');
+    const retryStart = app.indexOf('const retryPendingAuthValidation = async');
+    const recoveryStart = app.indexOf('const processRecoveryUrl = async', retryStart);
+    const retry = app.slice(retryStart, recoveryStart);
+
+    assert.match(retry, /!isMounted/);
+    assert.match(retry, /request\.version !== validationVersion/);
+    assert.match(retry, /request\.version === validationVersion/);
+    assert.match(app, /isMounted = false/);
+    assert.match(app, /appStateSubscription\?\.remove\(\)/);
+    assert.match(app, /appFocusSubscription\?\.remove\(\)/);
+});
+
+test('lifecycle retry retains the canonical account-deletion and role guard boundary', () => {
+    const app = read('App.js');
+    const service = read('apps/mobile/src/features/auth/services/authService.js');
+    const retryStart = app.indexOf('const retryPendingAuthValidation = async');
+    const recoveryStart = app.indexOf('const processRecoveryUrl = async', retryStart);
+    const retry = app.slice(retryStart, recoveryStart);
+
+    assert.match(retry, /getCurrentClientAuthState\(\)/);
+    assert.doesNotMatch(retry, /getUserProfile|profile\.role|isClient\s*=/);
+    assert.match(service, /await assertNoPendingAccountDeletion\(session\)/);
+    assert.match(service, /if \(profile\.role !== 'client'\)/);
+    assert.match(service, /return ensureClientSession\(session\)/);
 });
 
 test('Auth navigation keeps ResetPassword outside the client root and includes safe invalid-link actions', () => {

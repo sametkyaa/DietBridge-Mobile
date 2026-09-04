@@ -58,11 +58,11 @@ test('Expo/EAS production-readiness contract uses the canonical EAS project id',
     assert.equal(app.expo.version, '1.0.0');
     assert.equal(app.expo.android.package, 'com.dietbridge.app');
     assert.equal(app.expo.android.versionCode, 1);
-    assert.equal(app.expo.android.adaptiveIcon.foregroundImage, './assets/meal_icon.png');
+    assert.equal(app.expo.android.adaptiveIcon.foregroundImage, './assets/adaptive-icon.png');
     assert.equal(app.expo.ios.bundleIdentifier, 'com.dietbridge.app');
     assert.equal(app.expo.ios.buildNumber, '1');
-    assert.equal(app.expo.icon, './assets/meal_icon.png');
-    assert.equal(app.expo.splash.image, './assets/meal_icon.png');
+    assert.equal(app.expo.icon, './assets/app-icon.png');
+    assert.equal(app.expo.splash.image, './assets/splash-icon.png');
     assert.equal(imagePickerPlugin[1].microphonePermission, false);
     assert.deepEqual(Object.keys(eas.build).sort(), ['development', 'preview', 'production']);
     assert.equal(eas.build.development.distribution, 'internal');
@@ -71,6 +71,8 @@ test('Expo/EAS production-readiness contract uses the canonical EAS project id',
     assert.equal(eas.build.preview.distribution, 'internal');
     assert.equal(eas.build.preview.node, '24.17.0');
     assert.equal(eas.build.production.node, '24.17.0');
+    assert.equal(eas.cli.appVersionSource, 'remote');
+    assert.equal(eas.build.production.autoIncrement, true);
     assert.equal(app.expo.owner, 'samet_app');
     assert.equal(app.expo.extra.eas.projectId, '51259ad9-2efb-4393-9e40-8c22238a5cf8');
 });
