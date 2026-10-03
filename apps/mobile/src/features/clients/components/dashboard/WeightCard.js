@@ -1,20 +1,24 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { AppButton, AppCard, AppInput, Icon } from '../../../../shared/components/ui';
+import { AppButton, AppCard, AppInput } from '../../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../../shared/theme';
+
+const formatWeight = (weight) => String(weight).replace('.', ',');
 
 export function WeightCard({ weight, value, onChange, onSave, isSaving }) {
     return (
         <AppCard>
-            <View style={styles.titleRow}>
-                <Icon name="target" size={20} color={colors.primaryDark} />
-                <View style={styles.titleText}>
-                    <Text style={styles.title}>Güncel kilonuz</Text>
-                    <Text style={styles.supporting}>
-                        {weight ? `Son kaydedilen: ${weight} kg` : 'Henüz kilonuzu girmediniz.'}
+            <View style={styles.header}>
+                <Text style={styles.title} accessibilityRole="header">Kilo</Text>
+                {weight ? (
+                    <Text style={styles.current}>
+                        {formatWeight(weight)}<Text style={styles.unit}> kg</Text>
                     </Text>
-                </View>
+                ) : null}
             </View>
+            <Text style={styles.supporting}>
+                {weight ? 'Son kaydın. Bugün tartıldıysan yeni değeri gir.' : 'Henüz kilonu girmedin. İlk ölçümünü ekle.'}
+            </Text>
             <View style={styles.controls}>
                 <AppInput
                     value={value}
@@ -25,20 +29,23 @@ export function WeightCard({ weight, value, onChange, onSave, isSaving }) {
                     accessibilityLabel="Güncel kilo, kilogram"
                     editable={!isSaving}
                     style={styles.input}
+                    rightAccessory={<Text style={styles.inputUnit}>kg</Text>}
                 />
-                <AppButton label="Kaydet" onPress={onSave} loading={isSaving} style={styles.button} />
+                <AppButton variant="secondary" label="Kaydet" onPress={onSave} loading={isSaving} style={styles.button} />
             </View>
         </AppCard>
     );
 }
 
 const styles = StyleSheet.create({
-    titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.x2 },
-    titleText: { flex: 1 },
-    title: { ...typography.bodyMedium, color: colors.textPrimary },
-    supporting: { ...typography.supporting, color: colors.textSecondary, marginTop: 2 },
+    header: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.x2 },
+    title: { ...typography.sectionTitle, color: colors.textPrimary },
+    current: { ...typography.numericSmall, color: colors.textPrimary },
+    unit: { ...typography.supporting, color: colors.textTertiary },
+    supporting: { ...typography.supporting, color: colors.textSecondary, marginTop: spacing.x1 },
     controls: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.x2, marginTop: spacing.x4 },
     input: { flex: 1 },
+    inputUnit: { ...typography.supporting, color: colors.textTertiary },
     button: { minWidth: 104 },
 });
 

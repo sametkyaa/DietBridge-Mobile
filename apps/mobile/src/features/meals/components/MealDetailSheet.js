@@ -1,36 +1,39 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { BottomSheetView, Icon, StatusBadge } from '../../../shared/components/ui';
+import { BottomSheetView, StatusBadge } from '../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 import { MealPhotoThumbnail } from './MealPhotoThumbnail';
 import { formatMealType } from '../../../shared/utils/mealType';
+import { PlateMark } from '../../auth/components/BrandMark';
 
-const formatMacro = (value, unit) => {
+const formatMacro = (value) => {
     if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) return '—';
     const number = Number(value);
-    return Number.isFinite(number) ? `${Math.round(number)} ${unit}` : '—';
+    return Number.isFinite(number) ? String(Math.round(number)) : '—';
 };
 
 export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPress, bottomInset = 0 }) {
     if (!meal) return null;
     const completed = typeof completion?.completed === 'boolean' ? completion.completed : !!meal.isEaten;
     const macros = [
-        { label: 'Kalori', value: formatMacro(meal.calories, 'kcal') },
-        { label: 'Protein', value: formatMacro(meal.protein, 'g') },
-        { label: 'Karbonhidrat', value: formatMacro(meal.carbohydrate, 'g') },
-        { label: 'Yağ', value: formatMacro(meal.fat, 'g') },
+        { label: 'kcal', value: formatMacro(meal.calories) },
+        { label: 'g protein', value: formatMacro(meal.protein) },
+        { label: 'g karb.', value: formatMacro(meal.carbohydrate) },
+        { label: 'g yağ', value: formatMacro(meal.fat) },
     ];
     const description = typeof meal.description === 'string' ? meal.description.trim() : '';
     const ingredients = Array.isArray(meal.ingredients) ? meal.ingredients : [];
     const steps = Array.isArray(meal.steps) ? meal.steps : [];
 
     return (
-        <BottomSheetView visible={visible} onClose={onClose} title="Öğün detayı" scrollable bottomInset={bottomInset}>
+        <BottomSheetView visible={visible} onClose={onClose} scrollable bottomInset={bottomInset}>
             <View style={styles.metaRow}>
-                <Text style={styles.meta}>{meal.time} · {formatMealType(meal.type)}</Text>
+                <Text style={styles.time}>{meal.time}</Text>
+                <Text style={styles.meta}>{formatMealType(meal.type)}</Text>
+                <View style={styles.flex} />
                 <StatusBadge status={completed ? 'completed' : 'upcoming'} label={completed ? 'Tamamlandı' : 'Planlandı'} />
             </View>
-            <Text style={styles.title}>{meal.title || formatMealType(meal.type)}</Text>
+            <Text style={styles.title} accessibilityRole="header">{meal.title || formatMealType(meal.type)}</Text>
             <MealPhotoThumbnail
                 photoPath={meal.photoPath}
                 completionPhotoPath={completed
@@ -45,13 +48,13 @@ export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPre
                 accessibilityLabel={`${meal.title || formatMealType(meal.type)} fotoğrafını büyüt`}
                 fallback={(
                     <View style={styles.photoFallback}>
-                        <Icon name="meal" size={36} color={colors.primaryDark} />
+                        <PlateMark size={104} />
                     </View>
                 )}
             />
             <View style={styles.macroGrid}>
-                {macros.map((macro) => (
-                    <View key={macro.label} style={styles.macroCell}>
+                {macros.map((macro, index) => (
+                    <View key={macro.label} style={[styles.macroCell, index > 0 && styles.macroDivider]}>
                         <Text style={styles.macroValue}>{macro.value}</Text>
                         <Text style={styles.macroLabel}>{macro.label}</Text>
                     </View>
@@ -72,13 +75,23 @@ export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPre
             {ingredients.length > 0 ? (
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle} accessibilityRole="header">Malzemeler</Text>
-                    {ingredients.map((item, index) => <Text key={`${index}-${item}`} style={styles.body}>• {item}</Text>)}
+                    {ingredients.map((item, index) => (
+                        <View key={`${index}-${item}`} style={styles.listRow}>
+                            <View style={styles.bullet} />
+                            <Text style={styles.listText}>{item}</Text>
+                        </View>
+                    ))}
                 </View>
             ) : null}
             {steps.length > 0 ? (
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle} accessibilityRole="header">Hazırlanış</Text>
-                    {steps.map((step, index) => <Text key={`${index}-${step}`} style={styles.body}>{index + 1}. {step}</Text>)}
+                    {steps.map((step, index) => (
+                        <View key={`${index}-${step}`} style={styles.listRow}>
+                            <Text style={styles.stepNumber}>{index + 1}</Text>
+                            <Text style={styles.listText}>{step}</Text>
+                        </View>
+                    ))}
                 </View>
             ) : null}
         </BottomSheetView>
@@ -86,19 +99,26 @@ export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPre
 }
 
 const styles = StyleSheet.create({
-    metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.x2 },
+    flex: { flex: 1 },
+    metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.x3 },
+    time: { ...typography.numericSmall, color: colors.primaryDark },
     meta: { ...typography.supporting, color: colors.textSecondary },
-    title: { ...typography.sectionTitle, color: colors.textPrimary },
-    photoButton: { width: '100%' },
-    photo: { width: '100%', height: 180, borderRadius: radius.card },
-    photoFallback: { width: '100%', height: 140, borderRadius: radius.card, backgroundColor: colors.primarySurface, alignItems: 'center', justifyContent: 'center' },
-    macroGrid: { flexDirection: 'row', flexWrap: 'wrap', borderRadius: radius.control, backgroundColor: colors.surfaceMuted, padding: spacing.x2 },
-    macroCell: { width: '50%', alignItems: 'center', padding: spacing.x2 },
-    macroValue: { ...typography.bodyMedium, color: colors.textPrimary },
-    macroLabel: { ...typography.caption, color: colors.textSecondary },
-    section: { gap: spacing.x1 },
-    sectionTitle: { ...typography.bodyMedium, color: colors.textPrimary },
+    title: { ...typography.screenTitle, fontSize: 24, lineHeight: 30, color: colors.textPrimary, marginTop: spacing.x1 },
+    photoButton: { width: '100%', marginTop: spacing.x2 },
+    photo: { width: '100%', height: 200, borderRadius: radius.card },
+    photoFallback: { width: '100%', height: 168, borderRadius: radius.card, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', marginTop: spacing.x2 },
+    macroGrid: { flexDirection: 'row', paddingVertical: spacing.x3, marginTop: spacing.x1 },
+    macroCell: { flex: 1, paddingHorizontal: spacing.x2 },
+    macroDivider: { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.borderStrong },
+    macroValue: { ...typography.numeric, fontSize: 22, lineHeight: 28, color: colors.textPrimary },
+    macroLabel: { ...typography.caption, color: colors.textTertiary, marginTop: 2 },
+    section: { gap: spacing.x2, paddingTop: spacing.x4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderStrong },
+    sectionTitle: { ...typography.cardTitle, fontSize: 16, color: colors.textPrimary },
     body: { ...typography.body, color: colors.textSecondary },
+    listRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.x3 },
+    bullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginTop: 8 },
+    stepNumber: { ...typography.numericSmall, fontSize: 15, color: colors.primaryDark, width: 18 },
+    listText: { ...typography.body, color: colors.textPrimary, flex: 1 },
 });
 
 export default MealDetailSheet;
