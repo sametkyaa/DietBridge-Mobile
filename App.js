@@ -4,12 +4,12 @@ import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   useFonts,
-  Inter_300Light,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
+  Figtree_300Light,
+  Figtree_400Regular,
+  Figtree_500Medium,
+  Figtree_600SemiBold,
+  Figtree_700Bold,
+} from '@expo-google-fonts/figtree';
 import RootNavigator from './apps/mobile/src/navigation/RootNavigator';
 import AuthNavigator from './apps/mobile/src/navigation/AuthNavigator';
 import { MealsProvider } from './apps/mobile/src/features/meals/context/MealsContext'; // Updated path
@@ -46,11 +46,11 @@ const INITIAL_RECOVERY_STATE = {
 
 export default function App() {
   const [fontsLoaded] = useFonts({
-    Inter_300Light,
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    Figtree_300Light,
+    Figtree_400Regular,
+    Figtree_500Medium,
+    Figtree_600SemiBold,
+    Figtree_700Bold,
   });
   const [authState, setAuthState] = useState(EMPTY_AUTH_STATE);
   const [authLoading, setAuthLoading] = useState(true);

@@ -64,8 +64,8 @@ export const AppButton = forwardRef(function AppButton({
 const styles = StyleSheet.create({
   base: {
     minHeight: 52,
-    borderRadius: radius.control,
-    paddingHorizontal: spacing.x5,
+    borderRadius: radius.round,
+    paddingHorizontal: spacing.x6,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -78,10 +78,10 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   disabled: { backgroundColor: colors.surfaceMuted },
-  pressed: { opacity: 0.85 },
+  pressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.x2 },
   label: { ...typography.button },
-  labelPrimary: { color: colors.white },
+  labelPrimary: { color: colors.textOnPrimary },
   labelSecondary: { color: colors.primaryDark },
   labelText: { color: colors.primaryDark },
   labelDisabled: { color: colors.textTertiary },

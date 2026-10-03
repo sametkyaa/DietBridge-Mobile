@@ -11,3 +11,5 @@ export { ChoiceChip } from './ChoiceChip';
 export { BottomSheetView } from './BottomSheetView';
 export { ProgressBar } from './ProgressBar';
 export { Icon } from './Icon';
+export { ScreenHeader } from './ScreenHeader';
+export { SegmentedTabs } from './SegmentedTabs';
