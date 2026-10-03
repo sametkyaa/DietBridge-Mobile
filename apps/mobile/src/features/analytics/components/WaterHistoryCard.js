@@ -1,9 +1,35 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { AppCard, EmptyState, Icon } from '../../../shared/components/ui';
+import { useReducedMotion } from '../../../shared/hooks/useReducedMotion';
 import { colors, spacing, typography } from '../../../shared/theme';
 
 const fmt = (value) => Number(value || 0).toFixed(1).replace('.', ',');
+const TRACK_HEIGHT = 96;
+
+function Bar({ ratio, index }) {
+    const reduced = useReducedMotion();
+    const rise = useRef(new Animated.Value(TRACK_HEIGHT)).current;
+
+    useEffect(() => {
+        if (reduced) {
+            rise.setValue(0);
+            return undefined;
+        }
+        rise.setValue(TRACK_HEIGHT);
+        const animation = Animated.timing(rise, {
+            toValue: 0,
+            duration: 480,
+            delay: index * 40,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+        });
+        animation.start();
+        return () => animation.stop();
+    }, [index, ratio, reduced, rise]);
+
+    return <Animated.View style={[styles.fill, { height: `${ratio * 100}%`, transform: [{ translateY: rise }] }]} />;
+}
 
 export function WaterHistoryCard({ history, total }) {
     if (history.length === 0) {
@@ -26,12 +52,12 @@ export function WaterHistoryCard({ history, total }) {
                 </View>
             </View>
             <View style={styles.chart}>
-                {history.map((item) => {
+                {history.map((item, index) => {
                     const amount = Number(item.amount || 0);
                     return (
                         <View key={item.dateKey || item.day} style={styles.day} accessible accessibilityLabel={`${item.day}, ${amount.toFixed(1)} litre`}>
                             <View style={styles.track} importantForAccessibility="no">
-                                <View style={[styles.fill, { height: `${(amount / maxAmount) * 100}%` }]} />
+                                <Bar ratio={amount / maxAmount} index={index} />
                             </View>
                             <Text style={styles.amount}>{fmt(amount)}</Text>
                             <Text style={styles.dayLabel}>{item.day}</Text>
@@ -53,7 +79,7 @@ const styles = StyleSheet.create({
     supporting: { ...typography.caption, color: colors.textSecondary, textAlign: 'right', marginTop: 2 },
     chart: { height: 150, flexDirection: 'row', alignItems: 'flex-end', gap: spacing.x2, marginTop: spacing.x5 },
     day: { flex: 1, minWidth: 0, alignItems: 'center' },
-    track: { width: '100%', maxWidth: 30, height: 96, borderRadius: 8, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, backgroundColor: colors.tealSoft, justifyContent: 'flex-end', overflow: 'hidden' },
+    track: { width: '100%', maxWidth: 30, height: TRACK_HEIGHT, borderRadius: 8, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, backgroundColor: colors.tealSoft, justifyContent: 'flex-end', overflow: 'hidden' },
     fill: { width: '100%', minHeight: 2, borderRadius: 8, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, backgroundColor: colors.teal },
     dayLabel: { ...typography.caption, color: colors.textTertiary, marginTop: 2 },
     amount: { ...typography.caption, fontVariant: ['tabular-nums'], color: colors.textPrimary, marginTop: spacing.x2 },

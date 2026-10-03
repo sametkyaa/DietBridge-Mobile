@@ -4,12 +4,18 @@ import { AppButton, EmptyState, ErrorState } from '../../../shared/components/ui
 import { colors, spacing, typography } from '../../../shared/theme';
 import ChatMessageBubble from './ChatMessageBubble';
 import MealActivityCard from './MealActivityCard';
+import { ChatMessageEntrance } from './ChatMessageEntrance';
 import { selectLatestVisibleCanonicalMessage } from '../utils/chatReadStatePolicy';
 import { shouldAdjustInitialChatLayout, shouldPositionInitialChat } from '../utils/chatScrollLifecycle';
 
 const getMessageKey = (message, index) => (
     message?.id || message?.optimisticId || message?.clientMessageId || `chat-message-${index}`
 );
+// Every identity a message can carry, so a confirmed optimistic message is not animated twice.
+const getMessageIdentities = (message, index) => {
+    const identities = [message?.id, message?.optimisticId, message?.clientMessageId].filter(Boolean);
+    return identities.length > 0 ? identities : [`chat-message-${index}`];
+};
 
 export default function ChatMessageList({
     messages,
@@ -49,6 +55,7 @@ export default function ChatMessageList({
         visibleMessageCallbackRef.current?.(latestMessage);
     });
     const [viewerMessage, setViewerMessage] = React.useState(null);
+    const seenKeysRef = useRef({ conversationId, keys: null });
 
     useEffect(() => {
         conversationIdRef.current = conversationId;
@@ -136,6 +143,23 @@ export default function ChatMessageList({
         );
     };
 
+    const messageList = Array.isArray(messages) ? messages : [];
+    if (seenKeysRef.current.conversationId !== conversationId) {
+        seenKeysRef.current = { conversationId, keys: null };
+    }
+    if (!seenKeysRef.current.keys && messageList.length > 0) {
+        // The first loaded page of a conversation is history and renders without motion.
+        seenKeysRef.current.keys = new Set(messageList.flatMap((item, index) => getMessageIdentities(item, index)));
+    }
+    const shouldAnimateEntrance = (item, index) => {
+        const seenKeys = seenKeysRef.current.keys;
+        if (!seenKeys) return false;
+        const identities = getMessageIdentities(item, index);
+        const seen = identities.some((identity) => seenKeys.has(identity));
+        identities.forEach((identity) => seenKeys.add(identity));
+        return !seen && index >= messageList.length - 2;
+    };
+
     return (
         <>
         <FlatList
@@ -143,8 +167,9 @@ export default function ChatMessageList({
             style={styles.list}
             data={Array.isArray(messages) ? messages : []}
             keyExtractor={getMessageKey}
-            renderItem={({ item }) => (
-                item?.kind === 'meal_activity' ? (
+            renderItem={({ item, index }) => (
+                <ChatMessageEntrance animate={shouldAnimateEntrance(item, index)}>
+                {item?.kind === 'meal_activity' ? (
                     <MealActivityCard activity={item} />
                 ) : (
                     <ChatMessageBubble
@@ -157,7 +182,8 @@ export default function ChatMessageList({
                         onRetryImage={() => onRetryImage?.(item)}
                         onOpenImage={() => setViewerMessage(item)}
                     />
-                )
+                )}
+                </ChatMessageEntrance>
             )}
             ListHeaderComponent={() => (
                 <>

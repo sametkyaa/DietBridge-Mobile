@@ -1,13 +1,22 @@
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { AppButton, AppCard, EmptyState } from '../../../shared/components/ui';
+import { useReducedMotion } from '../../../shared/hooks/useReducedMotion';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 
 const formatKg = (value) => Number(value).toFixed(1).replace('.', ',');
 const formatChange = (value) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatKg(Math.abs(value))} kg`;
 const CHART_HEIGHT = 140;
 const PAD_Y = 16;
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+const getPathLength = (points) => points.reduce((total, point, index) => {
+    if (index === 0) return 0;
+    const previous = points[index - 1];
+    return total + Math.hypot(point.x - previous.x, point.y - previous.y);
+}, 0);
 
 function WeightLine({ data, selectedIndex, width }) {
     const weights = data.map((item) => Number(item.weight));
@@ -22,14 +31,44 @@ function WeightLine({ data, selectedIndex, width }) {
     const line = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
     const area = `${line} L ${points[points.length - 1].x} ${CHART_HEIGHT} L 0 ${CHART_HEIGHT} Z`;
     const selected = points[selectedIndex];
+    const length = Math.max(1, Math.ceil(getPathLength(points)));
+    const reduced = useReducedMotion();
+    const draw = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (reduced) {
+            draw.setValue(1);
+            return undefined;
+        }
+        draw.setValue(0);
+        const animation = Animated.timing(draw, {
+            toValue: 1,
+            duration: 900,
+            easing: Easing.inOut(Easing.cubic),
+            useNativeDriver: false,
+        });
+        animation.start();
+        return () => animation.stop();
+    }, [draw, line, reduced]);
+
+    const dashOffset = draw.interpolate({ inputRange: [0, 1], outputRange: [length, 0] });
 
     return (
         <Svg width={width} height={CHART_HEIGHT} style={styles.svg}>
             {[0.25, 0.5, 0.75].map((ratio) => (
                 <Line key={ratio} x1={0} x2={width} y1={CHART_HEIGHT * ratio} y2={CHART_HEIGHT * ratio} stroke={colors.borderSoft} strokeWidth={1} />
             ))}
-            <Path d={area} fill={colors.primarySurface} />
-            <Path d={line} stroke={colors.primaryDark} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+            <AnimatedPath d={area} fill={colors.primarySurface} fillOpacity={draw} />
+            <AnimatedPath
+                d={line}
+                stroke={colors.primaryDark}
+                strokeWidth={2.5}
+                fill="none"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                strokeDasharray={`${length} ${length}`}
+                strokeDashoffset={dashOffset}
+            />
             {selected ? <Line x1={selected.x} x2={selected.x} y1={selected.y} y2={CHART_HEIGHT} stroke={colors.primary} strokeWidth={1} strokeDasharray="3 4" /> : null}
             {points.map((point, index) => (
                 <Circle

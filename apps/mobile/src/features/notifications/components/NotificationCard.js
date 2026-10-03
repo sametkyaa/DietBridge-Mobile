@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '../../../shared/components/ui';
+import { useReducedMotion } from '../../../shared/hooks/useReducedMotion';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 import {
     formatNotificationContext,
@@ -9,7 +10,7 @@ import {
     getNotificationCategoryIcon,
 } from '../utils/notificationUiUtils.cjs';
 
-export function NotificationCard({ notification, onPress, disabled = false }) {
+export function NotificationCard({ notification, onPress, disabled = false, index = 0 }) {
     const summary = useMemo(() => formatNotificationSummary(notification), [notification]);
     const context = useMemo(() => formatNotificationContext(notification), [notification]);
     const relativeTime = useMemo(
@@ -18,6 +19,26 @@ export function NotificationCard({ notification, onPress, disabled = false }) {
     );
     const isUnread = notification?.readAt === null;
     const accessibilityLabel = `${summary}${context ? ` ${context}.` : ''}${isUnread ? ' Okunmamış.' : ''}`;
+    const reduced = useReducedMotion();
+    // The white unread surface fades out (staggered by row) when a notification becomes read.
+    const unreadSurface = useRef(new Animated.Value(isUnread ? 1 : 0)).current;
+
+    useEffect(() => {
+        const toValue = isUnread ? 1 : 0;
+        if (reduced) {
+            unreadSurface.setValue(toValue);
+            return undefined;
+        }
+        const animation = Animated.timing(unreadSurface, {
+            toValue,
+            duration: 360,
+            delay: isUnread ? 0 : Math.min(index, 8) * 40,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+        });
+        animation.start();
+        return () => animation.stop();
+    }, [index, isUnread, reduced, unreadSurface]);
 
     return (
         <Pressable
@@ -28,10 +49,10 @@ export function NotificationCard({ notification, onPress, disabled = false }) {
             accessibilityState={{ disabled, selected: isUnread }}
             style={({ pressed }) => [
                 styles.card,
-                isUnread && styles.unreadCard,
                 pressed && !disabled && styles.pressed,
             ]}
         >
+            <Animated.View pointerEvents="none" style={[styles.unreadCard, { opacity: unreadSurface }]} />
             <View style={[styles.iconWrap, isUnread && styles.unreadIconWrap]} accessible={false}>
                 <Icon
                     name={getNotificationCategoryIcon(notification?.category)}
@@ -64,7 +85,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.x4,
         borderRadius: radius.card,
     },
-    unreadCard: { backgroundColor: colors.surface },
+    unreadCard: { ...StyleSheet.absoluteFillObject, borderRadius: radius.card, backgroundColor: colors.surface },
     iconWrap: {
         width: 44,
         height: 44,

@@ -1,11 +1,19 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { AppCard, AppSkeleton, Icon, InlineAlert, StatusBadge } from '../../../../shared/components/ui';
+import { AppCard, AppSkeleton, InlineAlert, StatusBadge } from '../../../../shared/components/ui';
+import { AnimatedChevron } from '../../../../shared/components/motion';
+import { useReducedMotion } from '../../../../shared/hooks/useReducedMotion';
 import { colors, radius, spacing, typography } from '../../../../shared/theme';
+import { animateNextLayout } from '../../../../shared/utils/layoutMotion';
 
 const getInitials = (name) => String(name || '').replace(/^Dyt\.\s*/i, '').trim().split(/\s+/).slice(0, 2).map((part) => part[0] || '').join('').toLocaleUpperCase('tr-TR');
 
 export function DietitianProfileCard({ loading, dietitian, hasActive, error, expanded, onToggle }) {
+    const reducedMotion = useReducedMotion();
+    const handleToggle = () => {
+        animateNextLayout({ duration: 260, reduced: reducedMotion });
+        onToggle?.();
+    };
     if (loading) return <AppCard><View accessible accessibilityRole="progressbar" accessibilityLabel="Diyetisyen bilgisi yükleniyor" accessibilityState={{ busy: true }}><AppSkeleton height={64} animated /></View></AppCard>;
     if (!hasActive || !dietitian) return error
         ? <InlineAlert variant="error" title="Diyetisyen bilgisi alınamadı" message="Diyetisyen bağlantı bilgisi alınamadı. Lütfen tekrar deneyin." />
@@ -19,11 +27,11 @@ export function DietitianProfileCard({ loading, dietitian, hasActive, error, exp
     ].filter(([, value]) => value);
     return (
         <AppCard style={styles.card}>
-            <Pressable onPress={onToggle} accessibilityRole="button" accessibilityLabel={`Diyetisyen ${name}, ayrıntıları ${expanded ? 'kapat' : 'aç'}`} accessibilityState={{ expanded }} style={({ pressed }) => [styles.header, pressed && styles.pressed]}>
+            <Pressable onPress={handleToggle} accessibilityRole="button" accessibilityLabel={`Diyetisyen ${name}, ayrıntıları ${expanded ? 'kapat' : 'aç'}`} accessibilityState={{ expanded }} style={({ pressed }) => [styles.header, pressed && styles.pressed]}>
                 {avatar ? <Image source={{ uri: avatar }} style={styles.avatar} accessibilityLabel={`${name} profil fotoğrafı`} /> : <View style={[styles.avatar, styles.fallback]}><Text style={styles.initials}>{getInitials(name)}</Text></View>}
                 <View style={styles.textWrap}><Text style={styles.name}>{name}</Text><Text style={styles.label}>{dietitian.specialization || 'Diyetisyenin'}</Text></View>
                 <StatusBadge status="connected" />
-                <Icon name={expanded ? 'chevronUp' : 'chevronDown'} color={colors.textTertiary} />
+                <AnimatedChevron expanded={expanded} collapsedName="chevronDown" expandedAngle={180} size={20} color={colors.textTertiary} />
             </Pressable>
             {error ? <InlineAlert variant="error" message="Diyetisyen bağlantı bilgisi yenilenemedi. Lütfen tekrar deneyin." style={styles.error} /> : null}
             {dietitian.nameLoadError ? <InlineAlert variant="error" message="Diyetisyen adı yüklenemedi. Lütfen daha sonra tekrar deneyin." style={styles.error} /> : null}

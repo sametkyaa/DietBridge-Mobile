@@ -1,6 +1,8 @@
 import React from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useReducedMotion } from '../../../shared/hooks/useReducedMotion';
+import { animateNextLayout } from '../../../shared/utils/layoutMotion';
 import {
     AppCard,
     AppInput,
@@ -91,6 +93,11 @@ export default function GroceryListScreen({ navigation }) {
     } = useGroceryListViewModel();
     const isLoading = status === 'loading' || status === 'retrying';
     const canMutate = status === 'ready' || status === 'empty';
+    const reducedMotion = useReducedMotion();
+    const handleToggle = (item) => {
+        animateNextLayout({ reduced: reducedMotion });
+        void toggleItem(item.id);
+    };
 
     const confirmDelete = (item) => {
         if (pendingItemIds[item.id]) return;
@@ -99,7 +106,14 @@ export default function GroceryListScreen({ navigation }) {
             'Bu ürünü listeden silmek istiyor musunuz?',
             [
                 { text: 'Vazgeç', style: 'cancel' },
-                { text: 'Sil', style: 'destructive', onPress: () => { void deleteItem(item.id); } },
+                {
+                    text: 'Sil',
+                    style: 'destructive',
+                    onPress: () => {
+                        animateNextLayout({ reduced: reducedMotion });
+                        void deleteItem(item.id);
+                    },
+                },
             ],
         );
     };
@@ -198,14 +212,14 @@ export default function GroceryListScreen({ navigation }) {
                         title="Alınacaklar"
                         items={activeItems}
                         pendingItemIds={pendingItemIds}
-                        onToggle={(item) => { void toggleItem(item.id); }}
+                        onToggle={handleToggle}
                         onDelete={confirmDelete}
                     />
                     <GroceryGroup
                         title="Sepette"
                         items={completedItems}
                         pendingItemIds={pendingItemIds}
-                        onToggle={(item) => { void toggleItem(item.id); }}
+                        onToggle={handleToggle}
                         onDelete={confirmDelete}
                     />
                 </View>

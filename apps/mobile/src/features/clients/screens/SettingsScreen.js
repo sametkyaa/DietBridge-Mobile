@@ -11,7 +11,10 @@ import {
     InlineAlert,
     ScreenHeader,
 } from '../../../shared/components/ui';
+import { AnimatedChevron } from '../../../shared/components/motion';
+import { useReducedMotion } from '../../../shared/hooks/useReducedMotion';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
+import { animateNextLayout } from '../../../shared/utils/layoutMotion';
 import PasswordToggle from '../../auth/components/PasswordToggle';
 import { useSettingsViewModel } from '../viewmodels/useSettingsViewModel';
 
@@ -22,6 +25,7 @@ const LOGOUT_MESSAGE = 'DietBridge hesabından çıkış yapmak istiyor musunuz?
 const SettingsScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const vm = useSettingsViewModel();
+    const reducedMotion = useReducedMotion();
     const {
         email,
         loading,
@@ -131,6 +135,7 @@ const SettingsScreen = ({ navigation }) => {
 
                     <Pressable
                         onPress={() => {
+                            animateNextLayout({ duration: 260, reduced: reducedMotion });
                             setPasswordExpanded((expanded) => !expanded);
                             if (passwordExpanded) {
                                 setCurrentPassword('');
@@ -147,7 +152,7 @@ const SettingsScreen = ({ navigation }) => {
                     >
                         <View style={styles.rowIcon}><Icon name="lock" size={18} color={colors.primaryDark} /></View>
                         <Text style={styles.actionLabel}>Şifreyi değiştir</Text>
-                        <Icon name={passwordExpanded ? 'chevronUp' : 'chevronRight'} size={18} color={colors.textTertiary} />
+                        <AnimatedChevron expanded={passwordExpanded} size={18} color={colors.textTertiary} />
                     </Pressable>
 
                     {passwordExpanded ? (

@@ -279,9 +279,10 @@ export default function NotificationCenterScreen({ navigation }) {
         />
     ) : null;
 
-    const renderItem = useCallback(({ item }) => (
+    const renderItem = useCallback(({ item, index }) => (
         <NotificationCard
             notification={item}
+            index={index}
             onPress={() => handleNotificationPress(item)}
             disabled={processingIds.has(item.id)}
         />
