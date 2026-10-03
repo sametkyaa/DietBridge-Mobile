@@ -1,19 +1,48 @@
-import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { ActivityIndicator, Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppCard, AppInput, Icon, InlineAlert, ProgressBar } from '../../../../shared/components/ui';
+import { useReducedMotion } from '../../../../shared/hooks/useReducedMotion';
 import { colors, radius, spacing, typography } from '../../../../shared/theme';
 
 const GLASS_LITERS = 0.25;
 const MAX_GLASSES = 12;
 const formatLiters = (value) => (Number.isFinite(value) ? value : 0).toFixed(2).replace('.', ',');
+const GLASS_HEIGHT = 34;
+
+function Glass({ filled, reduced }) {
+    const level = useRef(new Animated.Value(filled ? 0 : GLASS_HEIGHT)).current;
+
+    useEffect(() => {
+        const toValue = filled ? 0 : GLASS_HEIGHT;
+        if (reduced) {
+            level.setValue(toValue);
+            return undefined;
+        }
+        const animation = Animated.timing(level, {
+            toValue,
+            duration: 420,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+        });
+        animation.start();
+        return () => animation.stop();
+    }, [filled, level, reduced]);
+
+    return (
+        <View style={styles.glass}>
+            <Animated.View style={[styles.glassFill, { transform: [{ translateY: level }] }]} />
+        </View>
+    );
+}
 
 function GlassRow({ water, target }) {
     const count = Math.max(1, Math.min(MAX_GLASSES, Math.round(target / GLASS_LITERS)));
     const filled = Math.min(count, Math.floor((water + 0.0001) / GLASS_LITERS));
+    const reduced = useReducedMotion();
     return (
         <View style={styles.glasses} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
             {Array.from({ length: count }, (_, index) => (
-                <View key={index} style={[styles.glass, index < filled && styles.glassFilled]} />
+                <Glass key={index} filled={index < filled} reduced={reduced} />
             ))}
         </View>
     );
@@ -121,8 +150,8 @@ const styles = StyleSheet.create({
     amount: { ...typography.numericSmall, color: colors.textPrimary },
     target: { ...typography.supporting, fontVariant: ['tabular-nums'], color: colors.textTertiary },
     glasses: { flexDirection: 'row', gap: 6 },
-    glass: { flex: 1, height: 34, borderRadius: 8, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, backgroundColor: colors.tealSoft },
-    glassFilled: { backgroundColor: colors.teal },
+    glass: { flex: 1, height: GLASS_HEIGHT, overflow: 'hidden', borderRadius: 8, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, backgroundColor: colors.tealSoft },
+    glassFill: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.teal },
     stateRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.x2 },
     supporting: { ...typography.supporting, color: colors.textSecondary, marginTop: spacing.x2 },
     errorWrap: { marginTop: spacing.x2 },

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '../../../../shared/components/ui';
+import { PopIn } from '../../../../shared/components/motion';
+import { useHasMounted } from '../../../../shared/hooks/useHasMounted';
 import { colors, radius, spacing, typography } from '../../../../shared/theme';
 import { MealPhotoThumbnail } from '../MealPhotoThumbnail';
 import { formatMealType } from '../../../../shared/utils/mealType';
@@ -9,13 +11,14 @@ const isFiniteValue = (value) => value !== null && value !== undefined && value 
 
 export function MealPlanItem({ meal, completion, onPress }) {
     const completed = !!completion?.completed;
+    const hasMounted = useHasMounted();
     const title = meal.title || formatMealType(meal.type);
     return (
         <View style={styles.row}>
             <View style={styles.timeColumn}>
                 <Text style={[styles.time, completed && styles.muted]}>{meal.time}</Text>
                 <View style={[styles.node, completed && styles.nodeDone]}>
-                    {completed ? <Icon name="check" size={11} color={colors.textOnPrimary} /> : null}
+                    {completed ? <PopIn animate={hasMounted}><Icon name="check" size={11} color={colors.textOnPrimary} /></PopIn> : null}
                 </View>
                 <View style={[styles.rail, completed && styles.railDone]} />
             </View>

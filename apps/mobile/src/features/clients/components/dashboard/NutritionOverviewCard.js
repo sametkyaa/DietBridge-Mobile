@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppCard, ProgressBar } from '../../../../shared/components/ui';
+import { CountUp } from '../../../../shared/components/motion';
 import { colors, spacing, typography } from '../../../../shared/theme';
 
 const isFiniteValue = (value) => Number.isFinite(value);
@@ -34,7 +35,7 @@ export function NutritionOverviewCard({ nutrition, totalMeals }) {
                         <View key={row.key} style={styles.cell}>
                             <Text style={styles.label}>{row.label}</Text>
                             <Text style={styles.value} numberOfLines={1}>
-                                {hasValues ? Math.round(consumed) : '—'}
+                                {hasValues ? <CountUp value={consumed} /> : '—'}
                                 {hasValues ? <Text style={styles.planned}> / {Math.round(planned)} {row.unit}</Text> : null}
                             </Text>
                             <ProgressBar

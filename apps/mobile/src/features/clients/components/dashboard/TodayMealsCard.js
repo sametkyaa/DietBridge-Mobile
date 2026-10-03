@@ -1,12 +1,15 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppCard, Icon } from '../../../../shared/components/ui';
+import { PopIn } from '../../../../shared/components/motion';
+import { useHasMounted } from '../../../../shared/hooks/useHasMounted';
 import { colors, radius, spacing, typography } from '../../../../shared/theme';
 import { formatMealType } from '../../../../shared/utils/mealType';
 
 const NODE_SIZE = 26;
 
 export function TodayMealsCard({ meals, updatingMealId, onMealPress, onToggle }) {
+    const hasMounted = useHasMounted();
     if (!Array.isArray(meals) || meals.length === 0) return null;
     const nextMealId = meals.find((meal) => !meal.isEaten)?.id;
 
@@ -40,7 +43,7 @@ export function TodayMealsCard({ meals, updatingMealId, onMealPress, onToggle })
                                         updating && styles.nodeDisabled,
                                     ]}
                                 >
-                                    {meal.isEaten ? <Icon name="check" size={15} color={colors.textOnPrimary} /> : null}
+                                    {meal.isEaten ? <PopIn animate={hasMounted}><Icon name="check" size={15} color={colors.textOnPrimary} /></PopIn> : null}
                                 </Pressable>
                             </View>
 
