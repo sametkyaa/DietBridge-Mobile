@@ -21,7 +21,7 @@ export function ChoiceChip({ label, selected = false, onPress, disabled = false,
       ]}
     >
       {selected ? (
-        <Icon name="check" size={13} color={colors.primaryDark} />
+        <Icon name="check" size={13} color={colors.textOnPrimary} />
       ) : typeof icon === 'string' ? (
         <Icon name={icon} size={14} color={colors.textSecondary} />
       ) : (
@@ -46,18 +46,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.x2,
-    borderRadius: radius.control,
+    borderRadius: radius.round,
     borderWidth: 1,
     paddingHorizontal: spacing.x4,
     alignSelf: 'flex-start',
   },
-  default: { backgroundColor: colors.surface, borderColor: colors.borderSoft },
-  selected: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
+  default: { backgroundColor: colors.surface, borderColor: colors.borderStrong },
+  selected: { backgroundColor: colors.primaryDark, borderColor: colors.primaryDark },
   disabled: { opacity: 0.5 },
   pressed: { opacity: 0.8 },
   label: { ...typography.supporting, fontFamily: typography.bodyMedium.fontFamily },
   labelDefault: { color: colors.textPrimary },
-  labelSelected: { color: colors.primaryDark, fontFamily: typography.button.fontFamily },
+  labelSelected: { color: colors.textOnPrimary, fontFamily: typography.button.fontFamily },
   labelDisabled: { color: colors.textTertiary },
 });
 

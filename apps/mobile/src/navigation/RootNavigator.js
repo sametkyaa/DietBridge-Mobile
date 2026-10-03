@@ -13,11 +13,11 @@ const Stack = createNativeStackNavigator();
 
 const RootNavigator = () => {
     return (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
             <Stack.Screen name="MainTabs" component={MainTabs} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="Appointments" component={AppointmentsScreen} />
-            <Stack.Screen name="AppointmentDetail" component={AppointmentDetailScreen} />
+            <Stack.Screen name="AppointmentDetail" component={AppointmentDetailScreen} options={{ animation: 'fade_from_bottom' }} />
             <Stack.Screen name="NotificationCenter" component={NotificationCenterScreen} />
             <Stack.Screen name="GroceryList" component={GroceryListScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />

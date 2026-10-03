@@ -1,6 +1,9 @@
 import React, { forwardRef } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, typography } from '../../theme';
+import { usePressScale } from '../../hooks/usePressScale';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export const AppButton = forwardRef(function AppButton({
   variant = 'primary',
@@ -15,23 +18,26 @@ export const AppButton = forwardRef(function AppButton({
 }, ref) {
   const unavailable = disabled || loading;
   const isText = variant === 'text';
+  const press = usePressScale({ disabled: unavailable || isText });
 
   return (
-    <Pressable
+    <AnimatedPressable
       ref={ref}
       onPress={unavailable ? undefined : onPress}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
       disabled={unavailable}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel || label}
       accessibilityState={{ disabled: unavailable, busy: loading }}
       hitSlop={isText ? 8 : 0}
-      style={({ pressed }) => [
+      style={[
         styles.base,
         variant === 'primary' && styles.primary,
         variant === 'secondary' && styles.secondary,
         isText && styles.textVariant,
         unavailable && !isText && styles.disabled,
-        pressed && !unavailable && styles.pressed,
+        press.animatedStyle,
         style,
       ]}
     >
@@ -57,15 +63,15 @@ export const AppButton = forwardRef(function AppButton({
           </Text>
         </View>
       )}
-    </Pressable>
+    </AnimatedPressable>
   );
 });
 
 const styles = StyleSheet.create({
   base: {
     minHeight: 52,
-    borderRadius: radius.control,
-    paddingHorizontal: spacing.x5,
+    borderRadius: radius.round,
+    paddingHorizontal: spacing.x6,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -78,10 +84,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   disabled: { backgroundColor: colors.surfaceMuted },
-  pressed: { opacity: 0.85 },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.x2 },
   label: { ...typography.button },
-  labelPrimary: { color: colors.white },
+  labelPrimary: { color: colors.textOnPrimary },
   labelSecondary: { color: colors.primaryDark },
   labelText: { color: colors.primaryDark },
   labelDisabled: { color: colors.textTertiary },

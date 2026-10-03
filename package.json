@@ -25,7 +25,7 @@
     "quality": "npm run typecheck && npm run lint && npm run test && npm run expo:config && npm run export:android && npm run export:ios"
   },
   "dependencies": {
-    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/figtree": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-navigation/bottom-tabs": "^6.6.1",

@@ -9,7 +9,7 @@ export function EmptyState({ icon, title, description, actionLabel, onAction, st
     <View style={[styles.root, style]}>
       {icon ? (
         <View style={styles.iconWrap} accessible={false} importantForAccessibility="no">
-          {typeof icon === 'string' ? <Icon name={icon} size={28} color={colors.textTertiary} /> : icon}
+          {typeof icon === 'string' ? <Icon name={icon} size={26} color={colors.primary} /> : icon}
         </View>
       ) : null}
       <Text style={styles.title} accessibilityRole="header">{title}</Text>
@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.primarySurface,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.x2,

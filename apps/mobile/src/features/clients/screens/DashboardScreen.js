@@ -1,8 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, Alert, findNodeHandle, Platform, ScrollView, StyleSheet, Text } from 'react-native';
+import { AccessibilityInfo, Alert, findNodeHandle, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppCard } from '../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../shared/theme';
 import {
     DashboardHeader,
@@ -44,6 +43,7 @@ const DashboardScreen = () => {
         setSelectedMeal,
         dailyQuote,
         waterProgress,
+        waterTargetLiters,
         nutrition,
         completedMeals,
         meals,
@@ -202,10 +202,6 @@ const DashboardScreen = () => {
                     onReject={handleRejectDietitianRequest}
                 />
 
-                {hasActiveDietitian && mealPlanStatus === 'success' ? (
-                    <NutritionOverviewCard nutrition={nutrition} />
-                ) : null}
-
                 <NextMealCard
                     meal={displayedUiMeal}
                     status={mealPlanStatus}
@@ -220,8 +216,22 @@ const DashboardScreen = () => {
                     completionButtonRef={completionButtonRef}
                 />
 
+                {hasActiveDietitian && mealPlanStatus === 'success' ? (
+                    <NutritionOverviewCard nutrition={nutrition} totalMeals={meals.length} />
+                ) : null}
+
+                {mealPlanStatus === 'success' ? (
+                    <TodayMealsCard
+                        meals={uiMeals}
+                        updatingMealId={updatingMealId}
+                        onMealPress={handleMealPress}
+                        onToggle={handleTodayMealToggle}
+                    />
+                ) : null}
+
                 <WaterTrackerCard
                     water={water}
+                    target={waterTargetLiters}
                     waterInput={waterInput}
                     onWaterInputChange={setWaterInput}
                     progress={waterProgress}
@@ -242,19 +252,11 @@ const DashboardScreen = () => {
                     isSaving={isSavingWeight}
                 />
 
-                {mealPlanStatus === 'success' ? (
-                    <TodayMealsCard
-                        meals={uiMeals}
-                        updatingMealId={updatingMealId}
-                        onMealPress={handleMealPress}
-                        onToggle={handleTodayMealToggle}
-                    />
+                {dailyQuote ? (
+                    <View style={screenStyles.quoteWrap}>
+                        <Text style={screenStyles.quote}>“{dailyQuote}”</Text>
+                    </View>
                 ) : null}
-
-                <AppCard>
-                    <Text style={screenStyles.quoteTitle}>Günün motivasyonu</Text>
-                    <Text style={screenStyles.quote}>“{dailyQuote}”</Text>
-                </AppCard>
             </ScrollView>
 
             <DashboardSidebar
@@ -284,9 +286,9 @@ const DashboardScreen = () => {
 
 const screenStyles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: colors.background },
-    content: { paddingHorizontal: spacing.x5, paddingTop: spacing.x3, paddingBottom: spacing.x8, gap: spacing.x3 },
-    quoteTitle: { ...typography.bodyMedium, color: colors.textPrimary },
-    quote: { ...typography.body, color: colors.textSecondary, textAlign: 'center', fontStyle: 'italic', marginTop: spacing.x2 },
+    content: { paddingHorizontal: spacing.x5, paddingTop: spacing.x3, paddingBottom: spacing.x10, gap: spacing.x4 },
+    quoteWrap: { borderLeftWidth: 2, borderLeftColor: colors.borderStrong, paddingLeft: spacing.x4, marginTop: spacing.x2, marginRight: spacing.x6 },
+    quote: { ...typography.body, color: colors.textSecondary },
 });
 
 export default DashboardScreen;

@@ -16,7 +16,7 @@ export function InlineAlert({ variant = 'info', title, message, onDismiss, style
   return (
     <View style={[styles.root, { backgroundColor: config.background }, style]} accessibilityRole="alert">
       <View style={styles.iconWrap} accessible={false} importantForAccessibility="no">
-        <Icon name={config.icon} size={16} color={config.foreground} />
+        <Icon name={config.icon} size={18} color={config.foreground} />
       </View>
       <View style={styles.textWrap}>
         {title ? <Text style={[styles.title, { color: config.foreground }]}>{title}</Text> : null}
@@ -42,14 +42,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     borderRadius: radius.control,
-    padding: spacing.x3,
+    paddingVertical: spacing.x3,
+    paddingHorizontal: spacing.x4,
     gap: spacing.x3,
   },
   iconWrap: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,

@@ -1,8 +1,8 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppCard, AppScreen, ErrorState, Icon, StatusBadge } from '../../../shared/components/ui';
-import { colors, spacing, typography } from '../../../shared/theme';
+import { AppCard, AppScreen, ErrorState, Icon, ScreenHeader, StatusBadge } from '../../../shared/components/ui';
+import { colors, radius, shadows, spacing, typography } from '../../../shared/theme';
 import {
     formatAppointmentDate,
     formatAppointmentDuration,
@@ -10,33 +10,15 @@ import {
     getAppointmentStatusLabel,
 } from '../utils/appointmentContract.cjs';
 
-function DetailHeader({ navigation }) {
-    return (
-        <View style={styles.header}>
-            <Pressable
-                onPress={() => navigation.goBack()}
-                accessibilityRole="button"
-                accessibilityLabel="Geri"
-                hitSlop={4}
-                style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-            >
-                <Icon name="back" size={22} color={colors.textPrimary} />
-            </Pressable>
-            <Text accessibilityRole="header" style={styles.headerTitle}>Randevu Detayı</Text>
-            <View style={styles.headerBalance} accessible={false} />
-        </View>
-    );
-}
-
-function DetailRow({ icon, label, value }) {
+function DetailRow({ icon, label, value, isLast = false }) {
     if (!value) return null;
 
     return (
-        <View style={styles.detailRow}>
-            <View style={styles.rowLabel}>
+        <View style={[styles.detailRow, !isLast && styles.detailDivider]}>
+            <View style={styles.rowIcon}>
                 <Icon name={icon} size={18} color={colors.primaryDark} />
-                <Text style={styles.label}>{label}</Text>
             </View>
+            <Text style={styles.label}>{label}</Text>
             <Text style={styles.value}>{value}</Text>
         </View>
     );
@@ -50,25 +32,35 @@ export default function AppointmentDetailScreen({ navigation, route }) {
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
             <AppScreen
                 scroll
-                header={<DetailHeader navigation={navigation} />}
+                header={<ScreenHeader title="Randevu Detayı" onBack={() => navigation.goBack()} />}
                 contentStyle={styles.content}
             >
                 {appointment ? (
-                    <AppCard contentStyle={styles.cardContent}>
-                        <View style={styles.titleBlock}>
-                            <Text style={styles.title}>{appointment.title}</Text>
+                    <>
+                        <View style={styles.hero}>
                             <StatusBadge
                                 status={getAppointmentBadgeStatus(displayStatus)}
                                 label={getAppointmentStatusLabel(displayStatus)}
                             />
+                            <Text style={styles.title}>{appointment.title}</Text>
+                            <View style={styles.whenRow}>
+                                <Text style={styles.heroTime}>{appointment.time}</Text>
+                                <View style={styles.whenText}>
+                                    <Text style={styles.heroDate}>{formatAppointmentDate(appointment.date)}</Text>
+                                    <Text style={styles.heroWeekday}>
+                                        {formatAppointmentDate(appointment.date, { day: undefined, month: undefined, year: undefined, weekday: 'long' })}
+                                    </Text>
+                                </View>
+                            </View>
                         </View>
-                        <View style={styles.rows}>
+                        <Text style={styles.sectionTitle}>Görüşme bilgileri</Text>
+                        <AppCard style={styles.rows}>
                             <DetailRow icon="calendar" label="Tarih" value={formatAppointmentDate(appointment.date)} />
                             <DetailRow icon="clock" label="Saat" value={appointment.time} />
                             <DetailRow icon="message" label="Randevu türü" value={appointment.type} />
-                            <DetailRow icon="clock" label="Süre" value={formatAppointmentDuration(appointment.duration)} />
-                        </View>
-                    </AppCard>
+                            <DetailRow icon="hourglass" label="Süre" value={formatAppointmentDuration(appointment.duration)} isLast />
+                        </AppCard>
+                    </>
                 ) : (
                     <ErrorState
                         title="Randevu detayı bulunamadı"
@@ -84,26 +76,26 @@ export default function AppointmentDetailScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: colors.background },
-    header: {
-        minHeight: 60,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: spacing.x3,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderSoft,
+    content: { flexGrow: 1 },
+    hero: {
+        gap: spacing.x3,
+        padding: spacing.x6,
+        borderRadius: radius.hero,
         backgroundColor: colors.surface,
+        alignItems: 'flex-start',
+        ...shadows.hero,
     },
-    backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-    headerTitle: { flex: 1, ...typography.sectionTitle, color: colors.textPrimary, textAlign: 'center' },
-    headerBalance: { width: 44, height: 44 },
-    content: { paddingTop: spacing.x4, flexGrow: 1 },
-    cardContent: { gap: spacing.x4 },
-    titleBlock: { gap: spacing.x3 },
     title: { ...typography.screenTitle, color: colors.textPrimary },
-    rows: { borderTopWidth: 1, borderTopColor: colors.borderSoft },
-    detailRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: spacing.x3, borderBottomWidth: 1, borderBottomColor: colors.borderSoft },
-    rowLabel: { width: 112, flexDirection: 'row', alignItems: 'center', gap: spacing.x2 },
-    label: { ...typography.supporting, color: colors.textSecondary },
-    value: { ...typography.bodyMedium, color: colors.textPrimary, flex: 1, textAlign: 'right' },
-    pressed: { opacity: 0.7 },
+    whenRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.x4, marginTop: spacing.x2 },
+    heroTime: { ...typography.numeric, fontSize: 40, lineHeight: 44, color: colors.primaryDark },
+    whenText: { flex: 1, minWidth: 0, paddingLeft: spacing.x4, borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.borderStrong },
+    heroDate: { ...typography.bodyMedium, color: colors.textPrimary },
+    heroWeekday: { ...typography.supporting, color: colors.textSecondary, textTransform: 'capitalize' },
+    sectionTitle: { ...typography.sectionTitle, color: colors.textPrimary, marginTop: spacing.x8, marginBottom: spacing.x3 },
+    rows: { paddingVertical: spacing.x1 },
+    detailRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: spacing.x3 },
+    detailDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderStrong },
+    rowIcon: { width: 32, height: 32, borderRadius: radius.round, backgroundColor: colors.primarySurface, alignItems: 'center', justifyContent: 'center' },
+    label: { ...typography.supporting, color: colors.textSecondary, flex: 1 },
+    value: { ...typography.bodyMedium, color: colors.textPrimary, textAlign: 'right' },
 });

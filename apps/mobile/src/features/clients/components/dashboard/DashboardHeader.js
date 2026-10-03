@@ -11,6 +11,8 @@ const getInitials = (name) => String(name || 'K')
     .join('')
     .toLocaleUpperCase('tr-TR');
 
+const getFirstName = (name) => String(name || '').trim().split(/\s+/)[0] || '';
+
 export function DashboardHeader({
     greeting,
     userName,
@@ -23,8 +25,10 @@ export function DashboardHeader({
     return (
         <View style={styles.root}>
             <View style={styles.textWrap}>
-                <Text style={styles.greeting} accessibilityRole="header" numberOfLines={1}>{greeting}, {userName}</Text>
                 <Text style={styles.date}>{dateLabel}</Text>
+                <Text style={styles.greeting} accessibilityRole="header" numberOfLines={1}>
+                    {greeting}, {getFirstName(userName)}
+                </Text>
             </View>
             <View style={styles.actions}>
                 <NotificationBell unseenCount={unseenCount} onPress={onNotificationPress} />
@@ -48,14 +52,14 @@ export function DashboardHeader({
 }
 
 const styles = StyleSheet.create({
-    root: { flexDirection: 'row', alignItems: 'center', gap: spacing.x3 },
+    root: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.x3, paddingTop: spacing.x2, paddingBottom: spacing.x2 },
     textWrap: { flex: 1, minWidth: 0 },
     actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.x1 },
-    greeting: { ...typography.screenTitle, fontSize: 24, lineHeight: 30, color: colors.textPrimary },
-    date: { ...typography.supporting, color: colors.textSecondary, marginTop: 2 },
+    greeting: { ...typography.display, color: colors.textPrimary, marginTop: 2 },
+    date: { ...typography.supporting, color: colors.textSecondary },
     avatarButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
     avatar: { width: 42, height: 42, borderRadius: radius.round },
-    avatarFallback: { backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+    avatarFallback: { backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
     initials: { ...typography.bodyMedium, color: colors.primaryDark },
     pressed: { opacity: 0.8 },
 });

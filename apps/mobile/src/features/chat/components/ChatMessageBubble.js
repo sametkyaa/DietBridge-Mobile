@@ -34,7 +34,7 @@ export default function ChatMessageBubble({
     const receipt = receiptState === 'none' ? null : {
         icon: receiptState === 'sent' ? 'check' : 'checkDouble',
         label: receiptState === 'read' ? 'Okundu' : receiptState === 'delivered' ? 'Teslim edildi' : 'Gönderildi',
-        color: receiptState === 'read' ? colors.info : colors.textTertiary,
+        color: receiptState === 'read' ? colors.accent : colors.primarySoft,
     };
 
     const requestDelete = () => {
@@ -121,21 +121,21 @@ export default function ChatMessageBubble({
 }
 
 const styles = StyleSheet.create({
-    row: { width: '100%', paddingHorizontal: spacing.x4, marginVertical: spacing.x1 },
+    row: { width: '100%', paddingHorizontal: spacing.x4, marginVertical: 3 },
     ownRow: { alignItems: 'flex-end' },
     otherRow: { alignItems: 'flex-start' },
     bubble: {
-        maxWidth: '84%',
-        borderRadius: radius.control,
-        paddingHorizontal: spacing.x3,
-        paddingVertical: spacing.x2,
+        maxWidth: '80%',
+        borderRadius: 20,
+        paddingHorizontal: spacing.x4,
+        paddingVertical: spacing.x3,
     },
-    ownBubble: { backgroundColor: colors.primaryDark, borderBottomRightRadius: spacing.x1 },
-    otherBubble: { backgroundColor: colors.surfaceMuted, borderBottomLeftRadius: spacing.x1 },
+    ownBubble: { backgroundColor: colors.primaryDark, borderBottomRightRadius: 6 },
+    otherBubble: { backgroundColor: colors.surface, borderBottomLeftRadius: 6 },
     failedBubble: { borderWidth: 1, borderColor: colors.error },
     body: { ...typography.body, flexShrink: 1, flexWrap: 'wrap' },
     deletedBody: { fontStyle: 'italic', opacity: 0.82 },
-    ownBody: { color: colors.white },
+    ownBody: { color: colors.textOnPrimary },
     otherBody: { color: colors.textPrimary },
     imageContainer: { flexShrink: 1 },
     imagePlaceholder: {

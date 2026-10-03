@@ -162,18 +162,20 @@ export default function ChatComposer({
                     hitSlop={8}
                     style={({ pressed }) => [styles.sendButton, sendDisabled && styles.sendButtonDisabled, pressed && !sendDisabled && styles.pressed]}
                 >
-                    <Icon name="send" size={21} color={sendDisabled ? colors.textTertiary : colors.white} />
+                    <Icon name="send" size={20} color={sendDisabled ? colors.textTertiary : colors.textOnPrimary} />
                 </Pressable>
             </View>
-            <Text style={[styles.counter, overLimit && styles.counterError]} accessibilityLiveRegion="polite">
-                {overLimit ? `Mesaj en fazla ${CHAT_MESSAGE_MAX_LENGTH} karakter olabilir (${counterText})` : counterText}
-            </Text>
+            {characterCount >= CHAT_MESSAGE_MAX_LENGTH * 0.9 ? (
+                <Text style={[styles.counter, overLimit && styles.counterError]} accessibilityLiveRegion="polite">
+                    {overLimit ? `Mesaj en fazla ${CHAT_MESSAGE_MAX_LENGTH} karakter olabilir (${counterText})` : counterText}
+                </Text>
+            ) : null}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    root: { flexShrink: 0, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.borderSoft, paddingHorizontal: spacing.x4, paddingTop: spacing.x2, paddingBottom: spacing.x2 },
+    root: { flexShrink: 0, backgroundColor: colors.background, paddingHorizontal: spacing.x4, paddingTop: spacing.x2, paddingBottom: spacing.x3 },
     sendError: { ...typography.supporting, color: colors.errorDark, marginBottom: spacing.x2 },
     pickerHint: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.x2 },
     previewRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.x3, marginBottom: spacing.x2, padding: spacing.x2, borderRadius: radius.control, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderSoft },
@@ -187,13 +189,13 @@ const styles = StyleSheet.create({
     previewAction: { flexDirection: 'row', alignItems: 'center', gap: spacing.x1, minHeight: 32 },
     previewActionText: { ...typography.caption, color: colors.primaryDark },
     previewActionRemove: { ...typography.caption, color: colors.errorDark },
-    imageButton: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background, marginBottom: 1, marginRight: spacing.x1 },
+    imageButton: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySurface, marginBottom: 1, marginRight: spacing.x1 },
     imageButtonDisabled: { opacity: 0.6 },
-    inputRow: { minHeight: 50, flexDirection: 'row', alignItems: 'flex-end', borderWidth: 1, borderColor: colors.borderSoft, borderRadius: radius.control, backgroundColor: colors.background, paddingLeft: spacing.x3, paddingRight: spacing.x1, paddingVertical: spacing.x1 },
+    inputRow: { minHeight: 52, flexDirection: 'row', alignItems: 'flex-end', borderWidth: 1, borderColor: 'transparent', borderRadius: 26, backgroundColor: colors.surface, paddingLeft: spacing.x4, paddingRight: spacing.x1, paddingVertical: spacing.x1 },
     inputRowError: { borderColor: colors.error },
     input: { ...typography.body, color: colors.textPrimary, flex: 1, maxHeight: 112, minHeight: 38, paddingTop: spacing.x2, paddingBottom: spacing.x2, paddingRight: spacing.x2 },
     sendButton: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryDark, marginBottom: 1 },
-    sendButtonDisabled: { backgroundColor: colors.surfaceMuted },
+    sendButtonDisabled: { backgroundColor: colors.primarySurface },
     counter: { ...typography.caption, color: colors.textTertiary, textAlign: 'right', marginTop: spacing.x1 },
     counterError: { color: colors.errorDark },
     pressed: { opacity: 0.76 },
