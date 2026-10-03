@@ -25,7 +25,7 @@ export default function SupportScreen({ navigation }) {
           <Text style={styles.emailLabel}>Destek e-postası</Text>
           <Text selectable style={styles.email}>{SUPPORT_EMAIL}</Text>
           <AppButton
-            label="E-posta gönder"
+            label="E-posta Gönder"
             onPress={openSupportEmail}
             accessibilityLabel="Destek e-postası gönder"
             style={styles.button}
