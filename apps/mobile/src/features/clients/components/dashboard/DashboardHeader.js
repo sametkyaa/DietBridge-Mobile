@@ -26,7 +26,13 @@ export function DashboardHeader({
         <View style={styles.root}>
             <View style={styles.textWrap}>
                 <Text style={styles.date}>{dateLabel}</Text>
-                <Text style={styles.greeting} accessibilityRole="header" numberOfLines={1}>
+                <Text
+                    style={styles.greeting}
+                    accessibilityRole="header"
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.6}
+                >
                     {greeting}, {getFirstName(userName)}
                 </Text>
             </View>

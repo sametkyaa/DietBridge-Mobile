@@ -5,15 +5,16 @@ import { useReducedMotion } from '../../../../shared/hooks/useReducedMotion';
 import { colors, radius, spacing, typography } from '../../../../shared/theme';
 
 const GLASS_LITERS = 0.25;
+const GLASS_ML = 250;
 const MAX_GLASSES = 12;
 const formatLiters = (value) => (Number.isFinite(value) ? value : 0).toFixed(2).replace('.', ',');
 const GLASS_HEIGHT = 34;
 
-function Glass({ filled, reduced }) {
-    const level = useRef(new Animated.Value(filled ? 0 : GLASS_HEIGHT)).current;
+function Glass({ fill, reduced, disabled, onPress }) {
+    const level = useRef(new Animated.Value(GLASS_HEIGHT * (1 - fill))).current;
 
     useEffect(() => {
-        const toValue = filled ? 0 : GLASS_HEIGHT;
+        const toValue = GLASS_HEIGHT * (1 - fill);
         if (reduced) {
             level.setValue(toValue);
             return undefined;
@@ -26,23 +27,35 @@ function Glass({ filled, reduced }) {
         });
         animation.start();
         return () => animation.stop();
-    }, [filled, level, reduced]);
+    }, [fill, level, reduced]);
 
     return (
-        <View style={styles.glass}>
+        <Pressable
+            onPress={disabled ? undefined : onPress}
+            disabled={disabled}
+            hitSlop={{ top: 6, bottom: 6 }}
+            style={({ pressed }) => [styles.glass, pressed && !disabled && styles.glassPressed]}
+        >
             <Animated.View style={[styles.glassFill, { transform: [{ translateY: level }] }]} />
-        </View>
+        </Pressable>
     );
 }
 
-function GlassRow({ water, target }) {
+// Each glass shows its own share of the logged water, so 0,20 L fills most of the first glass.
+function GlassRow({ water, target, disabled, onAddGlass }) {
     const count = Math.max(1, Math.min(MAX_GLASSES, Math.round(target / GLASS_LITERS)));
-    const filled = Math.min(count, Math.floor((water + 0.0001) / GLASS_LITERS));
+    const glassesDrunk = Math.max(0, (Number.isFinite(water) ? water : 0) / GLASS_LITERS);
     const reduced = useReducedMotion();
     return (
-        <View style={styles.glasses} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+        <View style={styles.glasses}>
             {Array.from({ length: count }, (_, index) => (
-                <Glass key={index} filled={index < filled} reduced={reduced} />
+                <Glass
+                    key={index}
+                    fill={Math.min(1, Math.max(0, glassesDrunk - index))}
+                    reduced={reduced}
+                    disabled={disabled}
+                    onPress={onAddGlass}
+                />
             ))}
         </View>
     );
@@ -91,8 +104,21 @@ export function WaterTrackerCard({
             ) : (
                 <>
                     {Number.isFinite(target) && target > 0 ? (
-                        <View accessible accessibilityRole="progressbar" accessibilityLabel="Günlük su hedefi" accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }}>
-                            <GlassRow water={water} target={target} />
+                        <View>
+                            <View
+                                accessible
+                                accessibilityRole="button"
+                                accessibilityLabel="Bir bardak su ekle, 250 mililitre"
+                                accessibilityHint={`Günlük hedefin yüzde ${Math.round(progress * 100)} kadarı tamamlandı`}
+                                accessibilityState={{ disabled }}
+                                accessibilityActions={[{ name: 'activate' }]}
+                                onAccessibilityAction={(event) => {
+                                    if (!disabled && event.nativeEvent.actionName === 'activate') onAdd(GLASS_ML);
+                                }}
+                            >
+                                <GlassRow water={water} target={target} disabled={disabled} onAddGlass={() => onAdd(GLASS_ML)} />
+                            </View>
+                            <Text style={styles.glassHint}>Bardağa dokunarak 250 ml ekleyebilirsin.</Text>
                         </View>
                     ) : (
                         <ProgressBar value={progress * 100} tone="teal" accessibilityLabel="Günlük su hedefi" />
@@ -152,6 +178,8 @@ const styles = StyleSheet.create({
     glasses: { flexDirection: 'row', gap: 6 },
     glass: { flex: 1, height: GLASS_HEIGHT, overflow: 'hidden', borderRadius: 8, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, backgroundColor: colors.tealSoft },
     glassFill: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.teal },
+    glassPressed: { opacity: 0.7 },
+    glassHint: { ...typography.caption, color: colors.textTertiary, marginTop: spacing.x2 },
     stateRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.x2 },
     supporting: { ...typography.supporting, color: colors.textSecondary, marginTop: spacing.x2 },
     errorWrap: { marginTop: spacing.x2 },
