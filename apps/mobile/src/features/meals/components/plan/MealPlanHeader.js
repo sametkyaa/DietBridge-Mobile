@@ -1,9 +1,25 @@
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '../../../../shared/components/ui';
+import { useReducedMotion } from '../../../../shared/hooks/useReducedMotion';
 import { colors, radius, spacing, typography } from '../../../../shared/theme';
 
+const DAY_WIDTH = 46;
+const DAY_GAP = 6;
+
 export function MealPlanHeader({ dayOptions, selectedDay, todayIndex, onSelectDay, onOpenGrocery, groceryDisabled }) {
+    const reduced = useReducedMotion();
+    const offset = useRef(new Animated.Value(selectedDay * (DAY_WIDTH + DAY_GAP))).current;
+
+    useEffect(() => {
+        const toValue = selectedDay * (DAY_WIDTH + DAY_GAP);
+        if (reduced) {
+            offset.setValue(toValue);
+            return;
+        }
+        Animated.spring(offset, { toValue, speed: 16, bounciness: 5, useNativeDriver: true }).start();
+    }, [offset, reduced, selectedDay]);
+
     return (
         <View>
             <View style={styles.titleRow}>
@@ -27,6 +43,12 @@ export function MealPlanHeader({ dayOptions, selectedDay, todayIndex, onSelectDa
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.days}
             >
+                <View pointerEvents="none" style={styles.dayTrack}>
+                    {dayOptions.map((option, index) => (
+                        <View key={`bg-${index}-${option}`} style={[styles.dayBackground, { left: index * (DAY_WIDTH + DAY_GAP) }]} />
+                    ))}
+                    <Animated.View style={[styles.dayIndicator, { transform: [{ translateX: offset }] }]} />
+                </View>
                 {dayOptions.map((option, index) => {
                     const [dayLabel, dateLabel] = option.split(' ');
                     const selected = index === selectedDay;
@@ -38,7 +60,7 @@ export function MealPlanHeader({ dayOptions, selectedDay, todayIndex, onSelectDa
                             accessibilityRole="button"
                             accessibilityLabel={`${dayLabel} ${dateLabel}${isToday ? ', bugün' : ''}`}
                             accessibilityState={{ selected }}
-                            style={({ pressed }) => [styles.day, selected && styles.daySelected, pressed && styles.pressed]}
+                            style={({ pressed }) => [styles.day, pressed && styles.pressed]}
                         >
                             <Text style={[styles.dayLabel, selected && styles.dayLabelSelected]}>{dayLabel}</Text>
                             <Text style={[styles.dateLabel, selected && styles.dateLabelSelected]}>{dateLabel}</Text>
@@ -58,9 +80,11 @@ const styles = StyleSheet.create({
     title: { ...typography.screenTitle, color: colors.textPrimary },
     subtitle: { ...typography.supporting, color: colors.textSecondary, marginTop: 2 },
     cartButton: { width: 48, height: 48, borderRadius: radius.round, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
-    days: { gap: 6, paddingTop: spacing.x5, paddingBottom: spacing.x6 },
-    day: { width: 46, minHeight: 72, borderRadius: radius.round, alignItems: 'center', justifyContent: 'center', gap: 2, backgroundColor: colors.surface },
-    daySelected: { backgroundColor: colors.primaryDark },
+    days: { gap: DAY_GAP, paddingTop: spacing.x5, paddingBottom: spacing.x6 },
+    dayTrack: { position: 'absolute', top: spacing.x5, bottom: spacing.x6, left: 0, right: 0 },
+    dayBackground: { position: 'absolute', top: 0, bottom: 0, width: DAY_WIDTH, borderRadius: radius.round, backgroundColor: colors.surface },
+    dayIndicator: { position: 'absolute', top: 0, bottom: 0, left: 0, width: DAY_WIDTH, borderRadius: radius.round, backgroundColor: colors.primaryDark },
+    day: { width: DAY_WIDTH, minHeight: 72, borderRadius: radius.round, alignItems: 'center', justifyContent: 'center', gap: 2 },
     dayLabel: { ...typography.caption, color: colors.textTertiary },
     dayLabelSelected: { color: colors.primarySoft },
     dateLabel: { ...typography.numericSmall, color: colors.textPrimary },

@@ -1,18 +1,37 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { colors, radius, spacing } from '../../theme';
+import { usePressScale } from '../../hooks/usePressScale';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+function PressableCard({ children, style, onPress, accessibilityLabel, contentStyle }) {
+  const press = usePressScale({ to: 0.98 });
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={[styles.card, press.animatedStyle, style]}
+    >
+      <View style={contentStyle}>{children}</View>
+    </AnimatedPressable>
+  );
+}
 
 export function AppCard({ children, style, onPress, accessibilityLabel, contentStyle }) {
   if (onPress) {
     return (
-      <Pressable
+      <PressableCard
+        style={style}
         onPress={onPress}
-        accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
-        style={({ pressed }) => [styles.card, pressed && styles.pressed, style]}
+        contentStyle={contentStyle}
       >
-        <View style={contentStyle}>{children}</View>
-      </Pressable>
+        {children}
+      </PressableCard>
     );
   }
 
@@ -30,7 +49,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     padding: spacing.x5,
   },
-  pressed: { opacity: 0.85 },
 });
 
 export default AppCard;
