@@ -1,8 +1,9 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { AppButton, AppInput, Icon, InlineAlert } from '../../../shared/components/ui';
-import { colors, radius, spacing, typography } from '../../../shared/theme';
+import { AppButton, AppInput, InlineAlert } from '../../../shared/components/ui';
+import { colors, spacing, typography } from '../../../shared/theme';
 import PasswordToggle from './PasswordToggle';
+import BrandMark from './BrandMark';
 
 export default function LoginView({
   email,
@@ -24,11 +25,9 @@ export default function LoginView({
 }) {
   return (
     <>
-      <View style={styles.brandMark} accessible={false} importantForAccessibility="no">
-        <Icon name="sprout" size={26} color={colors.white} />
-      </View>
+      <BrandMark />
       <Text accessibilityRole="header" style={styles.title}>Tekrar hoş geldin</Text>
-      <Text style={styles.subtitle}>Hesabına giriş yap, kaldığın yerden devam et.</Text>
+      <Text style={styles.subtitle}>Diyetisyeninin hazırladığı plan ve günlük takibin seni bekliyor.</Text>
 
       {pendingAccountDeletion ? (
         <InlineAlert
@@ -129,16 +128,8 @@ export default function LoginView({
 }
 
 const styles = StyleSheet.create({
-  brandMark: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.control,
-    backgroundColor: colors.primaryDark,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: { ...typography.screenTitle, color: colors.textPrimary, marginTop: spacing.x5 },
-  subtitle: { ...typography.supporting, color: colors.textSecondary, marginTop: spacing.x2 },
+  title: { ...typography.display, color: colors.textPrimary, marginTop: spacing.x10 },
+  subtitle: { ...typography.body, color: colors.textSecondary, marginTop: spacing.x2, maxWidth: 320 },
   form: { gap: spacing.x4, marginTop: spacing.x8 },
   accountDeletionAlert: { marginTop: spacing.x4 },
   accountDeletionCleanup: { gap: spacing.x1, marginTop: spacing.x4 },

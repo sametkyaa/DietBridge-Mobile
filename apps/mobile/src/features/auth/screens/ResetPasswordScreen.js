@@ -75,7 +75,7 @@ export default function ResetPasswordScreen({
                     accessibilityLabel="Giriş ekranına dön"
                     style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
                 >
-                    <Icon name="back" size={22} color={colors.textPrimary} />
+                    <Icon name="back" size={20} color={colors.textPrimary} />
                 </Pressable>
 
                 <Text accessibilityRole="header" style={styles.title}>Bağlantı kullanılamıyor</Text>
@@ -115,7 +115,7 @@ export default function ResetPasswordScreen({
                 accessibilityState={{ disabled: loading }}
                 style={({ pressed }) => [styles.backButton, pressed && !loading && styles.pressed]}
             >
-                <Icon name="back" size={22} color={colors.textPrimary} />
+                <Icon name="back" size={20} color={colors.textPrimary} />
             </Pressable>
 
             <Text accessibilityRole="header" style={styles.title}>Yeni şifreni belirle</Text>
@@ -191,13 +191,13 @@ const styles = StyleSheet.create({
     backButton: {
         width: 44,
         height: 44,
-        borderRadius: radius.control,
+        borderRadius: radius.round,
         backgroundColor: colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    title: { ...typography.screenTitle, color: colors.textPrimary, marginTop: spacing.x6 },
-    subtitle: { ...typography.supporting, color: colors.textSecondary, marginTop: spacing.x2 },
+    title: { ...typography.display, color: colors.textPrimary, marginTop: spacing.x8 },
+    subtitle: { ...typography.body, color: colors.textSecondary, marginTop: spacing.x2, maxWidth: 340 },
     form: { gap: spacing.x4, marginTop: spacing.x8 },
     alert: { marginTop: spacing.x4 },
     spacer: { flex: 1, minHeight: spacing.x8 },

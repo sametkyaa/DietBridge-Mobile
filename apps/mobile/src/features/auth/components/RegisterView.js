@@ -4,6 +4,7 @@ import { AppButton, AppInput } from '../../../shared/components/ui';
 import LegalLinks from '../../../shared/components/legal/LegalLinks';
 import { colors, spacing, typography } from '../../../shared/theme';
 import PasswordToggle from './PasswordToggle';
+import BrandMark from './BrandMark';
 
 export default function RegisterView({
   fullName,
@@ -34,6 +35,7 @@ export default function RegisterView({
 
   return (
     <>
+      <BrandMark />
       <Text accessibilityRole="header" style={styles.title}>Hesap oluştur</Text>
       <Text style={styles.subtitle}>
         Birkaç bilgiyle başla; sağlık detaylarını profilinden tamamlayabilirsin.
@@ -137,8 +139,8 @@ export default function RegisterView({
 }
 
 const styles = StyleSheet.create({
-  title: { ...typography.screenTitle, color: colors.textPrimary },
-  subtitle: { ...typography.supporting, color: colors.textSecondary, marginTop: spacing.x2 },
+  title: { ...typography.display, color: colors.textPrimary, marginTop: spacing.x8 },
+  subtitle: { ...typography.body, color: colors.textSecondary, marginTop: spacing.x2, maxWidth: 340 },
   form: { gap: spacing.x4, marginTop: spacing.x6 },
   spacer: { flex: 1, minHeight: spacing.x6 },
   legal: { marginTop: spacing.x4 },
