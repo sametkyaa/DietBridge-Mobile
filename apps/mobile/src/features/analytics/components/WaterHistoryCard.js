@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppCard, EmptyState, Icon } from '../../../shared/components/ui';
-import { colors, radius, spacing, typography } from '../../../shared/theme';
+import { colors, spacing, typography } from '../../../shared/theme';
 
 const fmt = (value) => Number(value || 0).toFixed(1).replace('.', ',');
 
