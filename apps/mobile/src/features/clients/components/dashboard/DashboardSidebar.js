@@ -1,7 +1,8 @@
 import React from 'react';
-import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../../../../shared/components/ui';
+import { useModalTransition } from '../../../../shared/hooks/useModalTransition';
 import { colors, radius, shadows, spacing, typography } from '../../../../shared/theme';
 
 const ITEMS = [
@@ -21,12 +22,18 @@ const getInitials = (name) => String(name || 'K')
 
 export function DashboardSidebar({ visible, userName, avatarUrl, onClose, onNavigate, topInset = 0 }) {
     const insets = useSafeAreaInsets();
+    const { width: windowWidth } = useWindowDimensions();
+    const { mounted, progress } = useModalTransition(visible, { duration: 300 });
+    const panelWidth = Math.min(windowWidth * 0.8, 340);
+    const translateX = progress.interpolate({ inputRange: [0, 1], outputRange: [-panelWidth - 24, 0] });
 
     return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+        <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
             <View style={styles.overlay} accessibilityViewIsModal>
-                <View style={[
+                <Animated.View pointerEvents="none" style={[styles.scrim, { opacity: progress }]} />
+                <Animated.View style={[
                     styles.panel,
+                    { transform: [{ translateX }] },
                     {
                         paddingTop: spacing.x6 + Math.max(topInset, insets.top),
                         paddingBottom: spacing.x6 + insets.bottom,
@@ -58,7 +65,7 @@ export function DashboardSidebar({ visible, userName, avatarUrl, onClose, onNavi
                             </Pressable>
                         ))}
                     </View>
-                </View>
+                </Animated.View>
                 <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="Menüyü kapat" />
             </View>
         </Modal>
@@ -66,7 +73,8 @@ export function DashboardSidebar({ visible, userName, avatarUrl, onClose, onNavi
 }
 
 const styles = StyleSheet.create({
-    overlay: { flex: 1, flexDirection: 'row', backgroundColor: 'rgba(28, 43, 38, 0.36)' },
+    overlay: { flex: 1, flexDirection: 'row' },
+    scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(28, 43, 38, 0.36)' },
     panel: { width: '80%', maxWidth: 340, height: '100%', backgroundColor: colors.background, paddingHorizontal: spacing.x5, borderTopRightRadius: radius.hero, borderBottomRightRadius: radius.hero, ...shadows.sheet },
     backdrop: { flex: 1 },
     profile: { alignItems: 'flex-start', paddingBottom: spacing.x6 },

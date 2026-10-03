@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
+  Animated,
   KeyboardAvoidingView,
   Modal,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -12,6 +14,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, shadows, spacing, typography } from '../../theme';
+import { useModalTransition } from '../../hooks/useModalTransition';
+
+const OPEN_SPRING = { damping: 22, stiffness: 220, mass: 1, overshootClamping: true };
+const DRAG_CLOSE_DISTANCE = 120;
+const DRAG_CLOSE_VELOCITY = 1.2;
 
 export function BottomSheetView({
   visible,
@@ -29,6 +36,37 @@ export function BottomSheetView({
   const { height: windowHeight } = useWindowDimensions();
   const safeInsets = useSafeAreaInsets();
   const resolvedMaxHeight = maxHeight ?? Math.round(windowHeight * 0.9);
+  const { mounted, progress } = useModalTransition(visible, { duration: 280, spring: OPEN_SPRING });
+  const drag = useRef(new Animated.Value(0)).current;
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (visible) drag.setValue(0);
+  }, [drag, visible]);
+
+  const panResponder = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gesture) => gesture.dy > 6 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+    onPanResponderMove: (_, gesture) => drag.setValue(Math.max(0, gesture.dy)),
+    onPanResponderRelease: (_, gesture) => {
+      if (gesture.dy > DRAG_CLOSE_DISTANCE || gesture.vy > DRAG_CLOSE_VELOCITY) {
+        onCloseRef.current?.();
+        return;
+      }
+      Animated.spring(drag, { toValue: 0, speed: 20, bounciness: 4, useNativeDriver: true }).start();
+    },
+    onPanResponderTerminate: () => {
+      Animated.spring(drag, { toValue: 0, speed: 20, bounciness: 4, useNativeDriver: true }).start();
+    },
+  }), [drag]);
+
+  const translateY = Animated.add(
+    progress.interpolate({ inputRange: [0, 1], outputRange: [windowHeight, 0] }),
+    drag,
+  );
 
   const body = scrollable ? (
     <ScrollView
@@ -46,9 +84,9 @@ export function BottomSheetView({
 
   return (
     <Modal
-      visible={visible}
+      visible={mounted}
       transparent
-      animationType="slide"
+      animationType="none"
       onRequestClose={onClose}
       statusBarTranslucent
     >
@@ -59,15 +97,17 @@ export function BottomSheetView({
         style={styles.flex}
       >
         <View style={styles.overlay} accessibilityViewIsModal>
+          <Animated.View pointerEvents="none" style={[styles.scrim, { opacity: progress }]} />
           <Pressable
             style={styles.backdrop}
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel="Kapat"
           />
-          <View
+          <Animated.View
             style={[
               styles.sheet,
+              { transform: [{ translateY }] },
               {
                 maxHeight: resolvedMaxHeight,
                 paddingBottom: spacing.x6 + bottomInset,
@@ -76,11 +116,13 @@ export function BottomSheetView({
               },
             ]}
           >
-            <View style={styles.handle} accessible={false} importantForAccessibility="no" />
-            {title ? <Text style={styles.title} accessibilityRole="header">{title}</Text> : null}
+            <View {...panResponder.panHandlers}>
+              <View style={styles.handle} accessible={false} importantForAccessibility="no" />
+              {title ? <Text style={styles.title} accessibilityRole="header">{title}</Text> : null}
+            </View>
             {body}
             {footer ? <View style={styles.footer}>{footer}</View> : null}
-          </View>
+          </Animated.View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -91,8 +133,11 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(28, 43, 38, 0.36)',
     justifyContent: 'flex-end',
+  },
+  scrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(28, 43, 38, 0.36)',
   },
   backdrop: { flex: 1 },
   sheet: {
