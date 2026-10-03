@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useDietitianConnection } from '../../dietitianConnection/context/DietitianConnectionContext';
 import {
@@ -336,8 +336,14 @@ export const useGroceryListViewModel = () => {
         }
     }, [activeUserId, commitItems, markItemPending]);
 
+    // The screen lists what is still to buy apart from what is already in the basket.
+    const activeItems = useMemo(() => items.filter((item) => !item.isCompleted), [items]);
+    const completedItems = useMemo(() => items.filter((item) => item.isCompleted), [items]);
+
     return {
         items,
+        activeItems,
+        completedItems,
         status,
         error,
         mutationError,

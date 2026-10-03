@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, typography } from '../../theme';
-import Icon from './Icon';
+import { Icon } from './Icon';
 
 // Stack screens share one header: a round back button on the canvas and a
 // large, left-aligned title underneath. No bar, no divider.

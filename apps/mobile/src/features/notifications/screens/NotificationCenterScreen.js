@@ -17,6 +17,8 @@ import {
     ErrorState,
     Icon,
     InlineAlert,
+    ScreenHeader,
+    SegmentedTabs,
 } from '../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 import { useDietitianConnection } from '../../dietitianConnection/context/DietitianConnectionContext';
@@ -32,76 +34,33 @@ const VIEWABILITY_CONFIG = Object.freeze({
 
 const NotificationSeparator = () => <View style={styles.separator} />;
 
-function ScreenHeader({ navigation, canMarkAllRead, isMarkingAll, onMarkAllRead }) {
+function MarkAllReadButton({ canMarkAllRead, isMarkingAll, onMarkAllRead }) {
+    const disabled = !canMarkAllRead || isMarkingAll;
     return (
-        <View style={styles.header}>
-            <View style={styles.headerTopRow}>
-                <Pressable
-                    onPress={() => navigation.goBack()}
-                    accessibilityRole="button"
-                    accessibilityLabel="Geri"
-                    hitSlop={4}
-                    style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-                >
-                    <Icon name="back" size={22} color={colors.textPrimary} />
-                </Pressable>
-                <Text accessibilityRole="header" style={styles.headerTitle} numberOfLines={1}>Bildirimler</Text>
-                <View style={styles.headerTopSpacer} accessible={false} />
-            </View>
-            <View style={styles.markAllRow}>
-                <Pressable
-                    onPress={canMarkAllRead && !isMarkingAll ? onMarkAllRead : undefined}
-                    disabled={!canMarkAllRead || isMarkingAll}
-                    accessibilityRole="button"
-                    accessibilityLabel="Tümünü okundu işaretle"
-                    accessibilityState={{
-                        disabled: !canMarkAllRead || isMarkingAll,
-                        busy: isMarkingAll,
-                    }}
-                    style={({ pressed }) => [
-                        styles.markAllButton,
-                        !canMarkAllRead && styles.markAllDisabled,
-                        pressed && canMarkAllRead && !isMarkingAll && styles.pressed,
-                    ]}
-                >
-                    {isMarkingAll ? <ActivityIndicator size="small" color={colors.primaryDark} /> : null}
-                    <Text style={styles.markAllLabel} numberOfLines={1}>Tümünü okundu işaretle</Text>
-                </Pressable>
-            </View>
-        </View>
+        <Pressable
+            onPress={disabled ? undefined : onMarkAllRead}
+            disabled={disabled}
+            accessibilityRole="button"
+            accessibilityLabel="Tümünü okundu işaretle"
+            accessibilityState={{ disabled, busy: isMarkingAll }}
+            style={({ pressed }) => [
+                styles.markAllButton,
+                !canMarkAllRead && styles.markAllDisabled,
+                pressed && !disabled && styles.pressed,
+            ]}
+        >
+            {isMarkingAll
+                ? <ActivityIndicator size="small" color={colors.primaryDark} />
+                : <Icon name="checkDouble" size={16} color={colors.primaryDark} />}
+            <Text style={styles.markAllLabel} numberOfLines={1}>Tümünü okundu işaretle</Text>
+        </Pressable>
     );
 }
 
-function QueryTabs({ queryMode, onChange }) {
-    const tabs = [
-        { key: NOTIFICATION_QUERY_MODES.ALL, label: 'Tümü' },
-        { key: NOTIFICATION_QUERY_MODES.UNREAD, label: 'Okunmamış' },
-    ];
-
-    return (
-        <View style={styles.tabs} accessibilityRole="tablist">
-            {tabs.map((tab) => {
-                const selected = queryMode === tab.key;
-                return (
-                    <Pressable
-                        key={tab.key}
-                        onPress={() => onChange(tab.key)}
-                        accessibilityRole="tab"
-                        accessibilityLabel={tab.label}
-                        accessibilityState={{ selected }}
-                        style={({ pressed }) => [
-                            styles.tab,
-                            selected && styles.selectedTab,
-                            pressed && styles.pressed,
-                        ]}
-                    >
-                        <Text style={[styles.tabLabel, selected && styles.selectedTabLabel]}>{tab.label}</Text>
-                    </Pressable>
-                );
-            })}
-        </View>
-    );
-}
+const QUERY_TABS = [
+    { key: NOTIFICATION_QUERY_MODES.ALL, label: 'Tümü' },
+    { key: NOTIFICATION_QUERY_MODES.UNREAD, label: 'Okunmamış' },
+];
 
 function NotificationLoadingState() {
     return (
@@ -346,13 +305,18 @@ export default function NotificationCenterScreen({ navigation }) {
     return (
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
             <ScreenHeader
-                navigation={navigation}
-                canMarkAllRead={canMarkAllRead}
-                isMarkingAll={isMarkingAll}
-                onMarkAllRead={handleMarkAllRead}
+                title="Bildirimler"
+                onBack={() => navigation.goBack()}
+                right={(
+                    <MarkAllReadButton
+                        canMarkAllRead={canMarkAllRead}
+                        isMarkingAll={isMarkingAll}
+                        onMarkAllRead={handleMarkAllRead}
+                    />
+                )}
             />
             <View style={styles.content}>
-                <QueryTabs queryMode={queryMode} onChange={handleModeChange} />
+                <SegmentedTabs tabs={QUERY_TABS} selectedKey={queryMode} onChange={handleModeChange} />
                 {actionError ? (
                     <InlineAlert
                         variant="error"
@@ -409,62 +373,34 @@ export default function NotificationCenterScreen({ navigation }) {
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: colors.background },
-    header: {
-        paddingTop: spacing.x1,
-        paddingBottom: spacing.x1,
-        paddingHorizontal: spacing.x2,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderSoft,
-        backgroundColor: colors.surface,
-    },
-    headerTopRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center' },
-    backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-    headerTitle: { flex: 1, ...typography.sectionTitle, color: colors.textPrimary, textAlign: 'center' },
-    headerTopSpacer: { width: 44, height: 44 },
-    markAllRow: { minHeight: 44, alignItems: 'flex-end', justifyContent: 'center' },
     markAllButton: {
-        minHeight: 44,
+        minHeight: 40,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'flex-end',
-        gap: spacing.x1,
-        paddingHorizontal: spacing.x1,
+        gap: spacing.x2,
+        paddingHorizontal: spacing.x4,
+        borderRadius: radius.round,
+        backgroundColor: colors.surface,
     },
-    markAllLabel: {
-        ...typography.caption,
-        color: colors.primaryDark,
-        textAlign: 'right',
-    },
+    markAllLabel: { ...typography.caption, fontFamily: typography.button.fontFamily, color: colors.primaryDark },
     markAllDisabled: { opacity: 0.45 },
-    content: { flex: 1, paddingHorizontal: spacing.x4, paddingTop: spacing.x3 },
-    tabs: {
-        flexDirection: 'row',
-        backgroundColor: colors.surfaceMuted,
-        borderRadius: radius.control,
-        padding: spacing.x1,
-    },
-    tab: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.small },
-    selectedTab: { backgroundColor: colors.surface, elevation: 1 },
-    tabLabel: { ...typography.bodyMedium, color: colors.textSecondary },
-    selectedTabLabel: { color: colors.primaryDark },
+    content: { flex: 1, paddingHorizontal: spacing.x5 },
     listArea: { flex: 1, marginTop: spacing.x4 },
     listContent: { paddingBottom: spacing.x8 },
     listHeader: { marginBottom: spacing.x3 },
-    separator: { height: spacing.x3 },
+    separator: { height: spacing.x2 },
     footer: { alignItems: 'center', paddingVertical: spacing.x4 },
     footerSpacer: { height: spacing.x4 },
     actionAlert: { marginTop: spacing.x3 },
-    loadingList: { gap: spacing.x3 },
+    loadingList: { gap: spacing.x2 },
     skeletonCard: {
-        minHeight: 88,
+        minHeight: 84,
         flexDirection: 'row',
         alignItems: 'center',
         gap: spacing.x3,
         padding: spacing.x4,
         backgroundColor: colors.surface,
         borderRadius: radius.card,
-        borderWidth: 1,
-        borderColor: colors.borderSoft,
     },
     skeletonBody: { flex: 1, gap: spacing.x2 },
     pressed: { opacity: 0.7 },

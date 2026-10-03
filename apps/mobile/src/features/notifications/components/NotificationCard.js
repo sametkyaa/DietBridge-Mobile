@@ -35,7 +35,7 @@ export function NotificationCard({ notification, onPress, disabled = false }) {
             <View style={[styles.iconWrap, isUnread && styles.unreadIconWrap]} accessible={false}>
                 <Icon
                     name={getNotificationCategoryIcon(notification?.category)}
-                    size={21}
+                    size={20}
                     color={isUnread ? colors.primaryDark : colors.textSecondary}
                 />
             </View>
@@ -47,43 +47,40 @@ export function NotificationCard({ notification, onPress, disabled = false }) {
                 {context ? <Text style={styles.context} numberOfLines={1}>{context}</Text> : null}
                 {relativeTime ? <Text style={styles.timestamp}>{relativeTime}</Text> : null}
             </View>
-            <Icon name="chevronRight" size={18} color={colors.textTertiary} />
+            <Icon name="chevronRight" size={16} color={colors.textTertiary} />
         </Pressable>
     );
 }
 
+// Unread rows sit on white cards with a spruce dot; read rows fall back onto
+// the canvas so the eye lands on what is new first.
 const styles = StyleSheet.create({
     card: {
-        minHeight: 88,
+        minHeight: 84,
         flexDirection: 'row',
         alignItems: 'center',
         gap: spacing.x3,
-        padding: spacing.x4,
-        backgroundColor: colors.surface,
+        paddingVertical: spacing.x4,
+        paddingHorizontal: spacing.x4,
         borderRadius: radius.card,
-        borderWidth: 1,
-        borderColor: colors.borderSoft,
     },
-    unreadCard: {
-        backgroundColor: colors.primarySoft,
-        borderColor: colors.primarySoft,
-    },
+    unreadCard: { backgroundColor: colors.surface },
     iconWrap: {
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         borderRadius: radius.round,
-        backgroundColor: colors.surfaceMuted,
+        backgroundColor: colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
     },
     unreadIconWrap: { backgroundColor: colors.primarySurface },
-    body: { flex: 1, minWidth: 0, gap: spacing.x1 },
+    body: { flex: 1, minWidth: 0, gap: 2 },
     summaryRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.x2 },
-    summary: { ...typography.bodyMedium, color: colors.textPrimary, flex: 1 },
-    unreadText: { color: colors.primaryDark },
+    summary: { ...typography.body, color: colors.textSecondary, flex: 1 },
+    unreadText: { fontFamily: typography.bodyMedium.fontFamily, color: colors.textPrimary },
     context: { ...typography.supporting, color: colors.textSecondary },
     timestamp: { ...typography.caption, color: colors.textTertiary, marginTop: spacing.x1 },
-    unreadDot: { width: 8, height: 8, borderRadius: radius.round, backgroundColor: colors.primary, marginTop: 6 },
+    unreadDot: { width: 8, height: 8, borderRadius: radius.round, backgroundColor: colors.primary, marginTop: 7 },
     pressed: { opacity: 0.78 },
 });
 
