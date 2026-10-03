@@ -48,7 +48,10 @@ function DietitianHeader({ activeConnection, activeDietitian }) {
           <Text style={styles.avatarInitials}>{avatar.initials}</Text>
         </View>
       )}
-      <Text style={styles.headerTitle} accessibilityRole="header" numberOfLines={1}>{displayName}</Text>
+      <View style={styles.headerText}>
+        <Text style={styles.headerTitle} accessibilityRole="header" numberOfLines={1}>{displayName}</Text>
+        <Text style={styles.headerCaption}>Diyetisyenin</Text>
+      </View>
     </View>
   );
 }
@@ -215,15 +218,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.x3,
-    paddingHorizontal: spacing.x4,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSoft,
-    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.x5,
+    paddingTop: spacing.x2,
+    paddingBottom: spacing.x3,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderStrong,
   },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceMuted },
-  avatarFallback: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
-  avatarInitials: { ...typography.supporting, color: colors.primaryDark, fontWeight: '700' },
-  headerTitle: { ...typography.cardTitle, flex: 1, color: colors.textPrimary },
+  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface },
+  avatarFallback: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent },
+  avatarInitials: { ...typography.bodyMedium, fontFamily: typography.button.fontFamily, color: colors.textPrimary },
+  headerText: { flex: 1, minWidth: 0 },
+  headerTitle: { ...typography.cardTitle, color: colors.textPrimary },
+  headerCaption: { ...typography.caption, color: colors.textSecondary, marginTop: 1 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.x4, paddingHorizontal: spacing.x6 },
   loadingText: { ...typography.supporting, color: colors.textSecondary, textAlign: 'center' },
 });

@@ -31,12 +31,12 @@ export default function MealActivityCard({ activity }) {
             <View style={styles.card}>
                 <View style={styles.headerRow}>
                     <View style={styles.iconCircle} accessible={false}>
-                        <Icon name="meal" size={18} color={colors.primaryDark} />
+                        <Icon name="check" size={18} color={colors.textPrimary} />
                     </View>
                     <View style={styles.textWrap}>
-                        <Text style={styles.heading}>🍽 {mealLabel} tamamlandı</Text>
+                        <Text style={styles.heading}>{mealLabel} tamamlandı</Text>
                         <Text style={styles.title} numberOfLines={2}>{activity?.mealTitle}</Text>
-                        <Text style={styles.meta}>{completionTime || 'Tamamlandı'} · {activity?.mealTime}</Text>
+                        <Text style={styles.meta}>Plan {activity?.mealTime}, işaretlendi {completionTime || '—'}</Text>
                     </View>
                 </View>
                 {photoPath ? (
@@ -57,14 +57,14 @@ export default function MealActivityCard({ activity }) {
 }
 
 const styles = StyleSheet.create({
-    row: { width: '100%', paddingHorizontal: spacing.x4, marginVertical: spacing.x1, alignItems: 'center' },
-    card: { width: '100%', maxWidth: 420, borderRadius: radius.card, borderWidth: 1, borderColor: colors.primarySoft, backgroundColor: colors.primarySoft, padding: spacing.x3 },
-    headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.x2 },
-    iconCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.white },
+    row: { width: '100%', paddingHorizontal: spacing.x6, marginVertical: spacing.x3, alignItems: 'center' },
+    card: { width: '100%', maxWidth: 420, borderRadius: radius.card, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.borderStrong, padding: spacing.x3 },
+    headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.x3 },
+    iconCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent },
     textWrap: { flex: 1, minWidth: 0 },
-    heading: { ...typography.bodyMedium, color: colors.primaryDark },
-    title: { ...typography.supporting, color: colors.textPrimary, marginTop: 2 },
-    meta: { ...typography.caption, color: colors.primaryDark, marginTop: spacing.x1 },
+    heading: { ...typography.caption, color: colors.primaryDark },
+    title: { ...typography.bodyMedium, color: colors.textPrimary, marginTop: 2 },
+    meta: { ...typography.caption, fontVariant: ['tabular-nums'], color: colors.textTertiary, marginTop: 2 },
     photoButton: { marginTop: spacing.x3, alignSelf: 'flex-start', borderRadius: radius.small, overflow: 'hidden' },
     photo: { width: 120, height: 84, borderRadius: radius.small },
 });

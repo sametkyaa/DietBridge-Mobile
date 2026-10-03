@@ -3,6 +3,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppCard, EmptyState, Icon } from '../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 
+const fmt = (value) => Number(value || 0).toFixed(1).replace('.', ',');
+
 export function WaterHistoryCard({ history, total }) {
     if (history.length === 0) {
         return (
@@ -17,8 +19,11 @@ export function WaterHistoryCard({ history, total }) {
     return (
         <AppCard>
             <View style={styles.header}>
-                <View style={styles.titleRow}><Icon name="droplet" size={20} color={colors.tealDark} /><Text style={styles.heading} accessibilityRole="header">Su geçmişi</Text></View>
-                <View style={styles.summary}><Text style={styles.total}>{total.toFixed(1)} L</Text><Text style={styles.supporting}>7 günlük toplam · günlük ort. {average.toFixed(1)} L</Text></View>
+                <View style={styles.titleRow}><Icon name="droplet" size={18} color={colors.tealDark} /><Text style={styles.heading} accessibilityRole="header">Su</Text></View>
+                <View style={styles.summary}>
+                    <Text style={styles.total}>{fmt(average)}<Text style={styles.totalUnit}> L / gün</Text></Text>
+                    <Text style={styles.supporting}>Son 7 günde toplam {fmt(total)} L</Text>
+                </View>
             </View>
             <View style={styles.chart}>
                 {history.map((item) => {
@@ -28,8 +33,8 @@ export function WaterHistoryCard({ history, total }) {
                             <View style={styles.track} importantForAccessibility="no">
                                 <View style={[styles.fill, { height: `${(amount / maxAmount) * 100}%` }]} />
                             </View>
+                            <Text style={styles.amount}>{fmt(amount)}</Text>
                             <Text style={styles.dayLabel}>{item.day}</Text>
-                            <Text style={styles.amount}>{amount.toFixed(1)} L</Text>
                         </View>
                     );
                 })}
@@ -43,14 +48,15 @@ const styles = StyleSheet.create({
     titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.x2 },
     heading: { ...typography.sectionTitle, color: colors.textPrimary },
     summary: { alignItems: 'flex-end', flex: 1 },
-    total: { ...typography.cardTitle, color: colors.textPrimary },
-    supporting: { ...typography.caption, color: colors.textSecondary, textAlign: 'right' },
-    chart: { height: 154, flexDirection: 'row', alignItems: 'flex-end', gap: spacing.x1, marginTop: spacing.x4 },
+    total: { ...typography.numericSmall, color: colors.textPrimary },
+    totalUnit: { ...typography.supporting, color: colors.textTertiary },
+    supporting: { ...typography.caption, color: colors.textSecondary, textAlign: 'right', marginTop: 2 },
+    chart: { height: 150, flexDirection: 'row', alignItems: 'flex-end', gap: spacing.x2, marginTop: spacing.x5 },
     day: { flex: 1, minWidth: 0, alignItems: 'center' },
-    track: { width: 18, height: 106, borderRadius: radius.round, backgroundColor: colors.tealSoft, justifyContent: 'flex-end', overflow: 'hidden' },
-    fill: { width: '100%', minHeight: 2, borderRadius: radius.round, backgroundColor: colors.teal },
-    dayLabel: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.x1 },
-    amount: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
+    track: { width: '100%', maxWidth: 30, height: 96, borderRadius: 8, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, backgroundColor: colors.tealSoft, justifyContent: 'flex-end', overflow: 'hidden' },
+    fill: { width: '100%', minHeight: 2, borderRadius: 8, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, backgroundColor: colors.teal },
+    dayLabel: { ...typography.caption, color: colors.textTertiary, marginTop: 2 },
+    amount: { ...typography.caption, fontVariant: ['tabular-nums'], color: colors.textPrimary, marginTop: spacing.x2 },
 });
 
 export default WaterHistoryCard;

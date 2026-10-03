@@ -36,7 +36,6 @@ const AnalysisScreen = () => {
         weeklyWeightData,
         selectedWeekIndex,
         setSelectedWeekIndex,
-        maxChangeMagnitude,
         measurements,
         waterHistory,
         monthLabel,
@@ -108,8 +107,8 @@ const AnalysisScreen = () => {
         <SafeAreaView style={screenStyles.safeArea} edges={['top', 'left', 'right']}>
             <ScrollView contentContainerStyle={screenStyles.content} showsVerticalScrollIndicator={false}>
                 <View>
-                    <Text style={screenStyles.title} accessibilityRole="header">İlerleme analizi</Text>
-                    <Text style={screenStyles.subtitle}>Gerçek kayıtlarınızın güncel özeti</Text>
+                    <Text style={screenStyles.title} accessibilityRole="header">İlerlemen</Text>
+                    <Text style={screenStyles.subtitle}>Kilo, ölçü ve su kayıtlarının özeti</Text>
                 </View>
                 {analyticsStatus === 'empty' ? (
                     <InlineAlert variant="info" title="Henüz analiz verisi yok" message="Kilo, ölçüm ve su kayıtlarınız eklendikçe ilerlemeniz burada görünür." />
@@ -118,7 +117,6 @@ const AnalysisScreen = () => {
                     data={weeklyWeightData}
                     selectedIndex={selectedWeekIndex}
                     onSelect={setSelectedWeekIndex}
-                    maxChangeMagnitude={maxChangeMagnitude}
                     currentWeight={currentWeight}
                     startWeight={startWeight}
                     weightChange={weightChange}
@@ -159,8 +157,8 @@ const AnalysisScreen = () => {
 
 const screenStyles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: colors.background },
-    content: { paddingHorizontal: spacing.x5, paddingTop: spacing.x3, paddingBottom: spacing.x8, gap: spacing.x4 },
-    title: { ...typography.screenTitle, color: colors.textPrimary },
+    content: { paddingHorizontal: spacing.x5, paddingTop: spacing.x5, paddingBottom: spacing.x10, gap: spacing.x4 },
+    title: { ...typography.display, color: colors.textPrimary },
     subtitle: { ...typography.supporting, color: colors.textSecondary, marginTop: 2 },
     loadingWrap: { flex: 1, paddingHorizontal: spacing.x5, paddingTop: spacing.x8 },
     skeletonGap: { marginTop: spacing.x4 },
