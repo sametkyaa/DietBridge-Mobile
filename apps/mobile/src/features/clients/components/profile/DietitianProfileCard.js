@@ -3,6 +3,8 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppCard, AppSkeleton, Icon, InlineAlert, StatusBadge } from '../../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../../shared/theme';
 
+const getInitials = (name) => String(name || '').replace(/^Dyt\.\s*/i, '').trim().split(/\s+/).slice(0, 2).map((part) => part[0] || '').join('').toLocaleUpperCase('tr-TR');
+
 export function DietitianProfileCard({ loading, dietitian, hasActive, error, expanded, onToggle }) {
     if (loading) return <AppCard><View accessible accessibilityRole="progressbar" accessibilityLabel="Diyetisyen bilgisi yükleniyor" accessibilityState={{ busy: true }}><AppSkeleton height={64} animated /></View></AppCard>;
     if (!hasActive || !dietitian) return error
@@ -18,8 +20,8 @@ export function DietitianProfileCard({ loading, dietitian, hasActive, error, exp
     return (
         <AppCard style={styles.card}>
             <Pressable onPress={onToggle} accessibilityRole="button" accessibilityLabel={`Diyetisyen ${name}, ayrıntıları ${expanded ? 'kapat' : 'aç'}`} accessibilityState={{ expanded }} style={({ pressed }) => [styles.header, pressed && styles.pressed]}>
-                {avatar ? <Image source={{ uri: avatar }} style={styles.avatar} accessibilityLabel={`${name} profil fotoğrafı`} /> : <View style={[styles.avatar, styles.fallback]}><Icon name="person" color={colors.primaryDark} /></View>}
-                <View style={styles.textWrap}><Text style={styles.label}>Diyetisyeniniz</Text><Text style={styles.name}>{name}</Text></View>
+                {avatar ? <Image source={{ uri: avatar }} style={styles.avatar} accessibilityLabel={`${name} profil fotoğrafı`} /> : <View style={[styles.avatar, styles.fallback]}><Text style={styles.initials}>{getInitials(name)}</Text></View>}
+                <View style={styles.textWrap}><Text style={styles.name}>{name}</Text><Text style={styles.label}>{dietitian.specialization || 'Diyetisyenin'}</Text></View>
                 <StatusBadge status="connected" />
                 <Icon name={expanded ? 'chevronUp' : 'chevronDown'} color={colors.textTertiary} />
             </Pressable>
@@ -34,11 +36,12 @@ const styles = StyleSheet.create({
     card: { padding: 0, overflow: 'hidden' },
     header: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: spacing.x3, padding: spacing.x4 },
     avatar: { width: 48, height: 48, borderRadius: radius.round },
-    fallback: { backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+    fallback: { backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+    initials: { ...typography.bodyMedium, fontFamily: typography.button.fontFamily, color: colors.textPrimary },
     textWrap: { flex: 1, minWidth: 0 },
-    label: { ...typography.caption, color: colors.textSecondary },
-    name: { ...typography.bodyMedium, color: colors.textPrimary, marginTop: 2 },
-    details: { gap: spacing.x2, borderTopWidth: 1, borderTopColor: colors.borderSoft, backgroundColor: colors.surfaceMuted, padding: spacing.x4 },
+    label: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
+    name: { ...typography.cardTitle, color: colors.textPrimary },
+    details: { gap: spacing.x3, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderStrong, marginHorizontal: spacing.x4, paddingVertical: spacing.x4 },
     detailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.x3 },
     detailLabel: { ...typography.caption, color: colors.textSecondary, width: 72 },
     detailValue: { ...typography.supporting, color: colors.textPrimary, flex: 1 },

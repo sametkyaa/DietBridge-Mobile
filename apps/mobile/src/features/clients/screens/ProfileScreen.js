@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppCard, AppSkeleton, ErrorState, Icon, InlineAlert } from '../../../shared/components/ui';
+import { AppCard, AppSkeleton, ErrorState, InlineAlert, ScreenHeader } from '../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../shared/theme';
 import {
     AvatarPreviewSheet,
@@ -111,19 +111,26 @@ const ProfileScreen = ({ navigation }) => {
 
     return (
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
-            <View style={styles.topBar}>
-                <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Geri" style={({ pressed }) => [styles.back, pressed && styles.pressed]}><Icon name="back" size={22} /></Pressable>
-                <Text style={styles.topTitle} accessibilityRole="header">Profilim</Text><View style={styles.back} />
-            </View>
+            <ScreenHeader onBack={() => navigation.goBack()} style={styles.header} />
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 {error ? <InlineAlert variant="error" message="Bazı profil bilgileri yüklenemedi. Lütfen tekrar deneyin." /> : null}
                 {successMessage ? <InlineAlert variant="success" message={successMessage} /> : null}
-                <ProfileHeaderCard name={userName} avatarUrl={avatarUrl} isSelecting={isSelectingAvatar} isUploading={isUploadingAvatar} onAvatarPress={handleAvatarUpload} onEdit={startEditing} />
-                <AppCard>
-                    <Text style={styles.sectionTitle} accessibilityRole="header">Özet</Text>
-                    <View style={styles.stats}>
-                        {[['Boy', display(clientData.height, 'cm')], ['Güncel kilo', display(clientData.currentWeight, 'kg')], ['Hedef kilo', display(clientData.targetWeight, 'kg')], ['Uyum skoru', clientData.complianceScore == null ? '' : `${clientData.complianceScore}/100`]].map(([label, value]) => <View key={label} style={styles.stat}><Text style={styles.statLabel}>{label}</Text><Text style={styles.statValue}>{value || '—'}</Text></View>)}
-                    </View>
+                <ProfileHeaderCard name={userName} avatarUrl={avatarUrl} goal={clientData.goal} isSelecting={isSelectingAvatar} isUploading={isUploadingAvatar} onAvatarPress={handleAvatarUpload} onEdit={startEditing} />
+                <AppCard style={styles.statsCard} contentStyle={styles.stats}>
+                    {[
+                        ['Boy', clientData.height, 'cm'],
+                        ['Kilo', clientData.currentWeight, 'kg'],
+                        ['Hedef', clientData.targetWeight, 'kg'],
+                        ['Uyum', clientData.complianceScore, '/100'],
+                    ].map(([label, value, unit], index) => (
+                        <View key={label} style={[styles.stat, index > 0 && styles.statDivider]}>
+                            <Text style={styles.statValue}>
+                                {value == null || value === '' ? '—' : String(value).replace('.', ',')}
+                                {value == null || value === '' ? null : <Text style={styles.statUnit}>{unit === '/100' ? unit : ` ${unit}`}</Text>}
+                            </Text>
+                            <Text style={styles.statLabel}>{label}</Text>
+                        </View>
+                    ))}
                 </AppCard>
                 {pendingRequest ? (
                     <DietitianConnectionRequestCard
@@ -170,19 +177,18 @@ const ProfileScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: colors.background },
-    topBar: { minHeight: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.x3 },
-    back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-    topTitle: { ...typography.cardTitle, color: colors.textPrimary, flex: 1, textAlign: 'center' },
-    content: { paddingHorizontal: spacing.x5, paddingBottom: spacing.x8, gap: spacing.x4 },
+    header: { paddingBottom: 0 },
+    content: { paddingHorizontal: spacing.x5, paddingTop: spacing.x2, paddingBottom: spacing.x10, gap: spacing.x6 },
     loading: { flex: 1, padding: spacing.x5 }, gap: { marginTop: spacing.x4 },
     loadingText: { ...typography.supporting, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.x4 },
     centered: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.x5 },
-    sectionTitle: { ...typography.sectionTitle, color: colors.textPrimary },
-    stats: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.x2, marginTop: spacing.x3 },
-    stat: { minWidth: 92, flexGrow: 1, flexBasis: '28%', backgroundColor: colors.surfaceMuted, padding: spacing.x3, borderRadius: 14 },
+    statsCard: { paddingVertical: spacing.x4, paddingHorizontal: spacing.x1 },
+    stats: { flexDirection: 'row' },
+    stat: { flex: 1, alignItems: 'center', gap: 2 },
+    statDivider: { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.borderStrong },
+    statValue: { ...typography.numericSmall, color: colors.textPrimary },
+    statUnit: { ...typography.caption, color: colors.textSecondary },
     statLabel: { ...typography.caption, color: colors.textSecondary },
-    statValue: { ...typography.bodyMedium, color: colors.textPrimary, marginTop: 2 },
-    pressed: { opacity: 0.8 },
 });
 
 export default ProfileScreen;

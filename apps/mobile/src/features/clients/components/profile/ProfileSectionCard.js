@@ -3,45 +3,50 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppCard, Icon } from '../../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../../shared/theme';
 
+// Section title lives on the canvas; the rows are one grouped card with
+// hairline dividers, label on the left and the value on the right.
 export function ProfileSectionCard({ title, icon, rows }) {
     return (
-        <AppCard>
-            <View style={styles.headingRow}><Icon name={icon} size={20} color={colors.primaryDark} /><Text style={styles.heading} accessibilityRole="header">{title}</Text></View>
-            <View style={styles.rows}>
-                {rows.map((row) => {
+        <View>
+            <View style={styles.headingRow}>
+                {icon ? <Icon name={icon} size={18} color={colors.primary} /> : null}
+                <Text style={styles.heading} accessibilityRole="header">{title}</Text>
+            </View>
+            <AppCard style={styles.card}>
+                {rows.map((row, index) => {
+                    const isLast = index === rows.length - 1;
                     const content = (
                         <>
-                            <View style={styles.textWrap}>
-                                <Text style={styles.label}>{row.label}</Text>
-                                <Text style={[styles.value, !row.value && styles.empty]} numberOfLines={3}>{row.value || 'Henüz eklenmedi'}</Text>
-                            </View>
-                            {row.onPress ? <Icon name="chevronRight" color={colors.textTertiary} /> : null}
+                            <Text style={styles.label}>{row.label}</Text>
+                            <Text style={[styles.value, !row.value && styles.empty]} numberOfLines={2}>{row.value || 'Ekle'}</Text>
+                            {row.onPress ? <Icon name="chevronRight" size={16} color={colors.textTertiary} /> : null}
                         </>
                     );
+                    const rowStyle = [styles.row, !isLast && styles.divider];
                     return row.onPress ? (
                         <Pressable
                             key={row.key}
                             onPress={row.onPress}
                             accessibilityRole="button"
                             accessibilityLabel={`${row.label}, ${row.value || 'henüz eklenmedi'}, düzenle`}
-                            style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                            style={({ pressed }) => [...rowStyle, pressed && styles.pressed]}
                         >{content}</Pressable>
-                    ) : <View key={row.key} style={styles.row}>{content}</View>;
+                    ) : <View key={row.key} style={rowStyle}>{content}</View>;
                 })}
-            </View>
-        </AppCard>
+            </AppCard>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    headingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.x2, marginBottom: spacing.x2 },
+    headingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.x2, marginBottom: spacing.x3, paddingHorizontal: spacing.x1 },
     heading: { ...typography.sectionTitle, color: colors.textPrimary },
-    rows: { gap: spacing.x1 },
-    row: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: spacing.x2, borderTopWidth: 1, borderTopColor: colors.borderSoft, paddingVertical: spacing.x2 },
-    textWrap: { flex: 1, minWidth: 0 },
-    label: { ...typography.caption, color: colors.textSecondary },
-    value: { ...typography.bodyMedium, color: colors.textPrimary, marginTop: 2 },
-    empty: { color: colors.textSecondary, fontFamily: typography.body.fontFamily },
+    card: { paddingVertical: spacing.x1 },
+    row: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: spacing.x3, paddingVertical: spacing.x3 },
+    divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderStrong },
+    label: { ...typography.supporting, color: colors.textSecondary, flexShrink: 0, maxWidth: '50%' },
+    value: { ...typography.bodyMedium, color: colors.textPrimary, flex: 1, textAlign: 'right' },
+    empty: { color: colors.primary, fontFamily: typography.body.fontFamily },
     pressed: { opacity: 0.8 },
 });
 
