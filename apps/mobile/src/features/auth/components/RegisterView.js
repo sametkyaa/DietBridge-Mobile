@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppInput } from '../../../shared/components/ui';
 import LegalLinks from '../../../shared/components/legal/LegalLinks';
+import { FadeUp } from '../../../shared/components/motion';
 import { colors, spacing, typography } from '../../../shared/theme';
 import PasswordToggle from './PasswordToggle';
 import BrandMark from './BrandMark';
@@ -35,105 +36,111 @@ export default function RegisterView({
 
   return (
     <>
-      <BrandMark />
-      <Text accessibilityRole="header" style={styles.title}>Hesap oluştur</Text>
-      <Text style={styles.subtitle}>
-        Birkaç bilgiyle başla; sağlık detaylarını profilinden tamamlayabilirsin.
-      </Text>
+      <FadeUp index={0}>
+        <BrandMark />
+        <Text accessibilityRole="header" style={styles.title}>Hesap oluştur</Text>
+        <Text style={styles.subtitle}>
+          Birkaç bilgiyle başla; sağlık detaylarını profilinden tamamlayabilirsin.
+        </Text>
+      </FadeUp>
 
-      <View style={styles.form}>
-        <AppInput
-          label="Ad soyad"
-          value={fullName}
-          onChangeText={onFullNameChange}
-          editable={!loading}
-          autoCapitalize="words"
-          autoComplete="name"
-          textContentType="name"
-          returnKeyType="next"
-        />
-        <AppInput
-          label="Telefon"
-          value={phone}
-          onChangeText={onPhoneChange}
-          editable={!loading}
-          keyboardType="phone-pad"
-          autoComplete="tel"
-          textContentType="telephoneNumber"
-          returnKeyType="next"
-          placeholder="05xx xxx xx xx"
-        />
-        <AppInput
-          label="E-posta"
-          value={email}
-          onChangeText={onEmailChange}
-          editable={!loading}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="email"
-          textContentType="emailAddress"
-          returnKeyType="next"
-        />
-        <AppInput
-          label="Şifre"
-          value={password}
-          onChangeText={onPasswordChange}
-          editable={!loading}
-          secureTextEntry={!isPasswordVisible}
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="new-password"
-          textContentType="newPassword"
-          returnKeyType="next"
-          rightAccessory={passwordToggle}
-        />
-        <AppInput
-          label="Şifre doğrulama"
-          value={confirmPassword}
-          onChangeText={onConfirmPasswordChange}
-          editable={!loading}
-          secureTextEntry={!isConfirmPasswordVisible}
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="new-password"
-          textContentType="newPassword"
-          returnKeyType="done"
-          onSubmitEditing={onSubmit}
-          placeholder="Şifreni tekrar gir"
-          rightAccessory={(
-            <PasswordToggle
-              visible={isConfirmPasswordVisible}
-              onPress={onToggleConfirmPassword}
-              disabled={loading}
-              label="Şifre doğrulama"
-            />
-          )}
-        />
-      </View>
+      <FadeUp index={1}>
+        <View style={styles.form}>
+          <AppInput
+            label="Ad soyad"
+            value={fullName}
+            onChangeText={onFullNameChange}
+            editable={!loading}
+            autoCapitalize="words"
+            autoComplete="name"
+            textContentType="name"
+            returnKeyType="next"
+          />
+          <AppInput
+            label="Telefon"
+            value={phone}
+            onChangeText={onPhoneChange}
+            editable={!loading}
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            textContentType="telephoneNumber"
+            returnKeyType="next"
+            placeholder="05xx xxx xx xx"
+          />
+          <AppInput
+            label="E-posta"
+            value={email}
+            onChangeText={onEmailChange}
+            editable={!loading}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="email"
+            textContentType="emailAddress"
+            returnKeyType="next"
+          />
+          <AppInput
+            label="Şifre"
+            value={password}
+            onChangeText={onPasswordChange}
+            editable={!loading}
+            secureTextEntry={!isPasswordVisible}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            returnKeyType="next"
+            rightAccessory={passwordToggle}
+          />
+          <AppInput
+            label="Şifre doğrulama"
+            value={confirmPassword}
+            onChangeText={onConfirmPasswordChange}
+            editable={!loading}
+            secureTextEntry={!isConfirmPasswordVisible}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            returnKeyType="done"
+            onSubmitEditing={onSubmit}
+            placeholder="Şifreni tekrar gir"
+            rightAccessory={(
+              <PasswordToggle
+                visible={isConfirmPasswordVisible}
+                onPress={onToggleConfirmPassword}
+                disabled={loading}
+                label="Şifre doğrulama"
+              />
+            )}
+          />
+        </View>
+      </FadeUp>
 
       <View style={styles.spacer} />
-      <AppButton
-        label={loading ? 'Hesap oluşturuluyor…' : 'Kayıt ol'}
-        loading={loading}
-        onPress={onSubmit}
-      />
-      <View style={styles.legal}>
-        <LegalLinks />
-      </View>
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Zaten hesabın var mı?</Text>
-        <Pressable
-          onPress={onLogin}
-          disabled={loading}
-          accessibilityRole="button"
-          accessibilityLabel="Giriş yap"
-          accessibilityState={{ disabled: loading }}
-          style={({ pressed }) => [styles.footerLink, pressed && !loading && styles.pressed]}
-        >
-          <Text style={styles.linkText}>Giriş yap</Text>
-        </Pressable>
-      </View>
+      <FadeUp index={2}>
+        <AppButton
+          label={loading ? 'Hesap oluşturuluyor…' : 'Kayıt ol'}
+          loading={loading}
+          onPress={onSubmit}
+        />
+        <View style={styles.legal}>
+          <LegalLinks />
+        </View>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Zaten hesabın var mı?</Text>
+          <Pressable
+            onPress={onLogin}
+            disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel="Giriş yap"
+            accessibilityState={{ disabled: loading }}
+            style={({ pressed }) => [styles.footerLink, pressed && !loading && styles.pressed]}
+          >
+            <Text style={styles.linkText}>Giriş yap</Text>
+          </Pressable>
+        </View>
+      </FadeUp>
     </>
   );
 }

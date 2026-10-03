@@ -1,6 +1,7 @@
 import React from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppInput, Icon, InlineAlert } from '../../../shared/components/ui';
+import { FadeUp, ShakeView } from '../../../shared/components/motion';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 import { AuthShell, PasswordToggle } from '../components';
 import { PASSWORD_RECOVERY_INVALID_MESSAGE } from '../utils/passwordRecoveryContract.cjs';
@@ -118,55 +119,61 @@ export default function ResetPasswordScreen({
                 <Icon name="back" size={20} color={colors.textPrimary} />
             </Pressable>
 
-            <Text accessibilityRole="header" style={styles.title}>Yeni şifreni belirle</Text>
-            <Text style={styles.subtitle}>
-                Hesabın için yeni bir şifre oluştur. Şifreni iki kez girerek onayla.
-            </Text>
+            <FadeUp index={0}>
+                <Text accessibilityRole="header" style={styles.title}>Yeni şifreni belirle</Text>
+                <Text style={styles.subtitle}>
+                    Hesabın için yeni bir şifre oluştur. Şifreni iki kez girerek onayla.
+                </Text>
+            </FadeUp>
 
-            <View style={styles.form}>
-                <AppInput
-                    label="Yeni şifre"
-                    value={newPassword}
-                    onChangeText={setNewPassword}
-                    editable={!loading}
-                    secureTextEntry={!isPasswordVisible}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    autoComplete="new-password"
-                    textContentType="newPassword"
-                    returnKeyType="next"
-                    rightAccessory={(
-                        <PasswordToggle
-                            visible={isPasswordVisible}
-                            onPress={togglePasswordVisibility}
-                            disabled={loading}
+            <FadeUp index={1}>
+                <ShakeView trigger={errorMessage}>
+                    <View style={styles.form}>
+                        <AppInput
                             label="Yeni şifre"
+                            value={newPassword}
+                            onChangeText={setNewPassword}
+                            editable={!loading}
+                            secureTextEntry={!isPasswordVisible}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            autoComplete="new-password"
+                            textContentType="newPassword"
+                            returnKeyType="next"
+                            rightAccessory={(
+                                <PasswordToggle
+                                    visible={isPasswordVisible}
+                                    onPress={togglePasswordVisibility}
+                                    disabled={loading}
+                                    label="Yeni şifre"
+                                />
+                            )}
                         />
-                    )}
-                />
-                <AppInput
-                    label="Yeni şifre tekrar"
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    error={errorMessage}
-                    editable={!loading}
-                    secureTextEntry={!isConfirmPasswordVisible}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    autoComplete="new-password"
-                    textContentType="newPassword"
-                    returnKeyType="done"
-                    onSubmitEditing={handleSubmit}
-                    rightAccessory={(
-                        <PasswordToggle
-                            visible={isConfirmPasswordVisible}
-                            onPress={toggleConfirmPasswordVisibility}
-                            disabled={loading}
-                            label="Yeni şifre tekrarı"
+                        <AppInput
+                            label="Yeni şifre tekrar"
+                            value={confirmPassword}
+                            onChangeText={setConfirmPassword}
+                            error={errorMessage}
+                            editable={!loading}
+                            secureTextEntry={!isConfirmPasswordVisible}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            autoComplete="new-password"
+                            textContentType="newPassword"
+                            returnKeyType="done"
+                            onSubmitEditing={handleSubmit}
+                            rightAccessory={(
+                                <PasswordToggle
+                                    visible={isConfirmPasswordVisible}
+                                    onPress={toggleConfirmPasswordVisibility}
+                                    disabled={loading}
+                                    label="Yeni şifre tekrarı"
+                                />
+                            )}
                         />
-                    )}
-                />
-            </View>
+                    </View>
+                </ShakeView>
+            </FadeUp>
 
             {successMessage ? (
                 <InlineAlert

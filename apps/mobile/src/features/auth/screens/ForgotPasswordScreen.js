@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppInput, Icon, InlineAlert } from '../../../shared/components/ui';
+import { FadeUp, ShakeView } from '../../../shared/components/motion';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 import { AuthShell } from '../components';
 import { useForgotPasswordViewModel } from '../viewmodels/useForgotPasswordViewModel';
@@ -37,26 +38,30 @@ export default function ForgotPasswordScreen({ navigation }) {
         <Icon name="back" size={20} color={colors.textPrimary} />
       </Pressable>
 
-      <Text accessibilityRole="header" style={styles.title}>Şifreni sıfırla</Text>
-      <Text style={styles.subtitle}>
-        Hesabına bağlı e-posta adresini gir. Sana bir sıfırlama bağlantısı gönderelim.
-      </Text>
+      <FadeUp index={0}>
+        <Text accessibilityRole="header" style={styles.title}>Şifreni sıfırla</Text>
+        <Text style={styles.subtitle}>
+          Hesabına bağlı e-posta adresini gir. Sana bir sıfırlama bağlantısı gönderelim.
+        </Text>
 
-      <AppInput
-        label="E-posta"
-        value={email}
-        onChangeText={setEmail}
-        error={errorMessage}
-        editable={!loading}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-        autoComplete="email"
-        textContentType="emailAddress"
-        returnKeyType="send"
-        onSubmitEditing={handleSubmit}
-        style={styles.field}
-      />
+        <ShakeView trigger={errorMessage}>
+          <AppInput
+            label="E-posta"
+            value={email}
+            onChangeText={setEmail}
+            error={errorMessage}
+            editable={!loading}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="email"
+            textContentType="emailAddress"
+            returnKeyType="send"
+            onSubmitEditing={handleSubmit}
+            style={styles.field}
+          />
+        </ShakeView>
+      </FadeUp>
 
       {successMessage ? (
         <InlineAlert
