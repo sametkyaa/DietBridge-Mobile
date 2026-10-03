@@ -42,7 +42,7 @@ export function MealPlanHeader({ dayOptions, selectedDay, todayIndex, onSelectDa
                         >
                             <Text style={[styles.dayLabel, selected && styles.dayLabelSelected]}>{dayLabel}</Text>
                             <Text style={[styles.dateLabel, selected && styles.dateLabelSelected]}>{dateLabel}</Text>
-                            <View style={[styles.todayDot, !isToday && styles.todayDotHidden]} />
+                            <View style={[styles.todayDot, selected && styles.todayDotSelected, !isToday && styles.todayDotHidden]} />
                         </Pressable>
                     );
                 })}
@@ -57,17 +57,18 @@ const styles = StyleSheet.create({
     titleWrap: { flex: 1, minWidth: 0 },
     title: { ...typography.screenTitle, color: colors.textPrimary },
     subtitle: { ...typography.supporting, color: colors.textSecondary, marginTop: 2 },
-    cartButton: { width: 48, height: 48, borderRadius: radius.round, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
-    days: { gap: spacing.x1, paddingVertical: spacing.x5 },
-    day: { width: 48, minHeight: 68, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center', gap: 2 },
-    daySelected: { backgroundColor: colors.primarySoft },
-    dayLabel: { ...typography.caption, color: colors.textSecondary },
-    dayLabelSelected: { color: colors.primaryDark },
-    dateLabel: { ...typography.bodyMedium, color: colors.textSecondary },
-    dateLabelSelected: { color: colors.primaryDark },
-    todayDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.primary },
+    cartButton: { width: 48, height: 48, borderRadius: radius.round, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+    days: { gap: 6, paddingTop: spacing.x5, paddingBottom: spacing.x6 },
+    day: { width: 46, minHeight: 72, borderRadius: radius.round, alignItems: 'center', justifyContent: 'center', gap: 2, backgroundColor: colors.surface },
+    daySelected: { backgroundColor: colors.primaryDark },
+    dayLabel: { ...typography.caption, color: colors.textTertiary },
+    dayLabelSelected: { color: colors.primarySoft },
+    dateLabel: { ...typography.numericSmall, color: colors.textPrimary },
+    dateLabelSelected: { color: colors.textOnPrimary },
+    todayDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.primaryDark, marginTop: 2 },
+    todayDotSelected: { backgroundColor: colors.accent },
     todayDotHidden: { opacity: 0 },
-    selectedLabel: { ...typography.sectionTitle, color: colors.textPrimary, marginBottom: spacing.x3 },
+    selectedLabel: { ...typography.sectionTitle, color: colors.textPrimary, marginBottom: spacing.x4 },
     pressed: { opacity: 0.8 },
     disabled: { opacity: 0.5 },
 });

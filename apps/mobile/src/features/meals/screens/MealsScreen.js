@@ -207,7 +207,7 @@ const MealsScreen = ({ navigation }) => {
 const screenStyles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: colors.background },
     content: { paddingHorizontal: spacing.x5, paddingTop: spacing.x3, paddingBottom: spacing.x8 },
-    separator: { height: spacing.x3 },
+    separator: { height: 0 },
     stateCard: { marginTop: spacing.x2 },
     loading: { flexDirection: 'row', alignItems: 'center', gap: spacing.x3 },
     loadingText: { flex: 1, gap: spacing.x2 },

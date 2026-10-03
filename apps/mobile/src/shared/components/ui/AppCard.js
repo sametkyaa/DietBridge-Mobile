@@ -28,9 +28,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     backgroundColor: colors.surface,
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    padding: spacing.x4,
+    padding: spacing.x5,
   },
   pressed: { opacity: 0.85 },
 });

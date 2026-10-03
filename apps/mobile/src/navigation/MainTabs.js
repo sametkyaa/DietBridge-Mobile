@@ -7,7 +7,7 @@ import MealsScreen from '../features/meals/screens/MealsScreen';
 import AnalysisScreen from '../features/analytics/screens/AnalysisScreen';
 import ChatScreen from '../features/clients/screens/ChatScreen';
 import { Icon } from '../shared/components/ui';
-import { colors, radius, shadows, spacing, typography } from '../shared/theme';
+import { colors, radius, spacing, typography } from '../shared/theme';
 
 const Tab = createBottomTabNavigator();
 const TAB_BAR_CONTENT_HEIGHT = 60;
@@ -30,23 +30,23 @@ const MainTabs = () => {
                 headerShown: false,
                 tabBarHideOnKeyboard: true,
                 tabBarActiveTintColor: colors.primaryDark,
-                tabBarInactiveTintColor: colors.textSecondary,
+                tabBarInactiveTintColor: colors.textTertiary,
                 tabBarStyle: {
                     height: tabBarHeight,
                     paddingTop: spacing.x2,
                     paddingBottom: tabBarBottomPadding,
-                    borderTopWidth: 1,
-                    borderTopColor: colors.borderSoft,
-                    borderTopLeftRadius: radius.hero,
-                    borderTopRightRadius: radius.hero,
+                    borderTopWidth: StyleSheet.hairlineWidth,
+                    borderTopColor: colors.borderStrong,
                     backgroundColor: colors.surface,
-                    ...shadows.sheet,
+                    elevation: 0,
+                    shadowOpacity: 0,
                 },
                 tabBarItemStyle: styles.tabItem,
                 tabBarLabelStyle: styles.tabLabel,
                 tabBarIconStyle: styles.tabIcon,
                 tabBarIcon: ({ color, focused }) => (
-                    <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+                    <View style={styles.iconWrap}>
+                        <View style={[styles.indicator, focused && styles.indicatorActive]} />
                         <Icon name={TAB_ICONS[route.name]} size={22} color={color} />
                     </View>
                 ),
@@ -83,6 +83,7 @@ const styles = StyleSheet.create({
     },
     tabLabel: {
         ...typography.caption,
+        fontSize: 11,
         marginTop: spacing.x1,
     },
     tabIcon: {
@@ -91,12 +92,20 @@ const styles = StyleSheet.create({
     iconWrap: {
         width: 34,
         height: 28,
-        borderRadius: radius.round,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    iconWrapActive: {
-        backgroundColor: colors.primarySoft,
+    indicator: {
+        position: 'absolute',
+        top: -spacing.x2,
+        width: 18,
+        height: 3,
+        borderBottomLeftRadius: 3,
+        borderBottomRightRadius: 3,
+        backgroundColor: 'transparent',
+    },
+    indicatorActive: {
+        backgroundColor: colors.primaryDark,
     },
 });
 

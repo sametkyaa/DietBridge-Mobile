@@ -1,53 +1,90 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { AppCard, Icon, StatusBadge } from '../../../../shared/components/ui';
+import { Icon } from '../../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../../shared/theme';
 import { MealPhotoThumbnail } from '../MealPhotoThumbnail';
 import { formatMealType } from '../../../../shared/utils/mealType';
 
+const isFiniteValue = (value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
+
 export function MealPlanItem({ meal, completion, onPress }) {
     const completed = !!completion?.completed;
+    const title = meal.title || formatMealType(meal.type);
     return (
-        <AppCard style={styles.card}>
+        <View style={styles.row}>
+            <View style={styles.timeColumn}>
+                <Text style={[styles.time, completed && styles.muted]}>{meal.time}</Text>
+                <View style={[styles.node, completed && styles.nodeDone]}>
+                    {completed ? <Icon name="check" size={11} color={colors.textOnPrimary} /> : null}
+                </View>
+                <View style={[styles.rail, completed && styles.railDone]} />
+            </View>
             <Pressable
                 onPress={() => onPress(meal)}
                 accessibilityRole="button"
-                accessibilityLabel={`${meal.time}, ${meal.title || formatMealType(meal.type)}, ${completed ? 'tamamlandı' : 'planlandı'}, ayrıntıları aç`}
-                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                accessibilityLabel={`${meal.time}, ${title}, ${completed ? 'tamamlandı' : 'planlandı'}, ayrıntıları aç`}
+                style={({ pressed }) => [styles.card, pressed && styles.pressed]}
             >
+                <View style={styles.textWrap}>
+                    <Text style={styles.type}>{formatMealType(meal.type)}</Text>
+                    <Text style={[styles.title, completed && styles.muted]} numberOfLines={2}>{title}</Text>
+                    <View style={styles.metaRow}>
+                        {isFiniteValue(meal.calories) ? (
+                            <Text style={styles.meta}>{Math.round(Number(meal.calories))} kcal</Text>
+                        ) : null}
+                        {completed ? <Text style={styles.done}>Tamamlandı</Text> : null}
+                    </View>
+                </View>
                 <MealPhotoThumbnail
                     photoPath={meal.photoPath}
                     completionPhotoPath={completion?.completionPhotoPath}
                     localCompletionPhotoUri={completion?.localCompletionPhotoUri}
                     imageStyle={styles.photo}
-                    fallback={(
-                        <View style={styles.photoFallback}>
-                            <Icon name="meal" size={22} color={colors.primaryDark} />
-                        </View>
-                    )}
+                    fallback={<Icon name="chevronRight" color={colors.textTertiary} />}
                 />
-                <View style={styles.textWrap}>
-                    <Text style={styles.meta}>{meal.time} · {formatMealType(meal.type)}</Text>
-                    <Text style={styles.title} numberOfLines={2}>{meal.title || formatMealType(meal.type)}</Text>
-                </View>
-                <View style={styles.trailing}>
-                    <StatusBadge status={completed ? 'completed' : 'upcoming'} label={completed ? 'Tamamlandı' : 'Planlandı'} />
-                    <Icon name="chevronRight" color={colors.textTertiary} />
-                </View>
             </Pressable>
-        </AppCard>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    card: { overflow: 'hidden', padding: 0 },
-    row: { minHeight: 88, flexDirection: 'row', alignItems: 'center', gap: spacing.x3, padding: spacing.x4 },
-    photo: { width: 56, height: 56, borderRadius: radius.small },
-    photoFallback: { width: 56, height: 56, borderRadius: radius.small, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+    row: { flexDirection: 'row', gap: spacing.x3 },
+    timeColumn: { width: 48, alignItems: 'center', paddingTop: spacing.x4 },
+    time: { ...typography.caption, fontSize: 13, fontVariant: ['tabular-nums'], color: colors.textPrimary },
+    node: {
+        width: 16,
+        height: 16,
+        marginTop: spacing.x2,
+        borderRadius: radius.round,
+        borderWidth: 2,
+        borderColor: colors.borderStrong,
+        backgroundColor: colors.background,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    nodeDone: { borderColor: colors.primaryDark, backgroundColor: colors.primaryDark },
+    rail: { flex: 1, width: 2, marginTop: spacing.x1, backgroundColor: colors.borderSoft },
+    railDone: { backgroundColor: colors.primarySoft },
+    card: {
+        flex: 1,
+        minWidth: 0,
+        minHeight: 88,
+        marginBottom: spacing.x3,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.x3,
+        padding: spacing.x4,
+        borderRadius: radius.card,
+        backgroundColor: colors.surface,
+    },
     textWrap: { flex: 1, minWidth: 0 },
-    meta: { ...typography.caption, color: colors.textSecondary },
-    title: { ...typography.bodyMedium, color: colors.textPrimary, marginTop: 2 },
-    trailing: { alignItems: 'flex-end', gap: spacing.x2 },
+    type: { ...typography.caption, color: colors.textTertiary },
+    title: { ...typography.cardTitle, color: colors.textPrimary, marginTop: 2 },
+    metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.x3, marginTop: spacing.x2 },
+    meta: { ...typography.supporting, fontVariant: ['tabular-nums'], color: colors.textSecondary },
+    done: { ...typography.supporting, fontFamily: typography.button.fontFamily, color: colors.primaryDark },
+    photo: { width: 60, height: 60, borderRadius: radius.control },
+    muted: { color: colors.textSecondary },
     pressed: { opacity: 0.82 },
 });
 
