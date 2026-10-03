@@ -220,15 +220,6 @@ const DashboardScreen = () => {
                     <NutritionOverviewCard nutrition={nutrition} totalMeals={meals.length} />
                 ) : null}
 
-                {mealPlanStatus === 'success' ? (
-                    <TodayMealsCard
-                        meals={uiMeals}
-                        updatingMealId={updatingMealId}
-                        onMealPress={handleMealPress}
-                        onToggle={handleTodayMealToggle}
-                    />
-                ) : null}
-
                 <WaterTrackerCard
                     water={water}
                     target={waterTargetLiters}
@@ -243,6 +234,16 @@ const DashboardScreen = () => {
                     onRemove={removeWater}
                     onRetry={retryDailyLog}
                 />
+
+                {mealPlanStatus === 'success' ? (
+                    <TodayMealsCard
+                        meals={uiMeals}
+                        updatingMealId={updatingMealId}
+                        onMealPress={handleMealPress}
+                        onToggle={handleTodayMealToggle}
+                    />
+                ) : null}
+
 
                 <WeightCard
                     weight={weight}
@@ -286,7 +287,7 @@ const DashboardScreen = () => {
 
 const screenStyles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: colors.background },
-    content: { paddingHorizontal: spacing.x5, paddingTop: spacing.x3, paddingBottom: spacing.x10, gap: spacing.x4 },
+    content: { paddingHorizontal: spacing.x5, paddingTop: spacing.x2, paddingBottom: spacing.x10, gap: spacing.x3 },
     quoteWrap: { borderLeftWidth: 2, borderLeftColor: colors.borderStrong, paddingLeft: spacing.x4, marginTop: spacing.x2, marginRight: spacing.x6 },
     quote: { ...typography.body, color: colors.textSecondary },
 });

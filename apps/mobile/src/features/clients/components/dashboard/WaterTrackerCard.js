@@ -8,7 +8,7 @@ const GLASS_LITERS = 0.25;
 const GLASS_ML = 250;
 const MAX_GLASSES = 12;
 const formatLiters = (value) => (Number.isFinite(value) ? value : 0).toFixed(2).replace('.', ',');
-const GLASS_HEIGHT = 34;
+const GLASS_HEIGHT = 28;
 
 function Glass({ fill, reduced, disabled, onPress }) {
     const level = useRef(new Animated.Value(GLASS_HEIGHT * (1 - fill))).current;
@@ -118,7 +118,6 @@ export function WaterTrackerCard({
                             >
                                 <GlassRow water={water} target={target} disabled={disabled} onAddGlass={() => onAdd(GLASS_ML)} />
                             </View>
-                            <Text style={styles.glassHint}>Bardağa dokunarak 250 ml ekleyebilirsin.</Text>
                         </View>
                     ) : (
                         <ProgressBar value={progress * 100} tone="teal" accessibilityLabel="Günlük su hedefi" />
@@ -170,7 +169,7 @@ export function WaterTrackerCard({
 }
 
 const styles = StyleSheet.create({
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.x4 },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.x3 },
     titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.x2 },
     title: { ...typography.sectionTitle, color: colors.textPrimary },
     amount: { ...typography.numericSmall, color: colors.textPrimary },
@@ -179,12 +178,11 @@ const styles = StyleSheet.create({
     glass: { flex: 1, height: GLASS_HEIGHT, overflow: 'hidden', borderRadius: 8, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, backgroundColor: colors.tealSoft },
     glassFill: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.teal },
     glassPressed: { opacity: 0.7 },
-    glassHint: { ...typography.caption, color: colors.textTertiary, marginTop: spacing.x2 },
     stateRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.x2 },
     supporting: { ...typography.supporting, color: colors.textSecondary, marginTop: spacing.x2 },
     errorWrap: { marginTop: spacing.x2 },
-    controls: { flexDirection: 'row', alignItems: 'center', gap: spacing.x2, marginTop: spacing.x4 },
-    roundButton: { width: 48, height: 48, borderRadius: radius.round, backgroundColor: colors.tealSoft, alignItems: 'center', justifyContent: 'center' },
+    controls: { flexDirection: 'row', alignItems: 'center', gap: spacing.x2, marginTop: spacing.x3 },
+    roundButton: { width: 44, height: 44, borderRadius: radius.round, backgroundColor: colors.tealSoft, alignItems: 'center', justifyContent: 'center' },
     inputRoot: { flex: 1 },
     input: { textAlign: 'center', paddingVertical: spacing.x2, fontVariant: ['tabular-nums'] },
     unit: { ...typography.supporting, color: colors.textSecondary, marginLeft: spacing.x2 },

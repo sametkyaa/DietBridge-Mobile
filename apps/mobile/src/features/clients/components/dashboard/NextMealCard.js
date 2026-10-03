@@ -106,7 +106,7 @@ export function NextMealCard({
                     <Text style={styles.time}>
                         {meal.time}<Text style={styles.type}>   {formatMealType(meal.type)}</Text>
                     </Text>
-                    <Text style={styles.title}>{meal.title}</Text>
+                    <Text style={styles.title} numberOfLines={2}>{meal.title}</Text>
                 </View>
                 <MealPhotoThumbnail
                     photoPath={meal.photoPath}
@@ -151,11 +151,11 @@ const styles = StyleSheet.create({
     hero: {
         backgroundColor: colors.primaryDark,
         borderRadius: radius.hero,
-        padding: spacing.x5,
-        paddingTop: spacing.x4,
+        padding: spacing.x4,
+        paddingTop: spacing.x2,
         ...shadows.hero,
     },
-    heroTop: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.x2 },
+    heroTop: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.x2 },
     heroLabel: { ...typography.supporting, fontFamily: typography.bodyMedium.fontFamily, color: colors.primarySoft },
     detailButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 2 },
     detailText: { ...typography.supporting, fontFamily: typography.button.fontFamily, color: colors.textOnPrimary },
@@ -163,12 +163,12 @@ const styles = StyleSheet.create({
     mealText: { flex: 1, minWidth: 0 },
     time: { ...typography.numericSmall, color: colors.accent },
     type: { ...typography.supporting, color: colors.primarySoft },
-    title: { ...typography.display, fontSize: 24, lineHeight: 30, letterSpacing: -0.4, color: colors.textOnPrimary, marginTop: spacing.x2 },
+    title: { ...typography.display, fontSize: 20, lineHeight: 26, letterSpacing: -0.3, color: colors.textOnPrimary, marginTop: spacing.x1 },
     photo: { width: 76, height: 76, borderRadius: radius.control },
-    facts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.x4, marginTop: spacing.x4 },
+    facts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.x4, marginTop: spacing.x3 },
     fact: { ...typography.supporting, color: colors.primarySoft },
     factValue: { fontFamily: typography.button.fontFamily, color: colors.textOnPrimary, fontVariant: ['tabular-nums'] },
-    primaryAction: { marginTop: spacing.x5, backgroundColor: colors.accent },
+    primaryAction: { minHeight: 48, marginTop: spacing.x4, backgroundColor: colors.accent },
     primaryLabel: { color: colors.textPrimary },
     undoAction: { backgroundColor: 'rgba(255,255,255,0.12)' },
     undoLabel: { color: colors.textOnPrimary },
