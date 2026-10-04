@@ -5,8 +5,8 @@ import { AppButton, AppCard, AppInput, Icon, InlineAlert, ProgressBar } from '..
 import { useReducedMotion } from '../../../../shared/hooks/useReducedMotion';
 import { colors, radius, spacing, typography } from '../../../../shared/theme';
 
-const GLASS_LITERS = 0.25;
-const GLASS_ML = 250;
+const GLASS_LITERS = 0.2;
+const GLASS_ML = 200;
 const MAX_GLASSES = 12;
 const formatLiters = (value) => (Number.isFinite(value) ? value : 0).toFixed(2).replace('.', ',');
 const GLASS_HEIGHT = 34;
@@ -61,7 +61,7 @@ function Glass({ index, fill, reduced, disabled, onPress }) {
     );
 }
 
-// Each glass shows its own share of the logged water, so 0,20 L fills most of the first glass.
+// Each glass shows its own share of the logged water, so 0,15 L fills most of the first glass.
 function GlassRow({ water, target, disabled, onAddGlass }) {
     const count = Math.max(1, Math.min(MAX_GLASSES, Math.round(target / GLASS_LITERS)));
     const glassesDrunk = Math.max(0, (Number.isFinite(water) ? water : 0) / GLASS_LITERS);
@@ -129,7 +129,7 @@ export function WaterTrackerCard({
                             <View
                                 accessible
                                 accessibilityRole="button"
-                                accessibilityLabel="Bir bardak su ekle, 250 mililitre"
+                                accessibilityLabel="Bir bardak su ekle, 200 mililitre"
                                 accessibilityHint={`Günlük hedefin yüzde ${Math.round(progress * 100)} kadarı tamamlandı`}
                                 accessibilityState={{ disabled }}
                                 accessibilityActions={[{ name: 'activate' }]}

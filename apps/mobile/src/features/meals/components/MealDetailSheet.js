@@ -17,9 +17,9 @@ export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPre
     const completed = typeof completion?.completed === 'boolean' ? completion.completed : !!meal.isEaten;
     const macros = [
         { label: 'kcal', value: formatMacro(meal.calories) },
-        { label: 'g protein', value: formatMacro(meal.protein) },
-        { label: 'g karb.', value: formatMacro(meal.carbohydrate) },
-        { label: 'g yağ', value: formatMacro(meal.fat) },
+        { label: 'protein', value: formatMacro(meal.protein), unit: 'g' },
+        { label: 'karb.', value: formatMacro(meal.carbohydrate), unit: 'g' },
+        { label: 'yağ', value: formatMacro(meal.fat), unit: 'g' },
     ];
     const description = typeof meal.description === 'string' ? meal.description.trim() : '';
     const ingredients = Array.isArray(meal.ingredients) ? meal.ingredients : [];
@@ -55,7 +55,10 @@ export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPre
             <View style={styles.macroGrid}>
                 {macros.map((macro, index) => (
                     <View key={macro.label} style={[styles.macroCell, index > 0 && styles.macroDivider]}>
-                        <Text style={styles.macroValue}>{macro.value}</Text>
+                        <Text style={styles.macroValue}>
+                            {macro.value}
+                            {macro.unit && macro.value !== '—' ? <Text style={styles.macroUnit}> {macro.unit}</Text> : null}
+                        </Text>
                         <Text style={styles.macroLabel}>{macro.label}</Text>
                     </View>
                 ))}
@@ -111,6 +114,7 @@ const styles = StyleSheet.create({
     macroCell: { flex: 1, paddingHorizontal: spacing.x2 },
     macroDivider: { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.borderStrong },
     macroValue: { ...typography.numeric, fontSize: 22, lineHeight: 28, color: colors.textPrimary },
+    macroUnit: { ...typography.supporting, color: colors.textTertiary },
     macroLabel: { ...typography.caption, color: colors.textTertiary, marginTop: 2 },
     section: { gap: spacing.x2, paddingTop: spacing.x4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderStrong },
     sectionTitle: { ...typography.cardTitle, fontSize: 16, color: colors.textPrimary },

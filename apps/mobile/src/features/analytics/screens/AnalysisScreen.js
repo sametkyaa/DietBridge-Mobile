@@ -42,7 +42,7 @@ const AnalysisScreen = () => {
         currentWeight,
         startWeight,
         weightChange,
-        totalWater,
+        waterGoalLiters,
         analyticsStatus,
         analyticsError,
         retryAnalytics,
@@ -124,7 +124,7 @@ const AnalysisScreen = () => {
                     onAddWeight={handleOpenWeightEntry}
                 />
                 <BodyMeasurementsCard measurements={measurements} onEdit={handleEditMeasurementsToggle} onHistory={handleOpenMeasurementHistory} />
-                <WaterHistoryCard history={waterHistory} total={totalWater} />
+                <WaterHistoryCard history={waterHistory} goalLiters={waterGoalLiters} />
             </ScrollView>
             <MeasurementSheet
                 visible={isEditingMeasurements && hasActiveDietitian}
