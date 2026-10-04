@@ -8,6 +8,7 @@ import { addLocalDateDays, toLocalDateKey } from '../../../shared/utils/localDat
 const {
     INVALID_PERSISTED_WATER_MESSAGE,
     normalizePersistedWaterLiters,
+    normalizeWaterTargetLitersFromMl,
 } = require('../../../shared/utils/waterTrackingContract.cjs');
 
 const getAuthorizedAnalyticsClientId = async () => {
@@ -168,9 +169,12 @@ export const saveBodyMeasurements = async (measurementData) => {
     return data;
 };
 
+// Covers the longest period the water card offers (30 days); the card slices shorter periods itself.
+const WATER_HISTORY_DAYS = 30;
+
 const getWaterHistory = async (clientId) => {
     const today = new Date();
-    const startStr = addLocalDateDays(today, -6);
+    const startStr = addLocalDateDays(today, -(WATER_HISTORY_DAYS - 1));
     const endStr = toLocalDateKey(today);
 
     const { data, error } = await supabase
@@ -204,6 +208,24 @@ const getWaterHistory = async (clientId) => {
             amount: log.amount,
         };
     });
+};
+
+// The goal only colours the water chart, so a failed read falls back to the default goal instead of failing the page.
+export const getWaterGoalLiters = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return normalizeWaterTargetLitersFromMl(null);
+
+    const { data, error } = await supabase
+        .from('client_profiles')
+        .select('daily_water_goal_ml')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    if (error) {
+        console.error('Error fetching water goal:', error);
+        return normalizeWaterTargetLitersFromMl(null);
+    }
+    return normalizeWaterTargetLitersFromMl(data?.daily_water_goal_ml);
 };
 
 export const getAnalyticsOverview = async () => {

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { getAnalyticsOverview, getMeasurementHistory, saveAnalyticsWeight, saveBodyMeasurements } from '../services/analyticsService';
+import { getAnalyticsOverview, getMeasurementHistory, getWaterGoalLiters, saveAnalyticsWeight, saveBodyMeasurements } from '../services/analyticsService';
 import { useDietitianConnection } from '../../dietitianConnection/context/DietitianConnectionContext';
 import { CONNECTION_REQUIRED_MESSAGE } from '../../dietitianConnection/services/dietitianConnectionService';
 
@@ -50,6 +50,7 @@ export const useAnalyticsViewModel = () => {
     const [monthlyWeightTrend, setMonthlyWeightTrend] = useState([]);
     const [measurements, setMeasurements] = useState([]);
     const [waterHistory, setWaterHistory] = useState([]);
+    const [waterGoalLiters, setWaterGoalLiters] = useState(null);
     const [selectedWeekIndex, setSelectedWeekIndex] = useState(0);
     const [analyticsStatus, setAnalyticsStatus] = useState('loading');
     const [analyticsError, setAnalyticsError] = useState(null);
@@ -102,11 +103,11 @@ export const useAnalyticsViewModel = () => {
         }
 
         try {
-            const {
+            const [{
                 weights,
                 measurements: currentMeasurements,
                 waterHistory: currentWaterHistory,
-            } = await getAnalyticsOverview();
+            }, currentWaterGoal] = await Promise.all([getAnalyticsOverview(), getWaterGoalLiters()]);
             if (!isMountedRef.current || loadSequenceRef.current !== sequence) return false;
 
             setMonthlyWeightTrend(weights);
@@ -114,6 +115,7 @@ export const useAnalyticsViewModel = () => {
             setMeasurements(currentMeasurements);
             setMeasurementForm(buildMeasurementForm(currentMeasurements));
             setWaterHistory(currentWaterHistory);
+            setWaterGoalLiters(currentWaterGoal);
             const hasMeaningfulData = weights.length > 0
                 || currentMeasurements.length > 0
                 || currentWaterHistory.length > 0;
@@ -295,7 +297,6 @@ export const useAnalyticsViewModel = () => {
     const currentWeight = weeklyWeightData.length > 0 ? weeklyWeightData[weeklyWeightData.length - 1].weight : null;
     const startWeight = weeklyWeightData.length > 0 ? weeklyWeightData[0].weight : null;
     const weightChange = currentWeight !== null && startWeight !== null ? currentWeight - startWeight : null;
-    const totalWater = waterHistory.reduce((total, item) => total + Number(item.amount || 0), 0);
 
     return {
         weeklyWeightData,
@@ -304,11 +305,11 @@ export const useAnalyticsViewModel = () => {
         maxChangeMagnitude,
         measurements,
         waterHistory,
+        waterGoalLiters,
         monthLabel: 'Son kayıtlar',
         currentWeight,
         startWeight,
         weightChange,
-        totalWater,
         analyticsStatus,
         analyticsError,
         retryAnalytics,
