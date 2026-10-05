@@ -4,7 +4,7 @@ import {
     NotificationServiceError,
     NOTIFICATION_ERROR_CODES,
 } from './notificationService';
-import { normalizeNotificationRow } from '../utils/notificationUtils';
+import { isUnsupportedNotificationRow, normalizeNotificationRow } from '../utils/notificationUtils';
 import {
     buildNotificationChannelConfig,
     normalizeSubscriptionStatus,
@@ -61,6 +61,9 @@ export const subscribeToNotificationChanges = ({
 
             const handlePayload = (payload) => {
                 if (!active) return;
+                // A notification type added by a newer backend is not shown by
+                // this build; ignore it instead of surfacing an error.
+                if (isUnsupportedNotificationRow(payload?.new)) return;
                 const notification = normalizeNotificationRow(payload?.new);
                 if (!notification || notification.recipientId !== user.id) {
                     onError?.(new NotificationServiceError(

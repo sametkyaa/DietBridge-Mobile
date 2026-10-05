@@ -31,6 +31,17 @@ test('unread and unseen semantics use separate canonical columns', () => {
     assert.match(service, /select\('id', \{ count: 'exact', head: true \}\)/);
 });
 
+test('unsupported notification types are skipped instead of breaking the list, count, or Realtime', () => {
+    assert.match(service, /buildNotificationPage\(data, size\)/);
+    assert.match(service, /page\.malformedCount > 0\) throw createMalformedRowError\(\)/);
+    assert.match(service, /\.is\('seen_at', null\)\s*\.or\(buildSupportedNotificationEventFilter\(\)\)/);
+    assert.match(realtime, /if \(isUnsupportedNotificationRow\(payload\?\.new\)\) return;/);
+    assert.ok(
+        realtime.indexOf('isUnsupportedNotificationRow(payload?.new)') < realtime.indexOf('Malformed notification realtime payload'),
+        'Realtime must ignore unsupported rows before reporting malformed payloads',
+    );
+});
+
 test('notification select columns never include Chat body fields', () => {
     const constants = read('apps/mobile/src/features/notifications/constants/notificationConstants.js');
     assert.doesNotMatch(constants, /message_text/);

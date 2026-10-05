@@ -79,6 +79,30 @@ const isSupportedEvent = (category, eventType) => {
 
 const hasOnlyNullValues = (values) => values.every((value) => value === null);
 
+// A row whose identity and ordering fields are intact but whose category/event
+// pair this app build does not know (for example a type added by a newer
+// backend). Lists skip such rows instead of failing; rows of a known type with
+// invalid fields are still treated as malformed.
+const isUnsupportedNotificationRow = (row) => (
+    !!row
+    && typeof row === 'object'
+    && !Array.isArray(row)
+    && isValidUuid(row.id)
+    && isValidUuid(row.recipient_id)
+    && typeof row.category === 'string'
+    && typeof row.event_type === 'string'
+    && !!normalizeIsoTimestamp(row.occurred_at)
+    && !isSupportedEvent(row.category, row.event_type)
+);
+
+// PostgREST `or` filter limited to the category/event pairs this build can
+// display, so server-side counts match what the notification list shows.
+const buildSupportedNotificationEventFilter = () => [
+    [NOTIFICATION_CATEGORIES.CHAT_MESSAGE, NOTIFICATION_EVENT_TYPES.CHAT_MESSAGE],
+    [NOTIFICATION_CATEGORIES.APPOINTMENT, NOTIFICATION_EVENT_TYPES.APPOINTMENT],
+    [NOTIFICATION_CATEGORIES.RELATIONSHIP, NOTIFICATION_EVENT_TYPES.RELATIONSHIP],
+].map(([category, eventTypes]) => `and(category.eq.${category},event_type.in.(${eventTypes.join(',')}))`).join(',');
+
 const normalizeNotificationRow = (row) => {
     if (!row || typeof row !== 'object' || Array.isArray(row)) return null;
 
@@ -264,6 +288,42 @@ const mergeNotifications = (existingNotifications, incomingNotifications, mode =
     return [...byId.values()].sort(compareNotificationsNewestFirst);
 };
 
+const partitionNotificationRows = (rows) => {
+    const notifications = [];
+    let unsupportedCount = 0;
+    let malformedCount = 0;
+
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+        const notification = normalizeNotificationRow(row);
+        if (notification) notifications.push(notification);
+        else if (isUnsupportedNotificationRow(row)) unsupportedCount += 1;
+        else malformedCount += 1;
+    });
+
+    return { notifications, unsupportedCount, malformedCount };
+};
+
+// Builds one keyset page from raw rows fetched with limit(pageSize + 1).
+// hasMore and nextCursor come from the raw rows, so skipped unsupported rows
+// never shorten pagination or cause gaps/repeats on the next page.
+const buildNotificationPage = (rows, pageSize) => {
+    const rawRows = Array.isArray(rows) ? rows : [];
+    const hasMore = rawRows.length > pageSize;
+    const pageRows = hasMore ? rawRows.slice(0, pageSize) : rawRows;
+    const { notifications, unsupportedCount, malformedCount } = partitionNotificationRows(pageRows);
+    const lastRow = pageRows[pageRows.length - 1] || null;
+
+    return {
+        notifications,
+        hasMore,
+        nextCursor: hasMore && lastRow
+            ? normalizeNotificationCursor({ occurredAt: lastRow.occurred_at, id: lastRow.id })
+            : null,
+        unsupportedCount,
+        malformedCount,
+    };
+};
+
 const isNotificationQueryMode = (mode) => (
     mode === NOTIFICATION_QUERY_MODES.ALL || mode === NOTIFICATION_QUERY_MODES.UNREAD
 );
@@ -272,7 +332,11 @@ module.exports = {
     isValidUuid,
     normalizeIsoTimestamp,
     isSupportedEvent,
+    isUnsupportedNotificationRow,
+    buildSupportedNotificationEventFilter,
     normalizeNotificationRow,
+    partitionNotificationRows,
+    buildNotificationPage,
     normalizeNotificationCursor,
     compareNotificationsNewestFirst,
     mergeNotifications,

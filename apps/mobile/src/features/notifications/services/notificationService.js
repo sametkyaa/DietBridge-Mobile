@@ -7,6 +7,8 @@ import {
     NOTIFICATION_SELECT_COLUMNS,
 } from '../constants/notificationConstants';
 import {
+    buildNotificationPage,
+    buildSupportedNotificationEventFilter,
     isValidUuid,
     isNotificationQueryMode,
     normalizeNotificationCursor,
@@ -107,24 +109,24 @@ const assertQueryMode = (mode) => {
     return mode;
 };
 
+const createMalformedPayloadError = () => new NotificationServiceError(
+    NOTIFICATION_ERROR_CODES.MALFORMED_ROW,
+    'Bildirim verisi beklenmeyen bir yapı döndürdü.',
+    new Error('Notification list payload is not an array'),
+);
+
+const createMalformedRowError = () => new NotificationServiceError(
+    NOTIFICATION_ERROR_CODES.MALFORMED_ROW,
+    'Bildirim verisi geçersiz olduğu için güvenli şekilde gösterilemiyor.',
+    new Error('Malformed notification row'),
+);
+
 const normalizeRowsOrThrow = (rows) => {
-    if (!Array.isArray(rows)) {
-        throw new NotificationServiceError(
-            NOTIFICATION_ERROR_CODES.MALFORMED_ROW,
-            'Bildirim verisi beklenmeyen bir yapı döndürdü.',
-            new Error('Notification list payload is not an array'),
-        );
-    }
+    if (!Array.isArray(rows)) throw createMalformedPayloadError();
 
     return rows.map((row) => {
         const notification = normalizeNotificationRow(row);
-        if (!notification) {
-            throw new NotificationServiceError(
-                NOTIFICATION_ERROR_CODES.MALFORMED_ROW,
-                'Bildirim verisi geçersiz olduğu için güvenli şekilde gösterilemiyor.',
-                new Error('Malformed notification row'),
-            );
-        }
+        if (!notification) throw createMalformedRowError();
         return notification;
     });
 };
@@ -175,17 +177,18 @@ export const fetchNotificationsPage = async ({ cursor = null, pageSize, mode = N
 
         if (error) throw error;
 
-        const normalizedRows = normalizeRowsOrThrow(data);
-        const hasMore = normalizedRows.length > size;
-        const notifications = hasMore ? normalizedRows.slice(0, size) : normalizedRows;
-        const oldest = notifications[notifications.length - 1] || null;
+        if (!Array.isArray(data)) throw createMalformedPayloadError();
+
+        // Rows of a category/event this build does not know are skipped so one
+        // newer notification type cannot break the whole list. Known-type rows
+        // with invalid fields still fail closed.
+        const page = buildNotificationPage(data, size);
+        if (page.malformedCount > 0) throw createMalformedRowError();
 
         return {
-            notifications,
-            hasMore,
-            nextCursor: hasMore && oldest
-                ? { occurredAt: oldest.occurredAt, id: oldest.id }
-                : null,
+            notifications: page.notifications,
+            hasMore: page.hasMore,
+            nextCursor: page.nextCursor,
             mode: normalizedMode,
             pageSize: size,
         };
@@ -202,7 +205,8 @@ export const fetchUnseenNotificationCount = async () => {
             .from('notifications')
             .select('id', { count: 'exact', head: true })
             .eq('recipient_id', user.id)
-            .is('seen_at', null);
+            .is('seen_at', null)
+            .or(buildSupportedNotificationEventFilter());
 
         if (error) throw error;
         return Number.isInteger(count) && count >= 0 ? count : 0;
