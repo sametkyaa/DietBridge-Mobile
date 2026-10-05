@@ -22,6 +22,7 @@ import {
 } from '../constants/profileOptions';
 import { useProfileViewModel } from '../viewmodels/useProfileViewModel';
 import DietitianConnectionRequestCard from '../../dietitianConnection/components/DietitianConnectionRequestCard';
+import InviteProfileActions from '../../dietitianConnection/components/InviteProfileActions';
 
 const FIELD_META = {
     bloodTypeId: { title: 'Kan grubunu düzenle', optionKey: 'bloodTypes' },
@@ -116,6 +117,7 @@ const ProfileScreen = ({ navigation }) => {
                 {error ? <InlineAlert variant="error" message="Bazı profil bilgileri yüklenemedi. Lütfen tekrar deneyin." /> : null}
                 {successMessage ? <InlineAlert variant="success" message={successMessage} /> : null}
                 <ProfileHeaderCard name={userName} avatarUrl={avatarUrl} goal={clientData.goal} isSelecting={isSelectingAvatar} isUploading={isUploadingAvatar} onAvatarPress={handleAvatarUpload} onEdit={startEditing} />
+                <InviteProfileActions />
                 <AppCard style={styles.statsCard} contentStyle={styles.stats}>
                     {[
                         ['Boy', clientData.height, 'cm'],

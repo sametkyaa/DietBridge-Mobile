@@ -13,6 +13,12 @@
     "android": {
       "package": "com.dietbridge.app",
       "versionCode": 1,
+      "intentFilters": [{
+        "action": "VIEW",
+        "autoVerify": true,
+        "data": [{ "scheme": "https", "host": "app.dietbridge.com.tr", "pathPrefix": "/davet/" }],
+        "category": ["BROWSABLE", "DEFAULT"]
+      }],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
@@ -20,6 +26,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.dietbridge.app",
+      "associatedDomains": ["applinks:app.dietbridge.com.tr"],
       "buildNumber": "1"
     },
     "plugins": [

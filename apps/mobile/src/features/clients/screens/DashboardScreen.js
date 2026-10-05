@@ -18,6 +18,7 @@ import { mapDashboardMeal } from '../mappers/dashboardUiMapper';
 import { useDashboardViewModel } from '../viewmodels/useDashboardViewModel';
 import { toLocalDateKey } from '../../../shared/utils/localDate';
 import DietitianConnectionRequestCard from '../../dietitianConnection/components/DietitianConnectionRequestCard';
+import InviteConnectionCard from '../../dietitianConnection/components/InviteConnectionCard';
 import { useNotifications } from '../../notifications/context/NotificationContext';
 import { pickMealCompletionPhoto } from '../../meals/services/mealCompletionPhotoPicker';
 
@@ -201,6 +202,8 @@ const DashboardScreen = () => {
                     onApprove={handleApproveDietitianRequest}
                     onReject={handleRejectDietitianRequest}
                 />
+
+                <InviteConnectionCard />
 
                 <NextMealCard
                     meal={displayedUiMeal}
