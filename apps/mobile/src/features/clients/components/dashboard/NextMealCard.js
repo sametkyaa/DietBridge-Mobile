@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppCard, AppSkeleton, EmptyState, Icon, InlineAlert } from '../../../../shared/components/ui';
 import { colors, radius, shadows, spacing, typography } from '../../../../shared/theme';
 import { MealPhotoThumbnail } from '../../../meals/components/MealPhotoThumbnail';
-import { formatMealType } from '../../../../shared/utils/mealType';
+import { formatMealSlotName } from '../../../../shared/utils/mealType';
 
 const isFiniteValue = (value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
 
@@ -104,7 +104,7 @@ export function NextMealCard({
             <View style={styles.mealRow}>
                 <View style={styles.mealText}>
                     <Text style={styles.time}>
-                        {meal.time}<Text style={styles.type}>   {formatMealType(meal.type)}</Text>
+                        {meal.time}<Text style={styles.type}>   {formatMealSlotName(meal)}</Text>
                     </Text>
                     <Text style={styles.title} numberOfLines={2}>{meal.title}</Text>
                 </View>

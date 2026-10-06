@@ -490,7 +490,13 @@ export const signIn = async (email, password) => {
     };
 };
 
-export const signUp = async (email, password, fullName, phone = null) => {
+// Legal consent is sent as sign-up metadata; the server (handle_new_user)
+// stamps the acceptance times on the profile with its own clock.
+// Older backends ignore the extra keys.
+export const signUp = async (email, password, fullName, phone = null, consent = {}) => {
+    if (consent?.termsAccepted !== true || consent?.kvkkAccepted !== true) {
+        throw new Error(GENERIC_AUTH_ERROR_MESSAGE);
+    }
     const cleanFullName = fullName.trim();
     const cleanPhone = phone?.trim() || null;
 
@@ -502,6 +508,8 @@ export const signUp = async (email, password, fullName, phone = null) => {
                 account_type: 'client',
                 full_name: cleanFullName,
                 phone: cleanPhone,
+                terms_accepted: true,
+                kvkk_accepted: true,
             },
         },
     });

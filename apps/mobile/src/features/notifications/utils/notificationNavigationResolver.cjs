@@ -73,6 +73,16 @@ const resolveNotificationDestinationWithDependencies = async ({
         return { kind: 'relationship', destination: 'home', actionable: false };
     }
 
+    if (intent.kind === 'mealPlan') {
+        // Only the plan of the current active relationship can be opened.
+        if (
+            activeConnection?.status !== 'active'
+            || !isValidUuid(activeConnection?.id)
+            || notification.dietitianClientId !== activeConnection.id
+        ) return invalidDestination('Bu beslenme planı artık görüntülenemiyor.');
+        return { kind: 'mealPlan' };
+    }
+
     return invalidDestination();
 };
 

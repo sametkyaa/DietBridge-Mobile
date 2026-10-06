@@ -16,6 +16,7 @@ export const mapDashboardMeal = (meal, completion = null) => {
         id: meal.id,
         title: meal.title || formatMealType(meal.type),
         type: meal.type,
+        slotLabel: meal.slotLabel || null,
         time: meal.time,
         status: isEaten ? 'completed' : 'upcoming',
         badgeLabel: isEaten ? 'Tamamlandı' : 'Planlandı',

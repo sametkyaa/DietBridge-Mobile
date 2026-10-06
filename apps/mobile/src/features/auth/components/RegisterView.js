@@ -6,6 +6,8 @@ import { FadeUp } from '../../../shared/components/motion';
 import { colors, spacing, typography } from '../../../shared/theme';
 import PasswordToggle from './PasswordToggle';
 import BrandMark from './BrandMark';
+import LegalConsentCheckbox from './LegalConsentCheckbox';
+import { KVKK_URL, TERMS_URL } from '../../../shared/utils/externalLinkPolicy.cjs';
 
 export default function RegisterView({
   fullName,
@@ -23,6 +25,10 @@ export default function RegisterView({
   onConfirmPasswordChange,
   onTogglePassword,
   onToggleConfirmPassword,
+  termsAccepted,
+  kvkkAccepted,
+  onToggleTerms,
+  onToggleKvkk,
   onSubmit,
   onLogin,
 }) {
@@ -114,6 +120,24 @@ export default function RegisterView({
               />
             )}
           />
+          <View style={styles.consents}>
+            <LegalConsentCheckbox
+              checked={!!termsAccepted}
+              onToggle={onToggleTerms}
+              disabled={loading}
+              documentLabel="Kullanım Koşulları"
+              documentUrl={TERMS_URL}
+              suffix="'nı okudum ve kabul ediyorum."
+            />
+            <LegalConsentCheckbox
+              checked={!!kvkkAccepted}
+              onToggle={onToggleKvkk}
+              disabled={loading}
+              documentLabel="KVKK Aydınlatma Metni"
+              documentUrl={KVKK_URL}
+              suffix="'ni okudum, kişisel verilerimin işlenmesini kabul ediyorum."
+            />
+          </View>
         </View>
       </FadeUp>
 
@@ -125,7 +149,7 @@ export default function RegisterView({
           onPress={onSubmit}
         />
         <View style={styles.legal}>
-          <LegalLinks />
+          <LegalLinks includeKvkk />
         </View>
         <View style={styles.footer}>
           <Text style={styles.footerText}>Zaten hesabın var mı?</Text>
@@ -149,6 +173,7 @@ const styles = StyleSheet.create({
   title: { ...typography.display, color: colors.textPrimary, marginTop: spacing.x8 },
   subtitle: { ...typography.body, color: colors.textSecondary, marginTop: spacing.x2, maxWidth: 340 },
   form: { gap: spacing.x4, marginTop: spacing.x6 },
+  consents: { gap: spacing.x3, marginTop: spacing.x1 },
   spacer: { flex: 1, minHeight: spacing.x6 },
   legal: { marginTop: spacing.x4 },
   footer: {

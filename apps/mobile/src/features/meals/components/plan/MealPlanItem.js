@@ -5,14 +5,14 @@ import { PopIn } from '../../../../shared/components/motion';
 import { useHasMounted } from '../../../../shared/hooks/useHasMounted';
 import { colors, radius, spacing, typography } from '../../../../shared/theme';
 import { MealPhotoThumbnail } from '../MealPhotoThumbnail';
-import { formatMealType } from '../../../../shared/utils/mealType';
+import { formatMealSlotName } from '../../../../shared/utils/mealType';
 
 const isFiniteValue = (value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
 
 export function MealPlanItem({ meal, completion, onPress }) {
     const completed = !!completion?.completed;
     const hasMounted = useHasMounted();
-    const title = meal.title || formatMealType(meal.type);
+    const title = meal.title || formatMealSlotName(meal);
     return (
         <View style={styles.row}>
             <View style={styles.timeColumn}>
@@ -29,7 +29,7 @@ export function MealPlanItem({ meal, completion, onPress }) {
                 style={({ pressed }) => [styles.card, pressed && styles.pressed]}
             >
                 <View style={styles.textWrap}>
-                    <Text style={styles.type}>{formatMealType(meal.type)}</Text>
+                    <Text style={styles.type}>{formatMealSlotName(meal)}</Text>
                     <Text style={[styles.title, completed && styles.muted]} numberOfLines={2}>{title}</Text>
                     <View style={styles.metaRow}>
                         {isFiniteValue(meal.calories) ? (

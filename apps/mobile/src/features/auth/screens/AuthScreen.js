@@ -15,6 +15,10 @@ export default function AuthScreen({ navigation }) {
     setPhone,
     confirmPassword,
     setConfirmPassword,
+    termsAccepted,
+    toggleTermsAccepted,
+    kvkkAccepted,
+    toggleKvkkAccepted,
     loading,
     isPasswordVisible,
     togglePasswordVisibility,
@@ -58,6 +62,10 @@ export default function AuthScreen({ navigation }) {
           email={email}
           password={password}
           confirmPassword={confirmPassword}
+          termsAccepted={termsAccepted}
+          kvkkAccepted={kvkkAccepted}
+          onToggleTerms={toggleTermsAccepted}
+          onToggleKvkk={toggleKvkkAccepted}
           isPasswordVisible={isPasswordVisible}
           isConfirmPasswordVisible={isConfirmPasswordVisible}
           loading={loading}
