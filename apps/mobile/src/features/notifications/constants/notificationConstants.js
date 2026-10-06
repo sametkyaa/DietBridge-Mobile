@@ -13,12 +13,14 @@ const NOTIFICATION_CATEGORIES = Object.freeze({
     CHAT_MESSAGE: 'chat_message',
     APPOINTMENT: 'appointment',
     RELATIONSHIP: 'relationship',
+    MEAL_PLAN: 'meal_plan',
 });
 
 const NOTIFICATION_EVENT_TYPES = Object.freeze({
     CHAT_MESSAGE: Object.freeze(['new_message']),
     APPOINTMENT: Object.freeze(['created', 'updated', 'cancelled', 'assigned', 'removed_from_client', 'reminder_24h', 'reminder_1h']),
     RELATIONSHIP: Object.freeze(['request_pending', 'accepted', 'rejected', 'removed']),
+    MEAL_PLAN: Object.freeze(['updated']),
 });
 
 const NOTIFICATION_SELECT_COLUMNS = [

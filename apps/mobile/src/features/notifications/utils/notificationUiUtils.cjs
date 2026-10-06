@@ -11,6 +11,7 @@ const CATEGORY_ICONS = Object.freeze({
     [NOTIFICATION_CATEGORIES.CHAT_MESSAGE]: 'message',
     [NOTIFICATION_CATEGORIES.APPOINTMENT]: 'calendar',
     [NOTIFICATION_CATEGORIES.RELATIONSHIP]: 'person',
+    [NOTIFICATION_CATEGORIES.MEAL_PLAN]: 'meal',
 });
 
 const APPOINTMENT_COPY = Object.freeze({
@@ -66,6 +67,11 @@ const formatRelationshipSummary = (notification) => {
     return base;
 };
 
+const formatMealPlanSummary = (notification) => {
+    const actor = safeText(notification?.actorDisplayName);
+    return actor ? `${actor} beslenme planınızı güncelledi.` : 'Beslenme planınız güncellendi.';
+};
+
 const formatNotificationSummary = (notification) => {
     if (notification?.category === NOTIFICATION_CATEGORIES.CHAT_MESSAGE
         && NOTIFICATION_EVENT_TYPES.CHAT_MESSAGE.includes(notification.eventType)) {
@@ -78,6 +84,10 @@ const formatNotificationSummary = (notification) => {
     if (notification?.category === NOTIFICATION_CATEGORIES.RELATIONSHIP
         && NOTIFICATION_EVENT_TYPES.RELATIONSHIP.includes(notification.eventType)) {
         return formatRelationshipSummary(notification);
+    }
+    if (notification?.category === NOTIFICATION_CATEGORIES.MEAL_PLAN
+        && NOTIFICATION_EVENT_TYPES.MEAL_PLAN.includes(notification.eventType)) {
+        return formatMealPlanSummary(notification);
     }
     return 'Yeni bir bildiriminiz var.';
 };

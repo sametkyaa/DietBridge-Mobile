@@ -39,6 +39,14 @@ const getNotificationNavigationIntent = (notification) => {
         return { kind: 'relationship', eventType: notification.eventType };
     }
 
+    if (
+        notification.category === NOTIFICATION_CATEGORIES.MEAL_PLAN
+        && NOTIFICATION_EVENT_TYPES.MEAL_PLAN.includes(notification.eventType)
+        && notification.dietitianClientId
+    ) {
+        return { kind: 'mealPlan' };
+    }
+
     return invalidIntent();
 };
 

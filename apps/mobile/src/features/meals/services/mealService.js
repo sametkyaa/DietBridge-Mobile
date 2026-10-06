@@ -11,6 +11,17 @@ const MEAL_COMPLETION_UPDATE_ERROR_MESSAGE = 'Öğün durumu güncellenemedi.';
 const ACTIVE_CONNECTION_SELECT_COLUMNS = 'id, client_id, dietitian_id, status';
 const MEAL_SELECT_COLUMNS = 'id, plan_id, type, title, description, calories, macros, time, sort_order, photo_url, completion_photo_url, source, recipe_id, is_eaten';
 const PLAN_SELECT_COLUMNS = `id, client_id, dietitian_id, plan_date, notes, meals (${MEAL_SELECT_COLUMNS})`;
+// meals.slot_label ships with a backend migration that may not be applied yet.
+// The richer select is tried first; an "undefined column" error for that
+// column switches this session to the legacy select.
+const PLAN_SELECT_COLUMNS_WITH_SLOT_LABEL = `id, client_id, dietitian_id, plan_date, notes, meals (${MEAL_SELECT_COLUMNS}, slot_label)`;
+let slotLabelColumnAvailable = true;
+
+export const isMissingSlotLabelColumnError = (error) => (
+    !!error
+    && (error.code === '42703' || error.code === 'PGRST204' || error.code === 'PGRST200')
+    && /slot_label/.test(String(error.message || ''))
+);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const createReadError = (code, message) => new MealPlanReadError(code, message);
@@ -52,13 +63,24 @@ const getSingleActiveConnection = async (clientId) => {
     return data[0];
 };
 
+const queryDailyPlan = (columns, { clientId, dietitianId, planDate }) => supabase
+    .from('meal_plans')
+    .select(columns)
+    .eq('client_id', clientId)
+    .eq('dietitian_id', dietitianId)
+    .eq('plan_date', planDate);
+
 const getSingleDailyPlan = async ({ clientId, dietitianId, planDate }) => {
-    const { data, error } = await supabase
-        .from('meal_plans')
-        .select(PLAN_SELECT_COLUMNS)
-        .eq('client_id', clientId)
-        .eq('dietitian_id', dietitianId)
-        .eq('plan_date', planDate);
+    const scope = { clientId, dietitianId, planDate };
+    let { data, error } = await queryDailyPlan(
+        slotLabelColumnAvailable ? PLAN_SELECT_COLUMNS_WITH_SLOT_LABEL : PLAN_SELECT_COLUMNS,
+        scope,
+    );
+
+    if (slotLabelColumnAvailable && isMissingSlotLabelColumnError(error)) {
+        slotLabelColumnAvailable = false;
+        ({ data, error } = await queryDailyPlan(PLAN_SELECT_COLUMNS, scope));
+    }
 
     if (error) {
         throw createReadError(MealPlanReadErrorCode.FETCH, 'Beslenme planı alınamadı. Lütfen tekrar deneyin.');

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { BottomSheetView, StatusBadge } from '../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 import { MealPhotoThumbnail } from './MealPhotoThumbnail';
-import { formatMealType } from '../../../shared/utils/mealType';
+import { formatMealSlotName } from '../../../shared/utils/mealType';
 import { PlateMark } from '../../auth/components/BrandMark';
 
 const formatMacro = (value) => {
@@ -29,11 +29,11 @@ export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPre
         <BottomSheetView visible={visible} onClose={onClose} scrollable bottomInset={bottomInset}>
             <View style={styles.metaRow}>
                 <Text style={styles.time}>{meal.time}</Text>
-                <Text style={styles.meta}>{formatMealType(meal.type)}</Text>
+                <Text style={styles.meta}>{formatMealSlotName(meal)}</Text>
                 <View style={styles.flex} />
                 <StatusBadge status={completed ? 'completed' : 'upcoming'} label={completed ? 'Tamamlandı' : 'Planlandı'} />
             </View>
-            <Text style={styles.title} accessibilityRole="header">{meal.title || formatMealType(meal.type)}</Text>
+            <Text style={styles.title} accessibilityRole="header">{meal.title || formatMealSlotName(meal)}</Text>
             <MealPhotoThumbnail
                 photoPath={meal.photoPath}
                 completionPhotoPath={completed
@@ -45,7 +45,7 @@ export function MealDetailSheet({ meal, completion, visible, onClose, onPhotoPre
                 imageStyle={styles.photo}
                 wrapperStyle={styles.photoButton}
                 onPress={onPhotoPress}
-                accessibilityLabel={`${meal.title || formatMealType(meal.type)} fotoğrafını büyüt`}
+                accessibilityLabel={`${meal.title || formatMealSlotName(meal)} fotoğrafını büyüt`}
                 fallback={(
                     <View style={styles.photoFallback}>
                         <PlateMark size={104} />

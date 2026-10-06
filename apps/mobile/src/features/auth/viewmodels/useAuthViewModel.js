@@ -37,6 +37,8 @@ export const useAuthViewModel = () => {
     const [fullName, setFullName] = useState('');
     const [phone, setPhone] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [termsAccepted, setTermsAccepted] = useState(false);
+    const [kvkkAccepted, setKvkkAccepted] = useState(false);
     const [loading, setLoading] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
@@ -144,7 +146,17 @@ export const useAuthViewModel = () => {
                     setLoading(false);
                     return;
                 }
-                await signUp(email, password, fullName, phone);
+                if (!termsAccepted) {
+                    Alert.alert('Hata', "Kayıt için Kullanım Koşulları'nı kabul etmelisiniz.");
+                    setLoading(false);
+                    return;
+                }
+                if (!kvkkAccepted) {
+                    Alert.alert('Hata', "Kayıt için KVKK Aydınlatma Metni'ni onaylamalısınız.");
+                    setLoading(false);
+                    return;
+                }
+                await signUp(email, password, fullName, phone, { termsAccepted, kvkkAccepted });
                 Alert.alert('Başarılı', 'Kayıt tamamlandı! Lütfen e-posta adresinizi doğrulayın.');
                 setMode('signin');
             }
@@ -192,6 +204,10 @@ export const useAuthViewModel = () => {
         setPhone,
         confirmPassword,
         setConfirmPassword,
+        termsAccepted,
+        toggleTermsAccepted: () => setTermsAccepted((value) => !value),
+        kvkkAccepted,
+        toggleKvkkAccepted: () => setKvkkAccepted((value) => !value),
         loading,
         isPasswordVisible,
         togglePasswordVisibility,
