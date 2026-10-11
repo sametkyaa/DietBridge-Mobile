@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabaseClient';
+import { clearChatImageUriCache } from '../../chat/services/chatImageResolver';
 import { revokePushInstallationBestEffort } from '../../push/services/pushRegistrationService';
 import { resolvePasswordResetRedirectUrl } from '../utils/passwordResetPolicy.cjs';
 import { assertLegalAcceptance, hasLegalAcceptance } from '../utils/legalAcceptancePolicy.cjs';
@@ -409,7 +410,13 @@ export const getCurrentClientAuthState = async () => {
 };
 
 export const subscribeToAuthChanges = (callback) => {
+    let cacheUserId;
     return supabase.auth.onAuthStateChange((event, session) => {
+        const nextUserId = session?.user?.id ?? null;
+        if (event === 'SIGNED_OUT' || event === 'PASSWORD_RECOVERY' || nextUserId !== cacheUserId) {
+            clearChatImageUriCache('session');
+        }
+        cacheUserId = nextUserId;
         setTimeout(() => callback(event, session), 0);
     });
 };

@@ -30,38 +30,59 @@ export const getReadableChatImagePath = (message) => {
 export const createChatImageResolver = ({ storage = supabase.storage, now = () => Date.now() } = {}) => {
     const cache = new Map();
     const inFlight = new Map();
+    let generation = 0;
+    const clear = () => { generation += 1; cache.clear(); inFlight.clear(); };
     const makeRoom = () => { while (cache.size >= CHAT_IMAGE_CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value); };
     const resolve = async (message, { forceRefresh = false } = {}) => {
         const path = getReadableChatImagePath(message);
         if (!path) return { uri: null, status: 'placeholder' };
-        if (forceRefresh) cache.delete(path);
+        if (forceRefresh) { cache.delete(path); inFlight.delete(path); }
+        const requestGeneration = generation;
         const cached = cache.get(path);
         if (cached && cached.refreshAfter > now()) return cached.result;
-        if (inFlight.has(path)) return inFlight.get(path);
-        const request = (async () => {
+        if (inFlight.has(path)) return inFlight.get(path).promise;
+        const token = {};
+        const request = Promise.resolve().then(async () => {
             try {
                 const { data, error } = await storage.from(CHAT_IMAGE_BUCKET_ID).createSignedUrl(path, CHAT_IMAGE_SIGNED_URL_SECONDS);
-                if (error || !data?.signedUrl) return { uri: null, status: 'error' };
+                if (requestGeneration !== generation || inFlight.get(path)?.token !== token
+                    || error || !data?.signedUrl) return { uri: null, status: 'error' };
                 const result = { uri: data.signedUrl, status: 'ready' };
                 makeRoom();
                 cache.set(path, { result, refreshAfter: now() + CHAT_IMAGE_CACHE_MS });
                 return result;
             } catch {
                 return { uri: null, status: 'error' };
-            } finally { inFlight.delete(path); }
-        })();
-        inFlight.set(path, request);
+            } finally {
+                if (inFlight.get(path)?.token === token) inFlight.delete(path);
+            }
+        });
+        inFlight.set(path, { token, promise: request });
         return request;
     };
     return {
         resolve,
         refresh: (message) => resolve(message, { forceRefresh: true }),
-        purge: (message) => { const path = getReadableChatImagePath(message); if (path) cache.delete(path); },
-        clear: () => { cache.clear(); inFlight.clear(); },
+        purge: (message) => {
+            const path = message?.attachment?.objectPath;
+            if (typeof path === 'string' && CHAT_IMAGE_OBJECT_PATH_PATTERN.test(path)) {
+                cache.delete(path); inFlight.delete(path);
+            }
+        },
+        clear,
     };
 };
 
 const resolver = createChatImageResolver();
+const invalidationListeners = new Set();
+export const clearChatImageUriCache = (reason = 'session') => {
+    resolver.clear();
+    invalidationListeners.forEach((listener) => listener(reason));
+};
+export const subscribeToChatImageCacheInvalidation = (listener) => {
+    invalidationListeners.add(listener);
+    return () => invalidationListeners.delete(listener);
+};
 export const resolveChatImageUri = (message) => resolver.resolve(message);
 export const refreshChatImageUri = (message) => resolver.refresh(message);
 export const purgeChatImageUri = (message) => resolver.purge(message);

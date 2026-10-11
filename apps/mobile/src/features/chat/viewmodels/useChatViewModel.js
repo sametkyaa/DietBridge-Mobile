@@ -31,7 +31,7 @@ import { useChatReadState } from '../hooks/useChatReadState';
 import { useChatDeliveryState } from '../hooks/useChatDeliveryState';
 import { useChatImageUpload } from '../hooks/useChatImageUpload';
 import { canDeleteChatMessage } from '../utils/chatUiUtils';
-import { purgeChatImageUri, refreshChatImageUri, resolveChatImageUri } from '../services/chatImageResolver';
+import { purgeChatImageUri, refreshChatImageUri, resolveChatImageUri, subscribeToChatImageCacheInvalidation } from '../services/chatImageResolver';
 
 const GENERIC_CHAT_ERROR = 'Sohbet işlemi şu anda tamamlanamadı. Lütfen tekrar deneyin.';
 const UUID_ERROR = 'Güvenli mesaj kimliği oluşturulamadı. Lütfen tekrar deneyin.';
@@ -710,6 +710,12 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
     }, [serverMessages]);
 
     useEffect(() => { void resolveImageMessages(); }, [conversation?.id, resolveImageMessages]);
+
+    useEffect(() => subscribeToChatImageCacheInvalidation((reason) => {
+        imageRequestVersionRef.current += 1;
+        setImageStates({});
+        if (reason === 'consent') void resolveImageMessages(true);
+    }), [resolveImageMessages]);
 
     useEffect(() => {
         const subscription = AppState.addEventListener('change', (nextState) => {
