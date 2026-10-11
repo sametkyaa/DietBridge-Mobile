@@ -6,6 +6,7 @@ import { useReducedMotion } from '../../hooks/useReducedMotion';
 const TONES = {
   primary: colors.primary,
   teal: colors.teal,
+  accent: colors.accent,
   info: colors.info,
   warning: colors.warning,
   success: colors.success,
