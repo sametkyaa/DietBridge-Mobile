@@ -1,5 +1,7 @@
 'use strict';
 
+const { SHARING_REQUIRED_MESSAGE, CONSENT_UNAVAILABLE_MESSAGE } = require('../../healthConsent/services/healthConsentClient.cjs');
+
 // Error and lifecycle contract for the canonical JPEG upload flow.
 //
 // Every failure surfaced to the UI is one of these categories, each with a
@@ -57,9 +59,15 @@ const createChatImageError = (code, options = {}) => {
 };
 
 // Narrows any thrown value onto the upload failure contract consumed by the
-// reducer and the UI. A non-ChatImageError is treated as an unknown, retryable
-// failure so the user can try again.
+// reducer and the UI. Consent failures retain fixed safe messages. Other
+// non-ChatImageError values become an unknown, retryable failure.
 const toChatImageUploadFailure = (error) => {
+    if (error?.code === 'HEALTH_CONSENT_REQUIRED') {
+        return { code: 'health_consent_required', userMessage: SHARING_REQUIRED_MESSAGE, retryable: false };
+    }
+    if (error?.code === 'HEALTH_CONSENT_UNAVAILABLE') {
+        return { code: 'health_consent_unavailable', userMessage: CONSENT_UNAVAILABLE_MESSAGE, retryable: true };
+    }
     if (error instanceof ChatImageError) {
         return { code: error.code, userMessage: error.userMessage, retryable: error.retryable };
     }

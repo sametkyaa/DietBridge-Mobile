@@ -146,3 +146,27 @@ test('each actual chat image stage stops before RPC, Storage or validation when 
     assert.equal(io,0,name);
   }
 });
+
+
+test('consent failures carry the safe message consumed by the chat ViewModel', async () => {
+  const client = createHealthConsentClient({ rpc: async () => ({ data: state() }) }, true);
+  await assert.rejects(client.requireSharing(), (error) => {
+    assert.equal(error.code, 'HEALTH_CONSENT_REQUIRED');
+    assert.equal(error.userMessage, error.message);
+    assert.match(error.userMessage, /diyetisyenine/);
+    return true;
+  });
+  assert.throws(() => validateConsentState(null), { code: 'HEALTH_CONSENT_UNAVAILABLE' });
+});
+
+test('chat image UI retains the safe consent failure and correct retry decision', () => {
+  const { toChatImageUploadFailure } = require('../../../chat/utils/chatImageError');
+  const denied = toChatImageUploadFailure({ code: 'HEALTH_CONSENT_REQUIRED', message: 'raw fixture' });
+  assert.equal(denied.code, 'health_consent_required');
+  assert.equal(denied.retryable, false);
+  assert.match(denied.userMessage, /paylaşım tercihini/);
+  const unavailable = toChatImageUploadFailure({ code: 'HEALTH_CONSENT_UNAVAILABLE', message: 'raw fixture' });
+  assert.equal(unavailable.code, 'health_consent_unavailable');
+  assert.equal(unavailable.retryable, true);
+  assert.doesNotMatch(unavailable.userMessage, /raw fixture/);
+});
