@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppInput } from '../../../shared/components/ui';
-import LegalLinks from '../../../shared/components/legal/LegalLinks';
+import LegalAcceptanceFields from './LegalAcceptanceFields';
 import { FadeUp } from '../../../shared/components/motion';
 import { colors, spacing, typography } from '../../../shared/theme';
 import PasswordToggle from './PasswordToggle';
@@ -16,6 +16,10 @@ export default function RegisterView({
   isPasswordVisible,
   isConfirmPasswordVisible,
   loading,
+  termsAccepted,
+  kvkkAcknowledged,
+  onTermsChange,
+  onKvkkChange,
   onFullNameChange,
   onPhoneChange,
   onEmailChange,
@@ -123,9 +127,16 @@ export default function RegisterView({
           label={loading ? 'Hesap oluşturuluyor…' : 'Kayıt ol'}
           loading={loading}
           onPress={onSubmit}
+          disabled={!termsAccepted || !kvkkAcknowledged}
         />
         <View style={styles.legal}>
-          <LegalLinks />
+          <LegalAcceptanceFields
+            termsAccepted={termsAccepted}
+            kvkkAcknowledged={kvkkAcknowledged}
+            onTermsChange={onTermsChange}
+            onKvkkChange={onKvkkChange}
+            disabled={loading}
+          />
         </View>
         <View style={styles.footer}>
           <Text style={styles.footerText}>Zaten hesabın var mı?</Text>

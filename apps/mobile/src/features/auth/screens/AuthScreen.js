@@ -16,6 +16,10 @@ export default function AuthScreen({ navigation }) {
     confirmPassword,
     setConfirmPassword,
     loading,
+    termsAccepted,
+    setTermsAccepted,
+    kvkkAcknowledged,
+    setKvkkAcknowledged,
     isPasswordVisible,
     togglePasswordVisibility,
     isConfirmPasswordVisible,
@@ -53,6 +57,10 @@ export default function AuthScreen({ navigation }) {
         />
       ) : (
         <RegisterView
+          termsAccepted={termsAccepted}
+          kvkkAcknowledged={kvkkAcknowledged}
+          onTermsChange={setTermsAccepted}
+          onKvkkChange={setKvkkAcknowledged}
           fullName={fullName}
           phone={phone}
           email={email}

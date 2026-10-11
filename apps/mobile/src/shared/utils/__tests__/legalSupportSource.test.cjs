@@ -5,10 +5,14 @@ const test = require('node:test');
 
 const read = (relativePath) => fs.readFileSync(path.resolve(process.cwd(), relativePath), 'utf8');
 
-test('registration exposes legal links without changing the form contract', () => {
+test('registration preserves form actions and exposes legal acceptance with KVKK links', () => {
     const registerView = read('apps/mobile/src/features/auth/components/RegisterView.js');
 
-    assert.match(registerView, /LegalLinks/);
+    assert.match(registerView, /LegalAcceptanceFields/);
+    const fields = read('apps/mobile/src/features/auth/components/LegalAcceptanceFields.js');
+    assert.match(fields, /LegalLinks includeKvkk/);
+    assert.match(fields, /accessibilityRole="checkbox"/);
+    assert.match(registerView, /disabled=\{!termsAccepted \|\| !kvkkAcknowledged\}/);
     assert.match(registerView, /Kayıt ol/);
     assert.match(registerView, /onSubmit/);
     assert.match(registerView, /onLogin/);

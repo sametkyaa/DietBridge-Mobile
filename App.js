@@ -12,6 +12,8 @@ import {
 } from '@expo-google-fonts/figtree';
 import RootNavigator from './apps/mobile/src/navigation/RootNavigator';
 import AuthNavigator from './apps/mobile/src/navigation/AuthNavigator';
+import LegalAcceptanceScreen from './apps/mobile/src/features/auth/screens/LegalAcceptanceScreen';
+import { hasLegalAcceptance } from './apps/mobile/src/features/auth/utils/legalAcceptancePolicy.cjs';
 import { MealsProvider } from './apps/mobile/src/features/meals/context/MealsContext'; // Updated path
 import { DietitianConnectionProvider } from './apps/mobile/src/features/dietitianConnection/context/DietitianConnectionContext';
 import { NotificationProvider } from './apps/mobile/src/features/notifications/context/NotificationContext';
@@ -367,23 +369,31 @@ export default function App() {
     );
   }
 
-  const canOpenClientRoutes = !recoveryModeRef.current
+  const authenticatedClient = !recoveryModeRef.current
     && recoveryState.status === 'idle'
     && authState.session
     && authState.isClient;
+  const canOpenClientRoutes = authenticatedClient && hasLegalAcceptance(authState.profile);
   const isRecoveryFlow = recoveryState.status !== 'idle';
 
   return (
     <SafeAreaProvider>
       <PushLifecycleController session={canOpenClientRoutes ? authState.session : null} />
-      <MealsProvider userId={authState.user?.id || null}>
-        <DietitianConnectionProvider userId={authState.user?.id || null}>
+      <MealsProvider userId={canOpenClientRoutes ? authState.user?.id : null}>
+        <DietitianConnectionProvider userId={canOpenClientRoutes ? authState.user?.id : null}>
           <StatusBar barStyle="dark-content" backgroundColor="#F4F5F7" />
           <NavigationContainer>
             {canOpenClientRoutes ? (
               <NotificationProvider userId={authState.user?.id || null}>
                 <RootNavigator />
               </NotificationProvider>
+            ) : authenticatedClient ? (
+              <LegalAcceptanceScreen
+                key={authState.user.id}
+                onAccepted={(next) => {
+                  if (next.user?.id === authState.user?.id) setAuthState(next);
+                }}
+              />
             ) : (
               <AuthNavigator
                 key={`${isRecoveryFlow ? 'recovery' : 'auth'}:${authEntryRoute}`}

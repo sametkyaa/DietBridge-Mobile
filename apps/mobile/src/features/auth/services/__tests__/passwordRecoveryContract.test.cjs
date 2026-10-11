@@ -169,7 +169,8 @@ test('offline startup validation stays fail-closed and arms lifecycle retry', ()
     assert.ok(authChangeStart > validationStart);
     assert.match(startupValidation, /authRetryPendingRef\.current = true/);
     assert.match(startupValidation, /setAuthState\(EMPTY_AUTH_STATE\)/);
-    assert.match(app, /const canOpenClientRoutes = !recoveryModeRef\.current/);
+    assert.match(app, /const authenticatedClient = !recoveryModeRef\.current/);
+    assert.match(app, /const canOpenClientRoutes = authenticatedClient && hasLegalAcceptance\(authState\.profile\)/);
     assert.match(app, /authState\.session/);
     assert.match(app, /authState\.isClient/);
 });
