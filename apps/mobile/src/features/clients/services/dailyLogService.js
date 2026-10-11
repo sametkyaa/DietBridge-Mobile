@@ -1,5 +1,6 @@
 import { supabase } from '../../../lib/supabaseClient';
 import { saveCurrentWeight } from './clientService';
+import { requireHealthStorageConsent } from '../../healthConsent/services/healthConsentService';
 const {
     INVALID_PERSISTED_WATER_MESSAGE,
     normalizePersistedWaterLiters,
@@ -65,6 +66,7 @@ export const upsertWaterIntake = async (dateStr, waterAmount) => {
     }
 
     const user = await getCurrentUserOrThrow();
+    await requireHealthStorageConsent();
     let response = null;
 
     try {
