@@ -410,8 +410,13 @@ export const getCurrentClientAuthState = async () => {
 };
 
 export const subscribeToAuthChanges = (callback) => {
+    let cacheUserId;
     return supabase.auth.onAuthStateChange((event, session) => {
-        if (event !== 'TOKEN_REFRESHED') clearChatImageUriCache('session');
+        const nextUserId = session?.user?.id ?? null;
+        if (event === 'SIGNED_OUT' || event === 'PASSWORD_RECOVERY' || nextUserId !== cacheUserId) {
+            clearChatImageUriCache('session');
+        }
+        cacheUserId = nextUserId;
         setTimeout(() => callback(event, session), 0);
     });
 };

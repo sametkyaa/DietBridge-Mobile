@@ -87,3 +87,24 @@ test('saving consent invalidates image state even when the RPC outcome is uncert
     await assert.rejects(context.setConsent({ storage: false, sharing: false }));
     assert.deepEqual(reasons, ['consent']);
 });
+
+test('auth changes clear other-account URLs without blanking images on same-account refresh', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../../../auth/services/authService.js'), 'utf8');
+    const start = source.indexOf('export const subscribeToAuthChanges =');
+    const end = source.indexOf('export const signIn =', start);
+    let listener; const reasons = [], callbacks = [];
+    const context = {
+        supabase: { auth: { onAuthStateChange: (callback) => { listener = callback; return {}; } } },
+        clearChatImageUriCache: (reason) => reasons.push(reason), setTimeout: (callback) => callback(),
+    };
+    vm.createContext(context);
+    vm.runInContext(source.slice(start,end).replace('export const subscribeToAuthChanges =', 'globalThis.subscribeAuth ='),context);
+    context.subscribeAuth((event) => callbacks.push(event));
+    listener('INITIAL_SESSION', { user: { id: 'a' } });
+    listener('SIGNED_IN', { user: { id: 'a' } });
+    listener('TOKEN_REFRESHED', { user: { id: 'a' } });
+    assert.equal(reasons.length, 1);
+    listener('SIGNED_IN', { user: { id: 'b' } });
+    listener('SIGNED_OUT', null);
+    assert.equal(reasons.length, 3); assert.equal(callbacks.length, 5);
+});
