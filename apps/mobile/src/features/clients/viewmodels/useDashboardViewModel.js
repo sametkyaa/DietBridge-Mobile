@@ -26,6 +26,7 @@ const {
     parseWaterInputMl,
     removeWaterLiters,
 } = require('../../../shared/utils/waterTrackingContract.cjs');
+const { buildWaterGlasses } = require('../../../shared/utils/waterGlassPolicy.cjs');
 
 const toFiniteNumber = (value) => {
     if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) return null;
@@ -98,7 +99,9 @@ export const useDashboardViewModel = () => {
     } = useDietitianConnection();
     const [water, setWater] = useState(0);
     const [waterTargetLiters, setWaterTargetLiters] = useState(WATER_TARGET_LITERS);
-    const [waterInput, setWaterInput] = useState('200');
+    const [customWaterInput, setWaterInput] = useState(null);
+    const waterGlasses = useMemo(() => buildWaterGlasses(water, waterTargetLiters), [water, waterTargetLiters]);
+    const waterInput = customWaterInput ?? String(waterGlasses.amountMl);
     const [waterDateKey, setWaterDateKey] = useState(null);
     const [dailyLogStatus, setDailyLogStatus] = useState('loading');
     const [dailyLogError, setDailyLogError] = useState(null);
@@ -154,6 +157,7 @@ export const useDashboardViewModel = () => {
         if (!isMountedRef.current) return;
         setWater(0);
         setWaterTargetLiters(WATER_TARGET_LITERS);
+        setWaterInput(null);
         updateWaterDateKey(null);
         setWeight(null);
         setWeightInput('');
@@ -359,7 +363,7 @@ export const useDashboardViewModel = () => {
         ? completedMeals[displayedMeal.id] || null
         : null;
 
-    const runWaterMutation = async (direction, amountMl) => {
+    const runWaterMutation = async (direction, amountMl, { asGlass = false } = {}) => {
         if (waterMutationRef.current) return;
         if (['loading', 'retrying', 'error'].includes(dailyLogStatus)) return;
 
@@ -427,8 +431,11 @@ export const useDashboardViewModel = () => {
 
             if (!isCurrentMutation() || waterDateKeyRef.current !== mutationDateKey) return;
 
+            const effectiveAmountMl = asGlass
+                ? buildWaterGlasses(rollbackState.water, waterTargetLiters).addAmountMl
+                : parsedAmountMl;
             const nextWater = direction === 'add'
-                ? addWaterLiters(rollbackState.water, parsedAmountMl)
+                ? addWaterLiters(rollbackState.water, effectiveAmountMl)
                 : removeWaterLiters(rollbackState.water, parsedAmountMl);
             if (!Number.isFinite(nextWater) || nextWater < 0) {
                 setWater(0);
@@ -478,6 +485,8 @@ export const useDashboardViewModel = () => {
     };
 
     const addWater = (amountMl) => runWaterMutation('add', amountMl);
+
+    const addWaterGlass = () => runWaterMutation('add', waterGlasses.amountMl, { asGlass: true });
 
     const removeWater = (amountMl) => runWaterMutation('remove', amountMl);
 
@@ -618,6 +627,7 @@ export const useDashboardViewModel = () => {
         retryMealPlan,
         water,
         waterTargetLiters,
+        waterGlasses,
         waterInput,
         setWaterInput,
         waterDateKey,
@@ -640,6 +650,7 @@ export const useDashboardViewModel = () => {
         displayedCompletion,
         isMealCompleted,
         addWater,
+        addWaterGlass,
         removeWater,
         completeMeal,
         completeMealById,
