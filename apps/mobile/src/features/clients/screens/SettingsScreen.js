@@ -16,6 +16,7 @@ import { useReducedMotion } from '../../../shared/hooks/useReducedMotion';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 import { animateNextLayout } from '../../../shared/utils/layoutMotion';
 import PasswordToggle from '../../auth/components/PasswordToggle';
+import LeaveDietitianAction from '../../dietitianConnection/components/LeaveDietitianAction';
 import { useSettingsViewModel } from '../viewmodels/useSettingsViewModel';
 
 const DELETE_TITLE = 'Hesabı sil';
@@ -244,6 +245,8 @@ const SettingsScreen = ({ navigation }) => {
                         <Text style={styles.actionLabel}>{logoutLoading ? 'Çıkış yapılıyor…' : 'Çıkış yap'}</Text>
                     </Pressable>
                 </AppCard>
+
+                <LeaveDietitianAction disabled={operationsDisabled} />
 
                 {deletionError ? (
                     <View style={styles.deletionStatus}>
