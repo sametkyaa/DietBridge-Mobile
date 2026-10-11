@@ -10,11 +10,17 @@
     },
     "preview": {
       "distribution": "internal",
-      "node": "24.17.0"
+      "node": "24.17.0",
+      "env": {
+        "EXPO_PUBLIC_ENABLE_HEALTH_CONSENT": "true"
+      }
     },
     "production": {
       "node": "24.17.0",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_ENABLE_HEALTH_CONSENT": "true"
+      }
     }
   }
 }
