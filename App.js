@@ -387,7 +387,7 @@ export default function App() {
           <NavigationContainer>
             {canOpenClientRoutes ? (
               <NotificationProvider userId={authState.user?.id || null}>
-                <RootNavigator />
+                <RootNavigator key={authState.user?.id} />
               </NotificationProvider>
             ) : authenticatedClient ? (
               <LegalAcceptanceScreen

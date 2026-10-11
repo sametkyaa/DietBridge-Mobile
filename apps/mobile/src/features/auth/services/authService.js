@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabaseClient';
+import { clearChatImageUriCache } from '../../chat/services/chatImageResolver';
 import { revokePushInstallationBestEffort } from '../../push/services/pushRegistrationService';
 import { resolvePasswordResetRedirectUrl } from '../utils/passwordResetPolicy.cjs';
 import { assertLegalAcceptance, hasLegalAcceptance } from '../utils/legalAcceptancePolicy.cjs';
@@ -410,6 +411,7 @@ export const getCurrentClientAuthState = async () => {
 
 export const subscribeToAuthChanges = (callback) => {
     return supabase.auth.onAuthStateChange((event, session) => {
+        if (event !== 'TOKEN_REFRESHED') clearChatImageUriCache('session');
         setTimeout(() => callback(event, session), 0);
     });
 };
