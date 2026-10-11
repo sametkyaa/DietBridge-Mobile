@@ -44,10 +44,11 @@ const applyWaterDelta = (currentLiters, amountMl, direction) => {
     if (Number.isNaN(normalized)) return Number.NaN;
 
     const base = normalized ?? 0;
-    const delta = waterMlToLiters(amountMl);
+    // Keep additions exact at the integer-milliliter precision accepted by the input.
+    const baseMl = Math.round(base * 1000);
     return direction === 'remove'
-        ? Math.max(base - delta, 0)
-        : base + delta;
+        ? Math.max(baseMl - amountMl, 0) / 1000
+        : (baseMl + amountMl) / 1000;
 };
 
 const addWaterLiters = (currentLiters, amountMl) => (
