@@ -1,3 +1,4 @@
+import HealthConsentPanel from '../../healthConsent/components/HealthConsentPanel';
 import React, { useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -153,6 +154,7 @@ const ProfileScreen = ({ navigation }) => {
                     { key: 'height', label: 'Boy', value: display(clientData.height, 'cm') },
                 ]} />
                 <HealthDataNotice />
+                <HealthConsentPanel disabled={isSaving || isUploadingAvatar} />
                 <ProfileSectionCard title="Sağlık bilgileri" icon="heartPulse" rows={medicalRows} />
                 <ProfileSectionCard title="Yaşam tarzı" icon="footprints" rows={lifestyleRows} />
                 <ProfileSectionCard title="Beslenme tercihleri" icon="leaf" rows={nutritionRows} />

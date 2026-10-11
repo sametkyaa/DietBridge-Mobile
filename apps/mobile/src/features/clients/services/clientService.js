@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabaseClient';
+import { requireHealthStorageConsent } from '../../healthConsent/services/healthConsentService';
 import { toLocalDateKey } from '../../../shared/utils/localDate';
 import {
     getUniqueCaseInsensitiveValues,
@@ -406,6 +407,8 @@ export const updateCurrentUserProfile = async (payload = {}) => {
 
     Object.assign(clientUpdates, normalizeSleepRange(payload));
 
+    if (Object.keys(clientUpdates).length > 0) await requireHealthStorageConsent();
+
     if (Object.keys(profileUpdates).length > 0) {
         const { data, error } = await supabase
             .from('profiles')
@@ -462,6 +465,7 @@ const updateProfileHealthField = async ({ payloadField, databaseField, value }) 
         user = await getCurrentUserOrThrow();
         return await updateCurrentUserProfile({ [payloadField]: value });
     } catch (error) {
+        if (error?.code?.startsWith('HEALTH_CONSENT_')) throw error;
         logProfileUpdateFailure({
             userId: user?.id || null,
             field: databaseField,
@@ -543,6 +547,7 @@ export const saveCurrentWeight = async (weight) => {
         throw new Error('Güncel kilo boş bırakılamaz.');
     }
 
+    await requireHealthStorageConsent();
     const { error } = await supabase.rpc('save_my_current_weight', {
         p_weight: numericWeight,
     });

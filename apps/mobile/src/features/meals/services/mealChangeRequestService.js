@@ -1,3 +1,4 @@
+import { requireHealthSharingConsent } from '../../healthConsent/services/healthConsentService';
 import { supabase } from '../../../lib/supabaseClient';
 import {
     CONNECTION_GENERIC_ERROR_MESSAGE,
@@ -11,6 +12,8 @@ export const submitMealChangeRequest = async ({ plan_date, meal_slot, requested_
 
     const relation = await getActiveDietitianConnection(user.id);
     if (!relation) throw new Error(CONNECTION_REQUIRED_MESSAGE);
+
+    await requireHealthSharingConsent();
 
     const { data, error } = await supabase
         .from('meal_change_requests')

@@ -1,3 +1,4 @@
+import { requireHealthSharingConsent } from '../../healthConsent/services/healthConsentService';
 import { supabase } from '../../../lib/supabaseClient';
 import {
     CHAT_MESSAGE_MAX_PAGE_SIZE,
@@ -324,6 +325,7 @@ export const sendChatMessage = async ({
     const normalizedClientMessageId = assertUuid(clientMessageId, 'clientMessageId');
     const normalizedBody = assertChatBody(body);
     const normalizedCurrentUserId = assertOptionalUuid(currentUserId, 'currentUserId');
+    await requireHealthSharingConsent();
 
     try {
         const { data, error } = await supabase.rpc('send_chat_message', {

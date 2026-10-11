@@ -1,3 +1,4 @@
+import { requireHealthStorageConsent } from '../../healthConsent/services/healthConsentService';
 import * as Crypto from 'expo-crypto';
 import { supabase } from '../../../lib/supabaseClient';
 import { canonicalizeChatImage } from '../../chat/utils/canonicalizeChatImage';
@@ -17,16 +18,19 @@ const enqueueUnreferencedCompletionPhoto = async (objectPath) => {
 // own bucket/path and final completion RPC. The local picker URI is never sent
 // to Supabase and the canonical Storage path is returned only after both
 // Storage and the completion RPC succeed.
-export const completeMealWithPhoto = async (mealId, source) => uploadAndCompleteMealWithPhoto({
-    mealId,
-    source,
-    getUser: () => supabase.auth.getUser(),
-    canonicalize: canonicalizeChatImage,
-    canonicalizerDeps: createExpoCanonicalizerDeps(),
-    randomUUID: () => Crypto.randomUUID(),
-    storage: supabase.storage,
-    rpc: (functionName, params) => supabase.rpc(functionName, params),
-    enqueueCleanup: enqueueUnreferencedCompletionPhoto,
-});
+export const completeMealWithPhoto = async (mealId, source) => {
+    await requireHealthStorageConsent();
+    return uploadAndCompleteMealWithPhoto({
+        mealId,
+        source,
+        getUser: () => supabase.auth.getUser(),
+        canonicalize: canonicalizeChatImage,
+        canonicalizerDeps: createExpoCanonicalizerDeps(),
+        randomUUID: () => Crypto.randomUUID(),
+        storage: supabase.storage,
+        rpc: (functionName, params) => supabase.rpc(functionName, params),
+        enqueueCleanup: enqueueUnreferencedCompletionPhoto,
+    });
+};
 
 export default completeMealWithPhoto;

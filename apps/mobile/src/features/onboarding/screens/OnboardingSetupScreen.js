@@ -1,3 +1,4 @@
+import HealthConsentPanel from '../../healthConsent/components/HealthConsentPanel';
 import React, { useCallback } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -93,6 +94,7 @@ export default function OnboardingSetupScreen({ navigation, route, userId }) {
             return (
                 <OnboardingStepLayout stepKey="goal" title="Seni en iyi ne anlatır?" description={`${eyebrow} · Diyetisyenin planını buna göre şekillendirecek.`} error={vm.error} footer={footer}>
                     <HealthDataNotice />
+                    <HealthConsentPanel disabled={vm.isSaving} />
                     <View style={styles.options} accessibilityRole="radiogroup">
                         {vm.referenceData.clientGoals.map((goal) => {
                             const goalStyle = getGoalStyle(goal);
@@ -116,6 +118,7 @@ export default function OnboardingSetupScreen({ navigation, route, userId }) {
             const difference = vm.weightDifference;
             return (
                 <OnboardingStepLayout stepKey="body" title="Ölçülerin" description={`${eyebrow} · İlk kilo kaydın Analiz ekranındaki grafiğin başlangıcı olur.`} error={vm.error} footer={footer}>
+                    <HealthConsentPanel disabled={vm.isSaving} />
                     <OnboardingNumberField label="Boy" unit="cm" value={vm.form.heightCm} onChange={(value) => vm.setField('heightCm', value)} min={50} max={250} fallback={165} placeholder="165" />
                     <OnboardingNumberField label="Güncel kilo" unit="kg" value={vm.form.currentWeight} onChange={(value) => vm.setField('currentWeight', value)} step={0.1} decimals={1} min={20} max={500} fallback={70} placeholder="70" />
                     <OnboardingNumberField label="Hedef kilo" unit="kg" value={vm.form.targetWeight} onChange={(value) => vm.setField('targetWeight', value)} step={0.5} decimals={1} min={20} max={500} fallback={65} placeholder="65" />
@@ -134,6 +137,7 @@ export default function OnboardingSetupScreen({ navigation, route, userId }) {
 
         return (
             <OnboardingStepLayout stepKey="preferences" title="Beslenme tercihlerin" description={`${eyebrow} · Bilmediğin ya da emin olmadığın yerleri boş bırakabilirsin.`} error={vm.error} footer={footer}>
+                <HealthConsentPanel disabled={vm.isSaving} />
                 {vm.referenceData.nutritionTypes.length > 0 ? (
                     <ChipGroup title="Beslenme tipi">
                         {vm.referenceData.nutritionTypes.map((item) => (
