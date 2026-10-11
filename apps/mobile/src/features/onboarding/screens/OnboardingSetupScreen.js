@@ -9,6 +9,7 @@ import OnboardingConnectStep from '../components/OnboardingConnectStep';
 import OnboardingNumberField from '../components/OnboardingNumberField';
 import OnboardingOptionCard from '../components/OnboardingOptionCard';
 import OnboardingStepLayout from '../components/OnboardingStepLayout';
+import HealthDataNotice from '../../../shared/components/legal/HealthDataNotice';
 import { ONBOARDING_STEPS, useOnboardingSetupViewModel } from '../viewmodels/useOnboardingSetupViewModel';
 
 const GOAL_STYLES = [
@@ -91,6 +92,7 @@ export default function OnboardingSetupScreen({ navigation, route, userId }) {
         if (vm.step === ONBOARDING_STEPS.GOAL) {
             return (
                 <OnboardingStepLayout stepKey="goal" title="Seni en iyi ne anlatır?" description={`${eyebrow} · Diyetisyenin planını buna göre şekillendirecek.`} error={vm.error} footer={footer}>
+                    <HealthDataNotice />
                     <View style={styles.options} accessibilityRole="radiogroup">
                         {vm.referenceData.clientGoals.map((goal) => {
                             const goalStyle = getGoalStyle(goal);

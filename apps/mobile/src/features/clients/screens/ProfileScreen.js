@@ -23,6 +23,7 @@ import {
 import { useProfileViewModel } from '../viewmodels/useProfileViewModel';
 import DietitianConnectionRequestCard from '../../dietitianConnection/components/DietitianConnectionRequestCard';
 import InviteProfileActions from '../../dietitianConnection/components/InviteProfileActions';
+import HealthDataNotice from '../../../shared/components/legal/HealthDataNotice';
 
 const FIELD_META = {
     bloodTypeId: { title: 'Kan grubunu düzenle', optionKey: 'bloodTypes' },
@@ -151,6 +152,7 @@ const ProfileScreen = ({ navigation }) => {
                     { key: 'target', label: 'Hedef kilo', value: display(clientData.targetWeight, 'kg') },
                     { key: 'height', label: 'Boy', value: display(clientData.height, 'cm') },
                 ]} />
+                <HealthDataNotice />
                 <ProfileSectionCard title="Sağlık bilgileri" icon="heartPulse" rows={medicalRows} />
                 <ProfileSectionCard title="Yaşam tarzı" icon="footprints" rows={lifestyleRows} />
                 <ProfileSectionCard title="Beslenme tercihleri" icon="leaf" rows={nutritionRows} />
