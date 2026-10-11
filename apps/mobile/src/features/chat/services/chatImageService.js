@@ -1,3 +1,4 @@
+import { requireHealthSharingConsent } from '../../healthConsent/services/healthConsentService';
 import { supabase } from '../../../lib/supabaseClient';
 import { isValidUuid } from '../utils/chatMessageUtils';
 import { createChatImageError, toChatImageUploadFailure } from '../utils/chatImageError';
@@ -30,6 +31,8 @@ export const createChatImageUploadIntent = async ({ conversationId, clientMessag
         throw createChatImageError('invalid_request');
     }
 
+    await requireHealthSharingConsent();
+
     try {
         const { data, error } = await supabase.rpc('create_chat_image_upload_intent', {
             p_conversation_id: conversationId,
@@ -50,6 +53,7 @@ export const createChatImageUploadIntent = async ({ conversationId, clientMessag
 // contract guard so nothing outside the contract can reach Storage.
 export const uploadCanonicalChatImage = async (intent, canonical) => {
     assertUploadTarget(intent, canonical);
+    await requireHealthSharingConsent();
 
     try {
         const { error } = await supabase.storage
@@ -85,6 +89,7 @@ const readValidatorCode = async (error) => {
 // errors never escape this service boundary.
 export const validateChatImageUpload = async (intentId) => {
     if (!isValidUuid(intentId)) throw createChatImageError('invalid_request');
+    await requireHealthSharingConsent();
     try {
         const { error } = await supabase.functions.invoke('validate-chat-image', { body: { intentId } });
         if (!error) return;
@@ -105,6 +110,7 @@ export const validateChatImageUpload = async (intentId) => {
 export const finalizeChatImageMessage = async (intentId, caption) => {
     if (!isValidUuid(intentId)) throw createChatImageError('invalid_request');
     const normalizedCaption = normalizeChatImageCaption(caption);
+    await requireHealthSharingConsent();
 
     try {
         const { data, error } = await supabase.rpc('finalize_chat_image_message', {

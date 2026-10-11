@@ -112,3 +112,37 @@ test('actual change request stops before the database write without sharing', as
   await assert.rejects(context.save({ plan_date: '2026-10-11', meal_slot: 'lunch' }), /sharing denied/);
   assert.equal(writes, 0);
 });
+
+test('actual chat sending stops before RPC and keeps the consent error', async () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../../../chat/services/chatService.js'), 'utf8');
+  const start = source.indexOf('export const sendChatMessage =');
+  const end = source.indexOf('export const fetchChatReadStates =', start);
+  let writes = 0;
+  const context = { assertUuid: (v) => v, assertOptionalUuid: (v) => v, assertChatBody: (v) => v,
+    requireHealthSharingConsent: async () => { const e = new Error('sharing denied'); e.code = 'HEALTH_CONSENT_REQUIRED'; throw e; },
+    supabase: { rpc: () => { writes += 1; assert.fail('unexpected send'); } } };
+  vm.createContext(context);
+  vm.runInContext(source.slice(start,end).replace('export const','const') + '\nthis.send = sendChatMessage;', context);
+  await assert.rejects(context.send({ relationId: 'relation', clientMessageId: 'message', body: 'fixture' }), { code: 'HEALTH_CONSENT_REQUIRED' });
+  assert.equal(writes, 0);
+});
+
+test('each actual chat image stage stops before RPC, Storage or validation when sharing is denied', async () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../../../chat/services/chatImageService.js'), 'utf8');
+  for (const [name,args] of [
+    ['createChatImageUploadIntent',[{ conversationId: 'id', clientMessageId: 'id' }]],
+    ['uploadCanonicalChatImage',[{},{}]], ['validateChatImageUpload',['id']], ['finalizeChatImageMessage',['id','fixture']],
+  ]) {
+    const start = source.indexOf(`export const ${name} =`);
+    const end = source.indexOf('\n};',start)+4;
+    let io = 0;
+    const unexpected = () => { io += 1; assert.fail('unexpected image IO'); };
+    const context = { isValidUuid: () => true, assertUploadTarget: () => {}, normalizeChatImageCaption: (v) => v,
+      requireHealthSharingConsent: async () => { const e = new Error('sharing denied'); e.code = 'HEALTH_CONSENT_REQUIRED'; throw e; },
+      supabase: { rpc: unexpected, storage: { from: unexpected }, functions: { invoke: unexpected } } };
+    vm.createContext(context);
+    vm.runInContext(source.slice(start,end).replace('export const','const') + `\nthis.stage = ${name};`,context);
+    await assert.rejects(context.stage(...args), { code: 'HEALTH_CONSENT_REQUIRED' });
+    assert.equal(io,0,name);
+  }
+});
