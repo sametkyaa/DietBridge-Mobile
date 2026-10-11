@@ -1,0 +1,16 @@
+{
+  "id": "94596a86-2cbd-476b-b7fd-9cc1c1340861",
+  "status": "FINISHED",
+  "platform": "ANDROID",
+  "profile": "preview",
+  "distribution": "INTERNAL",
+  "createdAt": "2026-10-11T10:32:55.692Z",
+  "completedAt": "2026-10-11T10:45:46.000Z",
+  "appVersion": "1.0.0",
+  "appBuildVersion": "1",
+  "artifactAvailable": true,
+  "artifactIsApk": true,
+  "buildPage": "https://expo.dev/accounts/samet_app/projects/dietbridge/builds/94596a86-2cbd-476b-b7fd-9cc1c1340861",
+  "sourceManifest": "C:/dev/DietBridge-Release-Audit/2026-10-11/mobile-build-source-manifest.json",
+  "physicalDeviceAcceptance": "Pending for this new build"
+}
