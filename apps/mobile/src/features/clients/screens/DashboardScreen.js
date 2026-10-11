@@ -49,6 +49,7 @@ const DashboardScreen = () => {
         dailyQuote,
         waterProgress,
         waterTargetLiters,
+        waterGlasses,
         nutrition,
         completedMeals,
         meals,
@@ -59,6 +60,7 @@ const DashboardScreen = () => {
         displayedCompletion,
         isMealCompleted,
         addWater,
+        addWaterGlass,
         removeWater,
         completeMeal,
         completeMealById,
@@ -249,6 +251,7 @@ const DashboardScreen = () => {
                 <WaterTrackerCard
                     water={water}
                     target={waterTargetLiters}
+                    glasses={waterGlasses}
                     waterInput={waterInput}
                     onWaterInputChange={setWaterInput}
                     progress={waterProgress}
@@ -257,6 +260,7 @@ const DashboardScreen = () => {
                     isAdding={isAddingWater}
                     isUndoing={isUndoingWater}
                     onAdd={addWater}
+                    onAddGlass={addWaterGlass}
                     onRemove={removeWater}
                     onRetry={retryDailyLog}
                 />

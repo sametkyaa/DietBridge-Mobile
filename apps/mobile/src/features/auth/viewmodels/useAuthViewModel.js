@@ -17,8 +17,10 @@ import {
 } from '../services/authService';
 import { getAccountDeletionState } from '../services/accountDeletionService';
 import { ACCOUNT_DELETION_PHASES } from '../services/accountDeletionStateStore';
+import { LEGAL_ACCEPTANCE_MESSAGE, assertLegalAcceptance } from '../utils/legalAcceptancePolicy.cjs';
 
 const KNOWN_AUTH_MESSAGES = [
+    LEGAL_ACCEPTANCE_MESSAGE,
     CLIENT_ONLY_ERROR_MESSAGE,
     PROFILE_NOT_FOUND_ERROR_MESSAGE,
     LOGIN_FAILED_ERROR_MESSAGE,
@@ -37,6 +39,8 @@ export const useAuthViewModel = () => {
     const [fullName, setFullName] = useState('');
     const [phone, setPhone] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [termsAccepted, setTermsAccepted] = useState(false);
+    const [kvkkAcknowledged, setKvkkAcknowledged] = useState(false);
     const [loading, setLoading] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
@@ -107,6 +111,7 @@ export const useAuthViewModel = () => {
     };
 
     const handleAuth = async () => {
+        if (loading) return;
         if (!email || !password) {
             Alert.alert('Hata', 'Lütfen tüm alanları doldurun.');
             return;
@@ -144,7 +149,11 @@ export const useAuthViewModel = () => {
                     setLoading(false);
                     return;
                 }
-                await signUp(email, password, fullName, phone);
+                const acceptance = { termsAccepted, kvkkAcknowledged };
+                assertLegalAcceptance(acceptance);
+                await signUp(email, password, fullName, phone, acceptance);
+                setTermsAccepted(false);
+                setKvkkAcknowledged(false);
                 Alert.alert('Başarılı', 'Kayıt tamamlandı! Lütfen e-posta adresinizi doğrulayın.');
                 setMode('signin');
             }
@@ -192,6 +201,10 @@ export const useAuthViewModel = () => {
         setPhone,
         confirmPassword,
         setConfirmPassword,
+        termsAccepted,
+        setTermsAccepted,
+        kvkkAcknowledged,
+        setKvkkAcknowledged,
         loading,
         isPasswordVisible,
         togglePasswordVisibility,
