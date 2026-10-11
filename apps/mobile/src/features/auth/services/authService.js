@@ -1,6 +1,7 @@
 import { supabase } from '../../../lib/supabaseClient';
 import { revokePushInstallationBestEffort } from '../../push/services/pushRegistrationService';
 import { resolvePasswordResetRedirectUrl } from '../utils/passwordResetPolicy.cjs';
+import { assertLegalAcceptance, hasLegalAcceptance } from '../utils/legalAcceptancePolicy.cjs';
 import {
     PASSWORD_RECOVERY_INVALID_MESSAGE,
     parsePasswordRecoveryUrl,
@@ -360,7 +361,7 @@ export const changeAuthenticatedPassword = async ({ currentPassword, newPassword
 export const getUserProfile = async (userId) => {
     const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, email, full_name, role')
+        .select('id, email, full_name, role, terms_accepted_at, kvkk_accepted_at')
         .eq('id', userId)
         .single();
 
@@ -490,7 +491,8 @@ export const signIn = async (email, password) => {
     };
 };
 
-export const signUp = async (email, password, fullName, phone = null) => {
+export const signUp = async (email, password, fullName, phone = null, acceptance) => {
+    assertLegalAcceptance(acceptance);
     const cleanFullName = fullName.trim();
     const cleanPhone = phone?.trim() || null;
 
@@ -502,12 +504,24 @@ export const signUp = async (email, password, fullName, phone = null) => {
                 account_type: 'client',
                 full_name: cleanFullName,
                 phone: cleanPhone,
+                terms_accepted: true,
+                kvkk_accepted: true,
             },
         },
     });
     if (error) throw error;
 
+    if (!data?.user?.id) throw new Error(GENERIC_AUTH_ERROR_MESSAGE);
     return data;
+};
+
+export const acceptLegalDocuments = async (acceptance) => {
+    assertLegalAcceptance(acceptance);
+    const { data, error } = await supabase.rpc('accept_legal_terms');
+    if (error) throw error;
+    const receipt = Array.isArray(data) ? data[0] : data;
+    if (!hasLegalAcceptance(receipt)) throw new Error(GENERIC_AUTH_ERROR_MESSAGE);
+    return receipt;
 };
 
 export const signOut = async () => {
