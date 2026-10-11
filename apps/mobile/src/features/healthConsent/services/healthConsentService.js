@@ -7,3 +7,5 @@ const client = createHealthConsentClient(supabase, HEALTH_CONSENT_UI_ENABLED);
 export const getHealthConsent = client.get;
 export const setHealthConsent = client.set;
 export const requireHealthStorageConsent = client.requireStorage;
+
+export const requireHealthSharingConsent = client.requireSharing;

@@ -62,3 +62,53 @@ test('actual weight service aborts before RPC when storage consent cannot be con
   await assert.rejects(context.save(70), /denied/);
   assert.equal(writes, 0);
 });
+
+test('sending to a dietitian needs sharing; own tracking only needs storage', async () => {
+  const client = createHealthConsentClient({ rpc: async () => ({ data: state({ storage_granted: true,
+    updated_at: '2026-10-11T19:00:00Z' }) }) }, true);
+  await client.requireStorage();
+  await assert.rejects(client.requireSharing(), { code: 'HEALTH_CONSENT_REQUIRED' });
+  const allowed = createHealthConsentClient({ rpc: async () => ({ data: state({ storage_granted: true,
+    sharing_granted: true, updated_at: '2026-10-11T19:00:00Z' }) }) }, true);
+  await allowed.requireSharing();
+});
+
+test('actual meal completion aborts before RPC when consent is denied', async () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../../../meals/services/mealService.js'), 'utf8');
+  const start = source.indexOf('export const updateMealCompletion =');
+  let writes = 0;
+  const context = { UUID_PATTERN: /^[a-f0-9-]{36}$/, requireHealthStorageConsent: async () => {
+    const error = new Error('consent denied'); error.code = 'HEALTH_CONSENT_REQUIRED'; throw error;
+  }, supabase: { rpc: async () => { writes += 1; } }, __DEV__: false };
+  vm.createContext(context);
+  vm.runInContext(source.slice(start).replace('export const', 'const') + '\nthis.save = updateMealCompletion;', context);
+  await assert.rejects(context.save('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', true), { code: 'HEALTH_CONSENT_REQUIRED' });
+  assert.equal(writes, 0);
+});
+
+test('actual photo service stops before canonicalization and upload on denied consent', async () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../../../meals/services/mealCompletionPhotoService.js'), 'utf8');
+  const start = source.indexOf('export const completeMealWithPhoto =');
+  const end = source.indexOf('export default', start);
+  let uploads = 0;
+  const context = { requireHealthStorageConsent: async () => { throw new Error('consent denied'); },
+    uploadAndCompleteMealWithPhoto: async () => { uploads += 1; } };
+  vm.createContext(context);
+  vm.runInContext(source.slice(start,end).replace('export const', 'const') + '\nthis.save = completeMealWithPhoto;', context);
+  await assert.rejects(context.save('meal', { uri: 'local' }), /consent denied/);
+  assert.equal(uploads, 0);
+});
+
+test('actual change request stops before the database write without sharing', async () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../../../meals/services/mealChangeRequestService.js'), 'utf8');
+  const start = source.indexOf('export const submitMealChangeRequest =');
+  let writes = 0;
+  const context = { requireHealthSharingConsent: async () => { throw new Error('sharing denied'); },
+    getActiveDietitianConnection: async () => ({ dietitian_id: 'fixture' }),
+    supabase: { auth: { getUser: async () => ({ data: { user: { id: 'client' } } }) },
+      from: () => { writes += 1; assert.fail('must not write'); } } };
+  vm.createContext(context);
+  vm.runInContext(source.slice(start).replace('export const', 'const') + '\nthis.save = submitMealChangeRequest;', context);
+  await assert.rejects(context.save({ plan_date: '2026-10-11', meal_slot: 'lunch' }), /sharing denied/);
+  assert.equal(writes, 0);
+});

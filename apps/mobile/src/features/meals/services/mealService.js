@@ -1,3 +1,4 @@
+import { requireHealthStorageConsent } from '../../healthConsent/services/healthConsentService';
 import { supabase } from '../../../lib/supabaseClient';
 import {
     MealPlanReadError,
@@ -136,6 +137,8 @@ export const updateMealCompletion = async (mealId, isEaten) => {
     if (typeof isEaten !== 'boolean') {
         throw new Error(MEAL_COMPLETION_UPDATE_ERROR_MESSAGE);
     }
+
+    await requireHealthStorageConsent();
 
     try {
         const { data, error } = await supabase.rpc('set_my_meal_completion', {

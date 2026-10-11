@@ -1,6 +1,7 @@
 'use strict';
 
 const CONSENT_REQUIRED_MESSAGE = 'Sağlık bilgilerini kaydetmek için sağlık verisi tercihini onayla. Hesabını bu bilgileri paylaşmadan da kullanabilirsin.';
+const SHARING_REQUIRED_MESSAGE = 'Bu bilgiyi diyetisyenine göndermek için sağlık verisi paylaşım tercihini onayla.';
 const CONSENT_UNAVAILABLE_MESSAGE = 'Sağlık verisi tercihleri doğrulanamadı. Lütfen tekrar deneyin.';
 
 function validateConsentState(value) {
@@ -47,7 +48,15 @@ function createHealthConsentClient(supabase, enabled) {
       throw failure;
     }
   };
-  return { get, set, requireStorage };
+  const requireSharing = async () => {
+    const state = await get();
+    if (state.enabled && (!state.storage_granted || !state.sharing_granted)) {
+      const failure = new Error(SHARING_REQUIRED_MESSAGE);
+      failure.code = 'HEALTH_CONSENT_REQUIRED';
+      throw failure;
+    }
+  };
+  return { get, set, requireStorage, requireSharing };
 }
 
 module.exports = { createHealthConsentClient, validateConsentState, CONSENT_REQUIRED_MESSAGE, CONSENT_UNAVAILABLE_MESSAGE };
