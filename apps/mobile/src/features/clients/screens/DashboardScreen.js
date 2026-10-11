@@ -18,6 +18,11 @@ import { mapDashboardMeal } from '../mappers/dashboardUiMapper';
 import { useDashboardViewModel } from '../viewmodels/useDashboardViewModel';
 import { toLocalDateKey } from '../../../shared/utils/localDate';
 import DietitianConnectionRequestCard from '../../dietitianConnection/components/DietitianConnectionRequestCard';
+import InviteConnectionCard from '../../dietitianConnection/components/InviteConnectionCard';
+import { useDietitianConnection } from '../../dietitianConnection/context/DietitianConnectionContext';
+import { useInviteFlow } from '../../dietitianConnection/context/InviteFlowContext';
+import GettingStartedCard from '../../onboarding/components/GettingStartedCard';
+import { useGettingStartedViewModel } from '../../onboarding/viewmodels/useGettingStartedViewModel';
 import { useNotifications } from '../../notifications/context/NotificationContext';
 import { pickMealCompletionPhoto } from '../../meals/services/mealCompletionPhotoPicker';
 
@@ -74,7 +79,11 @@ const DashboardScreen = () => {
         connectionError,
         handleApproveDietitianRequest,
         handleRejectDietitianRequest,
+        isLoadingConnection,
     } = useDashboardViewModel();
+    const { userId } = useDietitianConnection();
+    const { openInvite } = useInviteFlow();
+    const gettingStarted = useGettingStartedViewModel({ userId, hasActiveDietitian, isLoadingConnection, water });
     const [isPhotoPromptVisible, setIsPhotoPromptVisible] = useState(false);
     const [isPhotoPickerActive, setIsPhotoPickerActive] = useState(false);
     const completionButtonRef = useRef(null);
@@ -203,6 +212,23 @@ const DashboardScreen = () => {
                     onApprove={handleApproveDietitianRequest}
                     onReject={handleRejectDietitianRequest}
                 />
+
+                {gettingStarted.visible ? (
+                    <GettingStartedCard
+                        items={gettingStarted.items}
+                        completedCount={gettingStarted.completedCount}
+                        totalCount={gettingStarted.totalCount}
+                        busyKey={gettingStarted.isEnablingPush ? 'notifications' : null}
+                        actions={{
+                            connect: () => openInvite(),
+                            profile: () => navigation.navigate('OnboardingSetup', { mode: 'profile' }),
+                            notifications: gettingStarted.enableNotifications,
+                        }}
+                        onDismiss={gettingStarted.dismiss}
+                    />
+                ) : (
+                    <InviteConnectionCard />
+                )}
 
                 <NextMealCard
                     meal={displayedUiMeal}
