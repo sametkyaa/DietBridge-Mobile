@@ -69,6 +69,8 @@ export const pickChatImage = async () => {
 
     const mimeType = resolveSourceMimeType(asset);
     if (!mimeType) throw createChatImageError('unsupported_type');
+    const sourceSize = Number.isFinite(asset.fileSize) ? asset.fileSize : new File(asset.uri).size;
+    if (!Number.isFinite(sourceSize) || sourceSize <= 0 || sourceSize > 20 * 1048576) throw createChatImageError('output_too_large');
 
     return {
         uri: asset.uri,
@@ -76,7 +78,7 @@ export const pickChatImage = async () => {
         width: Number.isFinite(asset.width) ? asset.width : null,
         height: Number.isFinite(asset.height) ? asset.height : null,
         fileName: typeof asset.fileName === 'string' ? asset.fileName : null,
-        byteSize: Number.isFinite(asset.fileSize) ? asset.fileSize : null,
+        byteSize: sourceSize,
     };
 };
 

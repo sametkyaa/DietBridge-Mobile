@@ -8,6 +8,7 @@ import {
     getChatReceiptState,
 } from '../utils/chatUiUtils';
 import { getChatImageBubbleLabel } from '../utils/chatImageUiState';
+import ChatMediaBubble from './ChatMediaBubble';
 
 export default function ChatMessageBubble({
     message,
@@ -34,7 +35,7 @@ export default function ChatMessageBubble({
     const receipt = receiptState === 'none' ? null : {
         icon: receiptState === 'sent' ? 'check' : 'checkDouble',
         label: receiptState === 'read' ? 'Okundu' : receiptState === 'delivered' ? 'Teslim edildi' : 'Gönderildi',
-        color: receiptState === 'read' ? colors.accent : colors.primarySoft,
+        color: receiptState === 'read' ? '#7DD3FC' : '#CBD5E1',
     };
 
     const requestDelete = () => {
@@ -75,6 +76,8 @@ export default function ChatMessageBubble({
                             </Text>
                         ) : null}
                     </View>
+                ) : !isDeleted && ['video', 'file'].includes(message?.messageKind) ? (
+                    <ChatMediaBubble message={message} />
                 ) : (
                     <Text style={[
                         styles.body,

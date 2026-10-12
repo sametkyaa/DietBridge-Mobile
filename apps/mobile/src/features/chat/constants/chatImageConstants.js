@@ -8,7 +8,7 @@
 // anything outside this contract is rejected fail-closed while normalizing
 // server rows or validating an upload target.
 
-const CHAT_MESSAGE_KINDS = Object.freeze(['text', 'image']);
+const CHAT_MESSAGE_KINDS = Object.freeze(['text', 'image', 'video', 'file']);
 
 const CHAT_IMAGE_BUCKET_ID = 'chat-images';
 const CHAT_IMAGE_MIME_TYPE = 'image/jpeg';
@@ -35,7 +35,7 @@ const CHAT_IMAGE_OBJECT_PATH_PATTERN = new RegExp(
     `^pending/${UUID_PATTERN_SOURCE}/${UUID_PATTERN_SOURCE}\\.jpg$`,
 );
 
-const isChatMessageKind = (value) => value === 'text' || value === 'image';
+const isChatMessageKind = (value) => CHAT_MESSAGE_KINDS.includes(value);
 
 module.exports = {
     CHAT_MESSAGE_KINDS,

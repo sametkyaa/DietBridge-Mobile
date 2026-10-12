@@ -1,5 +1,6 @@
 import { requireHealthSharingConsent } from '../../healthConsent/services/healthConsentService';
 import { supabase } from '../../../lib/supabaseClient';
+import { enrichChatMediaRows } from './chatMediaService';
 import {
     CHAT_MESSAGE_MAX_PAGE_SIZE,
     CHAT_MESSAGE_PAGE_SIZE,
@@ -241,7 +242,7 @@ export const fetchChatMessagesPage = async ({
         const seenIds = new Set();
         const seenClientMessageIds = new Set();
         const messagesDescending = [];
-        const rows = Array.isArray(data) ? data : [];
+        const rows = await enrichChatMediaRows(Array.isArray(data) ? data : []);
 
         for (const row of rows) {
             const message = normalizeChatMessageRow(row, normalizedCurrentUserId);
@@ -297,7 +298,7 @@ export const fetchChatMessageById = async ({
 
         if (error) throw toChatServiceError(error);
 
-        const row = Array.isArray(data) ? data[0] : null;
+        const row = (await enrichChatMediaRows(Array.isArray(data) ? data : []))[0] || null;
         if (!row) return null;
 
         const message = normalizeChatMessageRow(row, normalizedCurrentUserId);

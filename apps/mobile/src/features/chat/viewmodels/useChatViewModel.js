@@ -30,6 +30,7 @@ import { useChatRealtime } from '../hooks/useChatRealtime';
 import { useChatReadState } from '../hooks/useChatReadState';
 import { useChatDeliveryState } from '../hooks/useChatDeliveryState';
 import { useChatImageUpload } from '../hooks/useChatImageUpload';
+import { useChatMediaUpload } from '../hooks/useChatMediaUpload';
 import { canDeleteChatMessage } from '../utils/chatUiUtils';
 import { purgeChatImageUri, refreshChatImageUri, resolveChatImageUri, subscribeToChatImageCacheInvalidation } from '../services/chatImageResolver';
 
@@ -510,7 +511,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
 
         const pending = pendingMessageFetchRef.current;
         const fetchKey = `${currentConversationId}:${messageId}`;
-        if (pending.has(fetchKey)) return;
+        if (pending.has(fetchKey)) return pending.get(fetchKey);
 
         const generation = requestGenerationRef.current;
         const request = (async () => {
@@ -539,6 +540,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
             }
         })();
         pending.set(fetchKey, request);
+        return request;
     }, [mergeServerMessages, relationId, relationKey, validCurrentUserId]);
 
     // Conversation INSERT can arrive before the RPC's relation refetch. It is
@@ -726,9 +728,8 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
 
     const retryImage = useCallback((message) => { void resolveImageMessages(true); }, [resolveImageMessages]);
 
-    // Optional canonical-JPEG image sending. The feature flag defaults off, so
-    // this hook is inert (picker hidden) unless EXPO_PUBLIC_ENABLE_CHAT_IMAGES
-    // is exactly 'true'. Finalized uploads reconcile through the same targeted
+    // Canonical JPEG sending is enabled by this ViewModel. Finalized uploads
+    // reconcile through the same targeted
     // fetch used by realtime, so only a fully normalized image message enters
     // the timeline.
     const handleImageFinalized = useCallback((result) => {
@@ -738,7 +739,20 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
 
     const imageUpload = useChatImageUpload({
         conversationId: conversation?.id ?? null,
+        featureEnabled: true,
         onFinalized: handleImageFinalized,
+    });
+
+    const mediaUpload = useChatMediaUpload({
+        conversationId: conversation?.id ?? null,
+        onFinalized: async (result) => {
+            const generation = requestGenerationRef.current;
+            if (result.conversationId !== conversationRef.current?.id) return;
+            await reconcileMessageById(result.messageId, result.conversationId);
+            if (!isMountedRef.current || requestGenerationRef.current !== generation
+                || result.conversationId !== conversationRef.current?.id) return;
+            setBottomScrollToken((token) => token + 1);
+        },
     });
 
     return {
@@ -776,6 +790,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
         realtimeScrollToken,
         realtimeStatus,
         imageUpload,
+        mediaUpload,
         imageStates,
         retryImage,
     };
