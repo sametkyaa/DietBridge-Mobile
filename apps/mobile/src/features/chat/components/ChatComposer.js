@@ -26,6 +26,7 @@ export default function ChatComposer({
     featureEnabled = false,
     conversationId = null,
     imageUpload,
+    mediaUpload,
 }) {
     const uploadState = imageUpload?.state || EMPTY_UPLOAD_STATE;
 
@@ -39,7 +40,9 @@ export default function ChatComposer({
     const uploadStatusLabel = getChatImageUploadStatusLabel(uploadState);
     const uploadErrorMessage = getChatImageUploadErrorMessage(uploadState);
     const showRetry = shouldShowChatImageRetry(uploadState);
-    const pickerDisabled = !picker.enabled || imageSelected || uploadInFlight;
+    const mediaSelected = Boolean(mediaUpload?.selection);
+    const mediaBusy = Boolean(mediaUpload?.isBusy);
+    const pickerDisabled = !picker.enabled || imageSelected || uploadInFlight || mediaSelected || mediaBusy || isSending;
 
     // On a successful image send the hook clears its own state; the composer
     // then clears the caption draft and resets the slot back to idle.
@@ -52,11 +55,16 @@ export default function ChatComposer({
 
     // A single send-gate. Text-only behavior is unchanged when no image is
     // selected; an in-flight image upload blocks any new send.
-    const canSend = canSendChatComposer(draft, isSending, disabled, imageUpload ? uploadState : null);
+    const canSend = mediaSelected ? !disabled && !isSending && !mediaBusy && !overLimit
+        : canSendChatComposer(draft, isSending, disabled || mediaBusy, imageUpload ? uploadState : null);
     const sendDisabled = !canSend || overLimit || uploadInFlight;
 
     const handleSend = () => {
         if (sendDisabled) return;
+        if (mediaSelected) {
+            void mediaUpload.send(draft).then((success) => { if (success) onChangeDraft(''); });
+            return;
+        }
         if (imageSelected) {
             // Image branch: the shared draft field carries the optional caption.
             imageUpload?.startUpload?.(draft);
@@ -70,6 +78,16 @@ export default function ChatComposer({
 
     return (
         <View style={styles.root}>
+            {mediaUpload?.error ? <Text style={styles.sendError} accessibilityLiveRegion="polite">{mediaUpload.error}</Text> : null}
+            {mediaSelected ? <View style={styles.previewRow}>
+                <View style={styles.previewMeta}>
+                    <Text style={styles.previewLabel}>{mediaUpload.selection.descriptor.fileName}</Text>
+                    <Text style={styles.uploadStatus}>{mediaUpload.stage || `${(mediaUpload.selection.descriptor.byteSize / 1048576).toFixed(1)} MB`}</Text>
+                    <Pressable onPress={mediaUpload.reset} accessibilityRole="button" style={styles.previewAction}>
+                        <Text style={styles.previewActionRemove}>{mediaBusy ? 'İptal et' : 'Kaldır'}</Text>
+                    </Pressable>
+                </View>
+            </View> : null}
             {sendError ? <Text style={styles.sendError} accessibilityLiveRegion="polite">{sendError}</Text> : null}
             {picker.disabledMessage ? (
                 <Text style={styles.pickerHint} accessibilityLiveRegion="polite">{picker.disabledMessage}</Text>
@@ -137,6 +155,11 @@ export default function ChatComposer({
                         <Icon name="image" size={22} color={pickerDisabled ? colors.textTertiary : colors.primaryDark} />
                     </Pressable>
                 ) : null}
+                {mediaUpload?.enabled ? <Pressable onPress={mediaUpload.select}
+                    disabled={disabled || isSending || mediaSelected || imageSelected || uploadInFlight || mediaBusy}
+                    accessibilityRole="button" accessibilityLabel="Video veya belge seç" style={styles.imageButton}>
+                    <Text style={{ color: colors.primaryDark, fontSize: 22 }}>＋</Text>
+                </Pressable> : null}
                 <TextInput
                     value={draft}
                     onChangeText={onChangeDraft}
@@ -146,7 +169,7 @@ export default function ChatComposer({
                     placeholder={placeholder}
                     placeholderTextColor={colors.textTertiary}
                     style={styles.input}
-                    editable={!disabled}
+                    editable={!disabled && !isSending && !uploadInFlight && !mediaBusy}
                     maxLength={undefined}
                     accessibilityLabel="Mesaj metni"
                     accessibilityHint={`En fazla ${CHAT_MESSAGE_MAX_LENGTH} karakter. Göndermek için gönder düğmesini kullanın.`}
@@ -157,14 +180,15 @@ export default function ChatComposer({
                     onPress={sendDisabled ? undefined : handleSend}
                     disabled={sendDisabled}
                     accessibilityRole="button"
-                    accessibilityLabel={isSending || uploadInFlight ? 'Mesaj gönderiliyor' : 'Mesajı gönder'}
-                    accessibilityState={{ disabled: sendDisabled, busy: isSending || uploadInFlight }}
+                    accessibilityLabel={isSending || uploadInFlight || mediaBusy ? 'Mesaj gönderiliyor' : 'Mesajı gönder'}
+                    accessibilityState={{ disabled: sendDisabled, busy: isSending || uploadInFlight || mediaBusy }}
                     hitSlop={8}
                     style={({ pressed }) => [styles.sendButton, sendDisabled && styles.sendButtonDisabled, pressed && !sendDisabled && styles.pressed]}
                 >
                     <Icon name="send" size={20} color={sendDisabled ? colors.textTertiary : colors.textOnPrimary} />
                 </Pressable>
             </View>
+            <Text style={styles.pickerHint}>{mediaUpload?.enabled ? 'Görsel: sıkıştırılmış 4 MB · Video: 20 MB · Belge: 10 MB' : 'Görsel: sıkıştırılmış 4 MB'}</Text>
             {characterCount >= CHAT_MESSAGE_MAX_LENGTH * 0.9 ? (
                 <Text style={[styles.counter, overLimit && styles.counterError]} accessibilityLiveRegion="polite">
                     {overLimit ? `Mesaj en fazla ${CHAT_MESSAGE_MAX_LENGTH} karakter olabilir (${counterText})` : counterText}

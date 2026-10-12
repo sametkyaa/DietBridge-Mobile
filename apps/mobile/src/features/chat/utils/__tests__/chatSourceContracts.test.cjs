@@ -42,7 +42,10 @@ test('foreground and chat focus reconcile latest history into the FlatList sourc
     assert.match(viewModel, /const addedMessages = mergeServerMessages\(page\.messages\)/);
     assert.match(viewModel, /if \(addedMessages\.length\) setRealtimeScrollToken/);
     assert.match(list, /data=\{Array\.isArray\(messages\) \? messages : \[\]\}/);
-    assert.match(list, /onContentSizeChange=\{\(_, contentHeight\) => positionInitialLatest\(contentHeight\)\}/);
+    assert.match(list, /onContentSizeChange=\{\(_, contentHeight\) => \{ contentHeightRef.current = contentHeight; positionInitialLatest\(contentHeight\); \}\}/);
+    assert.match(list, /onLayout=.*viewportHeightRef.current = nativeEvent.layout.height/);
+    assert.match(list, /positionInitialLatest\(contentHeightRef.current\);/);
+    assert.match(list, /\[conversationId, isScreenFocused\]/);
     assert.match(list, /shouldPositionInitialChat/);
     assert.match(list, /if \(!bottomScrollToken\) return undefined;/);
 });

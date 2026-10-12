@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { ActivityIndicator, FlatList, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton, EmptyState, ErrorState } from '../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../shared/theme';
@@ -19,6 +19,7 @@ const getMessageIdentities = (message, index) => {
 
 export default function ChatMessageList({
     messages,
+    isScreenFocused = true,
     mealActivityError,
     isInitialLoading,
     initialError,
@@ -44,6 +45,9 @@ export default function ChatMessageList({
     const isNearBottomRef = useRef(true);
     const initialPositionedKeyRef = useRef(null);
     const initialLayoutAdjustedKeyRef = useRef(null);
+    const viewportHeightRef = useRef(0);
+    const contentHeightRef = useRef(0);
+    const positioningFrameRef = useRef(null);
     const conversationIdRef = useRef(conversationId);
     const visibleMessageCallbackRef = useRef(onLastVisibleCanonicalMessageChange);
     const viewabilityConfigRef = useRef({ itemVisiblePercentThreshold: 50 });
@@ -63,7 +67,8 @@ export default function ChatMessageList({
     }, [conversationId, onLastVisibleCanonicalMessageChange]);
     useEffect(() => setViewerMessage(null), [conversationId]);
 
-    const positionInitialLatest = (contentHeight) => {
+    const positionInitialLatest = useCallback((contentHeight) => {
+        if (!isScreenFocused || isInitialLoading || !listRef.current || viewportHeightRef.current <= 0) return;
         if (typeof contentHeight === 'number' && contentHeight <= 0) return;
         const positionKey = `${conversationId}:${initialPositionToken}`;
         if (shouldPositionInitialChat({
@@ -72,8 +77,15 @@ export default function ChatMessageList({
             messageCount: Array.isArray(messages) ? messages.length : 0,
             positionedKey: initialPositionedKeyRef.current,
         })) {
-            listRef.current?.scrollToEnd({ animated: false });
-            initialPositionedKeyRef.current = positionKey;
+            if (positioningFrameRef.current !== null) cancelAnimationFrame(positioningFrameRef.current);
+            positioningFrameRef.current = requestAnimationFrame(() => {
+                positioningFrameRef.current = null;
+                if (!listRef.current) return;
+                listRef.current.scrollToEnd({ animated: false });
+                initialPositionedKeyRef.current = positionKey;
+                isNearBottomRef.current = true;
+                positioningFrameRef.current = null;
+            });
             return;
         }
 
@@ -87,7 +99,24 @@ export default function ChatMessageList({
             listRef.current?.scrollToEnd({ animated: false });
             initialLayoutAdjustedKeyRef.current = positionKey;
         }
-    };
+    }, [conversationId, initialPositionToken, isInitialLoading, isScreenFocused, messages]);
+
+    useEffect(() => {
+        if (!isScreenFocused) return undefined;
+        initialPositionedKeyRef.current = null;
+        initialLayoutAdjustedKeyRef.current = null;
+        isNearBottomRef.current = true;
+        return () => {
+            if (positioningFrameRef.current !== null) cancelAnimationFrame(positioningFrameRef.current);
+            positioningFrameRef.current = null;
+        };
+    }, [conversationId, isScreenFocused]);
+
+    // The data/token can change after the native size event. Position on both
+    // lifecycle and layout signals, once the viewport actually exists.
+    useEffect(() => {
+        positionInitialLatest(contentHeightRef.current);
+    }, [positionInitialLatest]);
 
     useEffect(() => {
         if (!bottomScrollToken) return undefined;
@@ -165,6 +194,8 @@ export default function ChatMessageList({
         <FlatList
             ref={listRef}
             style={styles.list}
+            initialNumToRender={40}
+            maxToRenderPerBatch={20}
             data={Array.isArray(messages) ? messages : []}
             keyExtractor={getMessageKey}
             renderItem={({ item, index }) => (
@@ -201,7 +232,14 @@ export default function ChatMessageList({
             )}
             contentContainerStyle={styles.content}
             maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
-            onContentSizeChange={(_, contentHeight) => positionInitialLatest(contentHeight)}
+            onContentSizeChange={(_, contentHeight) => { contentHeightRef.current = contentHeight; positionInitialLatest(contentHeight); }}
+            onLayout={({ nativeEvent }) => { viewportHeightRef.current = nativeEvent.layout.height; positionInitialLatest(contentHeightRef.current); }}
+            onScrollBeginDrag={() => {
+                if (positioningFrameRef.current !== null) cancelAnimationFrame(positioningFrameRef.current);
+                positioningFrameRef.current = null;
+                initialLayoutAdjustedKeyRef.current = `${conversationId}:${initialPositionToken}`;
+                initialPositionedKeyRef.current = `${conversationId}:${initialPositionToken}`;
+            }}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}

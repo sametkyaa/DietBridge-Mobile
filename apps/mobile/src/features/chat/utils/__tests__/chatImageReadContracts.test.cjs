@@ -78,7 +78,9 @@ test('resolveMessageKind stays backward compatible and rejects unknown kinds', (
     assert.equal(resolveMessageKind(null), 'text');
     assert.equal(resolveMessageKind('text'), 'text');
     assert.equal(resolveMessageKind('image'), 'image');
-    for (const kind of ['video', 'file', '', 'TEXT', 7]) {
+    assert.equal(resolveMessageKind('video'), 'video');
+    assert.equal(resolveMessageKind('file'), 'file');
+    for (const kind of ['audio', '', 'TEXT', 7]) {
         assert.equal(resolveMessageKind(kind), null, String(kind));
     }
 });

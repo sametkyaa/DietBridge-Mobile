@@ -1,4 +1,5 @@
 'use strict';
+const { normalizeChatMediaAttachment } = require('./chatMediaPolicy');
 
 // Pure, framework-free canonical chat helpers for the mobile client.
 // Written in CommonJS so Node's built-in test runner can exercise them without
@@ -201,10 +202,12 @@ const normalizeChatMessageRow = (row, currentUserId) => {
         : rawAttachment !== undefined && rawAttachment !== null;
     const attachment = rawAttachment === undefined || rawAttachment === null
         ? null
-        : normalizeChatImageAttachment(rawAttachment, id);
+        : ['video', 'file'].includes(messageKind)
+            ? normalizeChatMediaAttachment(rawAttachment, id, messageKind)
+            : normalizeChatImageAttachment(rawAttachment, id);
 
     let resolvedBody;
-    if (messageKind === 'image') {
+    if (messageKind !== 'text') {
         // Live image rows require complete, live attachment metadata. The
         // caption is optional and an empty caption normalizes to null.
         if (!attachment || attachment.deletedAt !== null) return null;
@@ -231,7 +234,7 @@ const normalizeChatMessageRow = (row, currentUserId) => {
         isOwn: senderId === currentUserId,
         deliveryState: 'sent',
         messageKind,
-        attachment: messageKind === 'image' ? attachment : null,
+        attachment: messageKind !== 'text' ? attachment : null,
     };
 };
 
@@ -289,7 +292,7 @@ const isCanonicalChatMessage = (candidate) => {
             && candidate.deletedBy === candidate.senderId;
     }
 
-    if (candidate.messageKind === 'image') {
+    if (['image', 'video', 'file'].includes(candidate.messageKind)) {
         return Boolean(candidate.attachment)
             && (candidate.body === null || (typeof candidate.body === 'string' && Boolean(candidate.body.trim())));
     }

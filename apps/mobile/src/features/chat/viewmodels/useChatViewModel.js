@@ -30,6 +30,7 @@ import { useChatRealtime } from '../hooks/useChatRealtime';
 import { useChatReadState } from '../hooks/useChatReadState';
 import { useChatDeliveryState } from '../hooks/useChatDeliveryState';
 import { useChatImageUpload } from '../hooks/useChatImageUpload';
+import { useChatMediaUpload } from '../hooks/useChatMediaUpload';
 import { canDeleteChatMessage } from '../utils/chatUiUtils';
 import { purgeChatImageUri, refreshChatImageUri, resolveChatImageUri, subscribeToChatImageCacheInvalidation } from '../services/chatImageResolver';
 
@@ -738,7 +739,16 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
 
     const imageUpload = useChatImageUpload({
         conversationId: conversation?.id ?? null,
+        featureEnabled: true,
         onFinalized: handleImageFinalized,
+    });
+
+    const mediaUpload = useChatMediaUpload({
+        conversationId: conversation?.id ?? null,
+        onFinalized: async (result) => {
+            await reconcileMessageById(result.messageId, conversationRef.current?.id ?? null);
+            setBottomScrollToken((token) => token + 1);
+        },
     });
 
     return {
@@ -776,6 +786,7 @@ export const useChatViewModel = ({ currentUserId, activeConnection, isScreenFocu
         realtimeScrollToken,
         realtimeStatus,
         imageUpload,
+        mediaUpload,
         imageStates,
         retryImage,
     };

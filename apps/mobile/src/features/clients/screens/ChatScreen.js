@@ -19,7 +19,6 @@ import { useChatViewModel } from '../../chat/viewmodels/useChatViewModel';
 import { useDietitianConnection } from '../../dietitianConnection/context/DietitianConnectionContext';
 import { CONNECTION_REQUIRED_MESSAGE } from '../../dietitianConnection/services/dietitianConnectionService';
 import { resolveDietitianAvatarPresentation } from '../../chat/utils/chatUiUtils';
-import { isChatImagesFeatureEnabled } from '../../chat/utils/chatImageFeatureFlag';
 import { CHAT_SCREEN_CONTENT, resolveChatScreenContent } from '../../chat/utils/chatScreenContent';
 
 function DietitianHeader({ activeConnection, activeDietitian }) {
@@ -100,6 +99,7 @@ function ActiveChatContent({ activeConnection, activeDietitian, isScreenFocused 
       <View style={styles.listArea}>
         <ChatMessageList
           messages={viewModel.timelineMessages}
+          isScreenFocused={isScreenFocused}
           mealActivityError={viewModel.mealActivityError}
           isInitialLoading={viewModel.isInitialLoading}
           initialError={viewModel.initialError}
@@ -129,9 +129,10 @@ function ActiveChatContent({ activeConnection, activeDietitian, isScreenFocused 
         disabled={!viewModel.canSend}
         isSending={viewModel.isSending}
         sendError={viewModel.sendError}
-        featureEnabled={isChatImagesFeatureEnabled()}
+        featureEnabled={viewModel.imageUpload.isEnabled}
         conversationId={viewModel.conversation?.id ?? null}
         imageUpload={viewModel.imageUpload}
+        mediaUpload={viewModel.mediaUpload}
       />
     </KeyboardAvoidingView>
   );
