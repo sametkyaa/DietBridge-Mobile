@@ -167,7 +167,7 @@ export const getChatConversationByRelationId = async ({ relationId } = {}) => {
 
         if (error) throw toChatServiceError(error);
 
-        const rows = await enrichChatMediaRows(Array.isArray(data) ? data : []);
+        const rows = Array.isArray(data) ? data : [];
         if (rows.length === 0) return null;
         if (rows.length > 1) {
             throw new ChatServiceError(
@@ -242,7 +242,7 @@ export const fetchChatMessagesPage = async ({
         const seenIds = new Set();
         const seenClientMessageIds = new Set();
         const messagesDescending = [];
-        const rows = Array.isArray(data) ? data : [];
+        const rows = await enrichChatMediaRows(Array.isArray(data) ? data : []);
 
         for (const row of rows) {
             const message = normalizeChatMessageRow(row, normalizedCurrentUserId);

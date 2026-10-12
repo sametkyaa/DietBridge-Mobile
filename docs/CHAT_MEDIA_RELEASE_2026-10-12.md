@@ -24,10 +24,12 @@ Native picker için yeni APK/AAB ve IPA build gerekir; JS export veya OTA yeterl
 ## Kontroller / görev sonu
 
 - `npm ci --ignore-scripts`, `npx expo install expo-document-picker --ignore-scripts`, `npm run quality`, `git diff --check` ve Git durum kontrolü çalıştırıldı.
-- Typecheck başarılı. Lint: 0 hata, mevcut 41 uyarı. 501 test başarılı. Expo config, Android ve iOS JS export başarılı (~4.46 MB JS bundle; APK/IPA boyutu değildir).
+- Typecheck başarılı. Lint: 0 hata, mevcut 41 uyarı. PR incelemesinin 10 yeni regresyon testiyle birlikte 511 test başarılı. Expo config, Android ve iOS JS export başarılı (~4.46 MB JS bundle; APK/IPA boyutu değildir).
 - Paket kurulumunun npm taraması 45 bildirim (22 yüksek, 23 orta) verdi. Bunlar 45 kullanılabilir mağaza uygulaması açığı anlamına gelmez; ayrı bağımlılık değerlendirmesi gerekiyor. Toplu `audit fix --force` uygulanmadı.
 - Yeni testler gerçek servis modülünü stub'larla boyut/kota, iptal/retry, yetkisiz descriptor için; gerçek liste bileşenini layout/focus/data sıraları ve kullanıcı kaydırması için çalıştırır. Webin geçici Supabase testi gerçek dosya/video/JPEG, receipt, erişim ve kota akışlarını doğrular.
+- PR incelemesinde picker açıkken ek alanının kilitlenmesi, yeniden açılan/sayfalanan geçmişte gerçek dosya adının okunması ve medya tamamlanmasında mevcut/ortak reconciliation isteğinin beklenmesi düzeltildi. Sohbet değişince eski isteğin yeni sohbete kaydırma etkisi engellenir.
 - Kanıt: `C:\dev\DietBridge-Release-Audit\2026-10-12\chat-mobile-quality.log`; sunucu ve web kanıtları aynı klasörde.
+- İnceleme sonrası güncel kanıt: `chat-review-mobile-quality.log`; aynı klasörde eski kodda hatayı gösteren `chat-review-*-before.log` dosyaları bulunur.
 - Yerel hazırlık doğrulamasında çalışma ağacında yalnız görev değişiklikleri vardı. Kullanıcı 12 Ekim 2026'da commit/push ve iki PR açılmasını onayladı; merge ve production dağıtımı bu onayın kapsamında değil. Tam dosya envanteri webdeki `docs/CHAT_MEDIA_CHANGED_FILES_2026-10-12.md` belgesinde.
 - Mobil repository'de migration oluşturulmadı/çalıştırılmadı. Production verisi veya Storage'a yazılmadı. Web migration'ı yalnız geçici yerel ortamda test edildi.
 - Çalıştırılmayan: yeni imzalı APK/AAB/IPA, fiziksel cihaz kabulü ve production dağıtımı. Kullanıcının daha önceki APK testi bu yeni medya özelliği için fiziksel test kanıtı değildir.
