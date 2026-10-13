@@ -96,6 +96,30 @@ test('Android channels are minimal, stable, and never request an icon badge or c
     assert.equal(configs.some((config) => config.sound === 'custom'), false);
 });
 
+test('denial retains OS retry availability on Android and iOS', () => {
+    for (const platform of ['android', 'ios']) {
+        for (const canAskAgain of [true, false]) {
+            const result = normalizePermissionState({
+                platform, isDevice: true,
+                permissionResponse: { status: 'denied', canAskAgain, ...(platform === 'ios' ? { ios: { status: 1 } } : {}) },
+            });
+            assert.equal(result.status, 'permission_denied');
+            assert.equal(result.canAskAgain, canAskAgain);
+        }
+    }
+});
+
+test('non-granted permission that cannot be prompted requires settings, even if status is undetermined', () => {
+    for (const platform of ['android', 'ios']) {
+        const result = normalizePermissionState({
+            platform, isDevice: true,
+            permissionResponse: { status: 'undetermined', canAskAgain: false, ...(platform === 'ios' ? { ios: { status: 0 } } : {}) },
+        });
+        assert.equal(result.status, 'permission_denied');
+        assert.equal(result.canAskAgain, false);
+    }
+});
+
 test('identity and Expo token validators do not accept user or arbitrary values', () => {
     assert.equal(isUuid(UUID_A), true);
     assert.equal(isUuid('client-' + UUID_A), false);

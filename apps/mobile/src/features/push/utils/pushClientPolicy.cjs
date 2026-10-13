@@ -132,11 +132,14 @@ const normalizePermissionState = ({
 
     if (platform === 'ios' && iosStatus === IOS_AUTHORIZATION_STATUS.NOT_DETERMINED) {
         return {
-            status: PUSH_CAPABILITY_STATUS.PERMISSION_NOT_DETERMINED,
+            status: permissionResponse?.canAskAgain === false
+                ? PUSH_CAPABILITY_STATUS.PERMISSION_DENIED
+                : PUSH_CAPABILITY_STATUS.PERMISSION_NOT_DETERMINED,
             canRegister: false,
             platform,
             isDevice: true,
             iosAuthorizationStatus: iosStatus,
+            canAskAgain: permissionResponse?.canAskAgain ?? null,
         };
     }
 
@@ -147,15 +150,19 @@ const normalizePermissionState = ({
             platform,
             isDevice: true,
             iosAuthorizationStatus: iosStatus,
+            canAskAgain: permissionResponse?.canAskAgain ?? null,
         };
     }
 
     if (topLevelStatus === 'undetermined') {
         return {
-            status: PUSH_CAPABILITY_STATUS.PERMISSION_NOT_DETERMINED,
+            status: permissionResponse?.canAskAgain === false
+                ? PUSH_CAPABILITY_STATUS.PERMISSION_DENIED
+                : PUSH_CAPABILITY_STATUS.PERMISSION_NOT_DETERMINED,
             canRegister: false,
             platform,
             isDevice: true,
+            canAskAgain: permissionResponse?.canAskAgain ?? null,
         };
     }
 

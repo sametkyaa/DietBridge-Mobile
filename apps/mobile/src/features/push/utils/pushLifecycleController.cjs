@@ -39,6 +39,7 @@ const createPushLifecycleController = ({
     let sessionVersion = 0;
     let lastRegistrationKey = null;
     let reconcilePromise = null;
+    let enablePromise = null;
     let tokenSubscription = null;
     let appStateSubscription = null;
     let previousAppState = appState?.currentState || 'active';
@@ -75,9 +76,15 @@ const createPushLifecycleController = ({
 
             let permission = await getPermissionState();
             if (permission?.status === PUSH_CAPABILITY_STATUS.UNSUPPORTED_RUNTIME) return permission;
+            if (!isCurrentSession(version, userId)) {
+                return { status: PUSH_CAPABILITY_STATUS.SESSION_CHANGED };
+            }
 
-            if (permission?.status === PUSH_CAPABILITY_STATUS.PERMISSION_NOT_DETERMINED) {
-                if (!allowPrompt) return permission;
+            const canPrompt = permission?.canAskAgain !== false && (
+                permission?.status === PUSH_CAPABILITY_STATUS.PERMISSION_NOT_DETERMINED
+                || (permission?.status === PUSH_CAPABILITY_STATUS.PERMISSION_DENIED && permission?.canAskAgain === true)
+            );
+            if (allowPrompt && canPrompt) {
                 permission = await requestPermission();
             }
 
@@ -179,7 +186,27 @@ const createPushLifecycleController = ({
         return promise;
     };
 
-    const enablePushNotifications = () => reconcile({ allowPrompt: true, preflightChannels: true });
+    const enablePushNotifications = () => {
+        if (enablePromise) return enablePromise;
+        const userId = getSessionUserId(currentSession);
+        const version = sessionVersion;
+        if (!userId) return Promise.resolve({ status: PUSH_CAPABILITY_STATUS.UNAUTHENTICATED });
+
+        // A passive startup check must not swallow an explicit permission request.
+        const pendingReconcile = reconcilePromise;
+        const promise = (async () => {
+            if (pendingReconcile) await pendingReconcile;
+            if (!isCurrentSession(version, userId)) {
+                return { status: PUSH_CAPABILITY_STATUS.SESSION_CHANGED };
+            }
+            return reconcile({ allowPrompt: true, preflightChannels: true });
+        })();
+        enablePromise = promise;
+        promise.finally(() => {
+            if (enablePromise === promise) enablePromise = null;
+        }).catch(() => undefined);
+        return promise;
+    };
 
     const setSession = (nextSession) => {
         const previousUserId = getSessionUserId(currentSession);
