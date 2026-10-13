@@ -17,6 +17,7 @@ concurrency:
 env:
   TZ: Europe/Istanbul
   CI: "1"
+  EXPO_PUBLIC_ENABLE_HEALTH_CONSENT: "true"
   EXPO_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
   EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-static-export-placeholder
 
