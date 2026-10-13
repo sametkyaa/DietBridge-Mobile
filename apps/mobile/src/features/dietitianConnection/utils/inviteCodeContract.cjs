@@ -10,7 +10,15 @@ const INVITE_MESSAGES = {
 const normalizeInviteCode = (value) => {
     if (typeof value !== 'string' || value.length > 64 || !/^[a-z0-9\s-]+$/i.test(value)) return null;
     const code = value.replace(/[\s-]/g, '').toUpperCase();
-    return /^DB[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{16}$/.test(code) ? code : null;
+    return /^(?:[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{8}|DB[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{16})$/.test(code) ? code : null;
+};
+const formatInviteCodeInput = (value) => {
+    if (typeof value !== 'string') return '';
+    const code = value.replace(/[\s-]/g, '').toUpperCase();
+    // Keep invalid characters visible so validation can reject them; never truncate.
+    if (!/^[A-Z0-9]*$/.test(code)) return value.toUpperCase();
+    if (code.length > 8 && code.startsWith('DB')) return `DB-${code.slice(2).match(/.{1,4}/g).join('-')}`;
+    return code.match(/.{1,4}/g)?.join('-') || '';
 };
 const parseInviteLink = (value) => {
     try {
@@ -24,4 +32,4 @@ const parseInviteLink = (value) => {
         return match ? normalizeInviteCode(decodeURIComponent(match[1])) : null;
     } catch { return null; }
 };
-module.exports = { INVITE_MESSAGES, normalizeInviteCode, parseInviteLink };
+module.exports = { INVITE_MESSAGES, normalizeInviteCode, formatInviteCodeInput, parseInviteLink };

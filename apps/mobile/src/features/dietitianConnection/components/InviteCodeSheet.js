@@ -12,7 +12,7 @@ export default function InviteCodeSheet({ code, userId, onClose, onComplete }) {
             <SafeAreaView style={styles.safe}>
                 <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                     <Text style={styles.title}>Diyetisyeninize bağlanın</Text>
-                    <AppInput label="Diyetisyen kodu" value={vm.code} onChangeText={vm.changeCode} maxLength={64} autoCapitalize="characters" autoCorrect={false} editable={!vm.busy && !vm.completed} />
+                    <AppInput label="Diyetisyen kodu" placeholder="ABCD-2345" hint="Harf ve rakamları girin; büyük harf ve çizgi otomatik düzenlenir. Eski uzun kodlar da geçerlidir." value={vm.code} onChangeText={vm.changeCode} maxLength={64} autoCapitalize="characters" autoCorrect={false} editable={!vm.busy && !vm.completed} />
                     {vm.message ? <InlineAlert variant={vm.completed ? 'success' : 'error'} message={vm.message} /> : null}
                     {vm.profile ? (
                         <View style={styles.profile}>

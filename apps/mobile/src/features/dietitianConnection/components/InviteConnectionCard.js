@@ -4,6 +4,7 @@ import { AppButton, AppCard, AppInput, InlineAlert } from '../../../shared/compo
 import { colors, spacing, typography } from '../../../shared/theme';
 import { useInviteFlow } from '../context/InviteFlowContext';
 import { useDietitianConnection } from '../context/DietitianConnectionContext';
+import { formatInviteCodeInput } from '../utils/inviteCodeContract.cjs';
 
 export default function InviteConnectionCard() {
     const { hasActiveDietitian, isLoadingConnection, connectionError } = useDietitianConnection();
@@ -13,7 +14,7 @@ export default function InviteConnectionCard() {
     return (
         <AppCard contentStyle={styles.content}>
             <Text style={styles.title}>Diyetisyeninize bağlanın</Text>
-            <AppInput label="Diyetisyen kodu" value={code} onChangeText={setCode} autoCapitalize="characters" autoCorrect={false} maxLength={64} />
+            <AppInput label="Diyetisyen kodu" placeholder="ABCD-2345" hint="Harf ve rakamları girin; büyük harf ve çizgi otomatik düzenlenir." value={code} onChangeText={(value) => setCode(formatInviteCodeInput(value))} autoCapitalize="characters" autoCorrect={false} maxLength={64} />
             {error ? <InlineAlert variant="error" message={error} /> : null}
             <AppButton label="Devam" disabled={!code.trim()} onPress={() => openInvite(code)} />
             <Text style={styles.text}>Kodunuz yok mu? Diyetisyeninizden isteyin.</Text>

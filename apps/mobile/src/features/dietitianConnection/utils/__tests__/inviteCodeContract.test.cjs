@@ -2,8 +2,25 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { INVITE_MESSAGES, normalizeInviteCode, parseInviteLink } = require('../inviteCodeContract.cjs');
+const { INVITE_MESSAGES, normalizeInviteCode, formatInviteCodeInput, parseInviteLink } = require('../inviteCodeContract.cjs');
 const code = 'DB-ABCD-2345-EFGH-6789';
+
+test('typing, pasting and deleting automatically applies capitals and grouping', () => {
+    for (const [input, expected] of [['',''],['a','A'],['abcd','ABCD'],['abcde','ABCD-E'],['abcd2345','ABCD-2345'],['ABCD-','ABCD'],['ABCD-2','ABCD-2'],['abcd 2345','ABCD-2345'],['dbabcd2345efgh6789',code],['dbsx2345','DBSX-2345']]) assert.equal(formatInviteCodeInput(input),expected);
+    assert.equal(formatInviteCodeInput('ABCD/2345'),'ABCD/2345');
+    assert.equal(normalizeInviteCode(formatInviteCodeInput('ABCD/2345')),null);
+    assert.equal(formatInviteCodeInput(null),'');
+});
+
+test('short web/native links and manual codes work alongside long codes', () => {
+    for (const value of ['ABCD-2345', 'abcd2345', ' abcd 2345 ']) assert.equal(normalizeInviteCode(value), 'ABCD2345');
+    for (const value of ['ABCD-2345', 'ABCD2345']) {
+        assert.equal(parseInviteLink(`https://app.dietbridge.com.tr/davet/${value}`), 'ABCD2345');
+        assert.equal(parseInviteLink(`dietbridge://davet/${value}`), 'ABCD2345');
+    }
+    for (const value of ['ABC2345', 'ABCD23456', 'ABCD-234I', 'ABCD-2340', 'DB-ABCD-2345', 'ABCD_2345', 'ＡBCD2345']) assert.equal(normalizeInviteCode(value), null);
+    for (const suffix of ['?token=secret', '#code', '/extra']) assert.equal(parseInviteLink(`https://app.dietbridge.com.tr/davet/ABCD2345${suffix}`), null);
+});
 test('invite code normalizes separators/case and rejects ambiguous or malformed characters', () => {
     assert.equal(normalizeInviteCode(code.toLowerCase()), 'DBABCD2345EFGH6789');
     assert.equal(normalizeInviteCode(' DB ABCD 2345 EFGH 6789 '), 'DBABCD2345EFGH6789');
@@ -54,4 +71,15 @@ test('pending auth handoff persists only the normalized code and supports restar
 test('leave recognizes only server confirmed outcomes', async () => {
     for(const result of ['left','not_connected']) assert.equal(await loadService({result}).leaveDietitian('user-a'),result);
     await assert.rejects(loadService({result:'success'}).leaveDietitian('user-a'));
+});
+
+test('short codes pass through auth storage, preview and redemption', async () => {
+    const service = loadService();
+    await service.storePendingInviteCode('abcd-2345');
+    assert.equal(await service.readPendingInviteCode(), 'ABCD2345');
+    assert.equal(await service.redeemInviteCode('abcd-2345', 'user-a'), 'connected');
+    assert.deepEqual(service.calls[0], {name:'redeem_dietitian_invite_code', args:{p_code:'ABCD2345'}});
+    const preview = loadService({result:{result:'ready',dietitian:{id:'11111111-1111-4111-8111-111111111111',display_name:'Test',professional_title:'Diyetisyen',avatar_url:null}}});
+    assert.equal((await preview.previewInviteCode('ABCD-2345','user-a')).result,'ready');
+    assert.equal(preview.calls[0].args.body.code,'ABCD2345');
 });
