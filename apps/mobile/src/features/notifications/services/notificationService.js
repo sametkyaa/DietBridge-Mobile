@@ -215,6 +215,23 @@ export const fetchUnseenNotificationCount = async () => {
     }
 };
 
+export const fetchNotificationById = async (notificationId) => {
+    if (!isValidUuid(notificationId)) throw createInvalidInputError('notificationId');
+    const user = await getAuthenticatedNotificationUser();
+    try {
+        const { data, error } = await supabase.from('notifications')
+            .select(NOTIFICATION_SELECT_COLUMNS).eq('id', notificationId)
+            .eq('recipient_id', user.id).maybeSingle();
+        if (error) throw error;
+        if (!data) return null;
+        const notification = normalizeNotificationRow(data);
+        if (!notification) throw createMalformedRowError();
+        return assertOwnNotification(notification, user.id);
+    } catch (error) {
+        throw toNotificationServiceError(error, NOTIFICATION_ERROR_CODES.QUERY);
+    }
+};
+
 const callNotificationRowRpc = async (rpcName, notificationId) => {
     const user = await getAuthenticatedNotificationUser();
     if (!isValidUuid(notificationId)) throw createInvalidInputError('notificationId');

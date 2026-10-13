@@ -64,6 +64,7 @@ export default function App() {
   const authRetryPendingRef = useRef(false);
   const authRevalidationInFlightRef = useRef(null);
   const appMountedRef = useRef(true);
+  const navigationRef = useRef(null);
 
   const exitRecoveryFlow = async (nextRoute = 'Login') => {
     const operationVersion = ++recoveryOperationRef.current;
@@ -374,7 +375,8 @@ export default function App() {
     && recoveryState.status === 'idle'
     && authState.session
     && authState.isClient;
-  const canOpenClientRoutes = authenticatedClient && hasLegalAcceptance(authState.profile);
+  const canOpenClientRoutes = authenticatedClient && hasLegalAcceptance(authState.profile)
+    && !authState.healthConsentNeedsReview;
   const isRecoveryFlow = recoveryState.status !== 'idle';
 
   return (
@@ -384,14 +386,16 @@ export default function App() {
         <DietitianConnectionProvider userId={canOpenClientRoutes ? authState.user?.id : null}>
           <InviteFlowProvider userId={canOpenClientRoutes ? authState.user?.id : null}>
           <StatusBar barStyle="dark-content" backgroundColor="#F4F5F7" />
-          <NavigationContainer>
+          <NavigationContainer ref={navigationRef}>
             {canOpenClientRoutes ? (
               <NotificationProvider userId={authState.user?.id || null}>
-                <RootNavigator key={authState.user?.id} />
+                <RootNavigator key={authState.user?.id} navigationRef={navigationRef} />
               </NotificationProvider>
             ) : authenticatedClient ? (
               <LegalAcceptanceScreen
                 key={authState.user.id}
+                legalAcceptanceRequired={!hasLegalAcceptance(authState.profile)}
+                healthConsentNeedsReview={authState.healthConsentNeedsReview === true}
                 onAccepted={(next) => {
                   if (next.user?.id === authState.user?.id) setAuthState(next);
                 }}

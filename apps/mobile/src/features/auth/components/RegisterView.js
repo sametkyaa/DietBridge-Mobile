@@ -2,6 +2,8 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppInput } from '../../../shared/components/ui';
 import LegalAcceptanceFields from './LegalAcceptanceFields';
+import RegistrationHealthConsentFields from '../../healthConsent/components/RegistrationHealthConsentFields';
+import HealthDataNotice from '../../../shared/components/legal/HealthDataNotice';
 import { FadeUp } from '../../../shared/components/motion';
 import { colors, spacing, typography } from '../../../shared/theme';
 import PasswordToggle from './PasswordToggle';
@@ -20,6 +22,11 @@ export default function RegisterView({
   kvkkAcknowledged,
   onTermsChange,
   onKvkkChange,
+  healthConsentVisible,
+  healthStorageAccepted,
+  healthSharingAccepted,
+  onHealthStorageChange,
+  onHealthSharingChange,
   onFullNameChange,
   onPhoneChange,
   onEmailChange,
@@ -123,13 +130,8 @@ export default function RegisterView({
 
       <View style={styles.spacer} />
       <FadeUp index={2}>
-        <AppButton
-          label={loading ? 'Hesap oluşturuluyor…' : 'Kayıt ol'}
-          loading={loading}
-          onPress={onSubmit}
-          disabled={!termsAccepted || !kvkkAcknowledged}
-        />
         <View style={styles.legal}>
+          <HealthDataNotice />
           <LegalAcceptanceFields
             termsAccepted={termsAccepted}
             kvkkAcknowledged={kvkkAcknowledged}
@@ -137,7 +139,22 @@ export default function RegisterView({
             onKvkkChange={onKvkkChange}
             disabled={loading}
           />
+          {healthConsentVisible ? (
+            <RegistrationHealthConsentFields
+              storage={healthStorageAccepted}
+              sharing={healthSharingAccepted}
+              onStorageChange={onHealthStorageChange}
+              onSharingChange={onHealthSharingChange}
+              disabled={loading}
+            />
+          ) : null}
         </View>
+        <AppButton
+          label={loading ? 'Hesap oluşturuluyor…' : 'Kayıt ol'}
+          loading={loading}
+          onPress={onSubmit}
+          disabled={!termsAccepted || !kvkkAcknowledged}
+        />
         <View style={styles.footer}>
           <Text style={styles.footerText}>Zaten hesabın var mı?</Text>
           <Pressable
@@ -161,7 +178,7 @@ const styles = StyleSheet.create({
   subtitle: { ...typography.body, color: colors.textSecondary, marginTop: spacing.x2, maxWidth: 340 },
   form: { gap: spacing.x4, marginTop: spacing.x6 },
   spacer: { flex: 1, minHeight: spacing.x6 },
-  legal: { marginTop: spacing.x4 },
+  legal: { gap: spacing.x3, marginBottom: spacing.x4 },
   footer: {
     flexDirection: 'row',
     flexWrap: 'wrap',

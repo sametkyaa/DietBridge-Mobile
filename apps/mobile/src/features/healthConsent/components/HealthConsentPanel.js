@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton, InlineAlert } from '../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../shared/theme';
@@ -13,13 +13,17 @@ function Choice({ label, checked, disabled, onChange }) {
   </Pressable>;
 }
 
-export default function HealthConsentPanel({ disabled = false }) {
+export default function HealthConsentPanel({ disabled = false, onSavingChange }) {
   const vm = useHealthConsentViewModel();
+  useEffect(() => {
+    onSavingChange?.(vm.saving);
+    return () => onSavingChange?.(false);
+  }, [onSavingChange, vm.saving]);
   if (!vm.visible || (vm.state && !vm.state.enabled)) return null;
   const busy = disabled || vm.loading || vm.saving;
   return <View style={styles.root}>
     <Text style={styles.title}>Sağlık verisi tercihlerin</Text>
-    <Text style={styles.text}>Bu tercihler hesap kaydından ayrıdır. Rıza vermeden sağlık bilgisi adımlarını atlayabilirsin.</Text>
+    <Text style={styles.text}>Bu tercihler KVKK bilgilendirmesinden ayrıdır. Seçimlerini değiştirip kaydederek rızanı verebilir veya geri alabilirsin. Rıza vermeden sağlık bilgisi adımlarını atlayabilirsin.</Text>
     <Pressable accessibilityRole="link" onPress={() => openExternalLink(KVKK_URL)} style={styles.link}>
       <Text style={styles.text}>KVKK Aydınlatma Metni</Text>
     </Pressable>

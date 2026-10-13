@@ -132,3 +132,77 @@ test('foreground reconciliation is deduped and listener cleanup is explicit', as
     assert.equal(calls.filter((call) => call === 'appstate-removed').length, 1);
     assert.equal(calls.filter((call) => call === 'listener-removed').length, 1);
 });
+
+test('previous denial can be retried only by an explicit user action when the OS allows it', async () => {
+    let prompts = 0;
+    const { calls, deps } = createDeps({
+        getPermissionState: async () => ({ status: 'permission_denied', canAskAgain: true }),
+        requestPermission: async () => { prompts += 1; return { status: 'permission_granted' }; },
+    });
+    const controller = createPushLifecycleController(deps);
+    await controller.setSession({ user: { id: USER_A } });
+    assert.equal(prompts, 0);
+    const result = await controller.enablePushNotifications();
+    assert.equal(result.status, 'registered');
+    assert.equal(prompts, 1);
+    assert.equal(calls.filter(call => call.register).length, 1);
+    controller.dispose();
+});
+
+test('blocked or unknown denial does not prompt, acquire tokens or register', async () => {
+    for (const canAskAgain of [false, null]) {
+        const { calls, deps } = createDeps({
+            getPermissionState: async () => ({ status: 'permission_denied', canAskAgain }),
+            requestPermission: async () => assert.fail('OS cannot be prompted'),
+        });
+        const controller = createPushLifecycleController(deps);
+        await controller.setSession({ user: { id: USER_A } });
+        assert.equal((await controller.enablePushNotifications()).status, 'permission_denied');
+        assert.equal(calls.includes('token'), false);
+        assert.equal(calls.some(call => call.register), false);
+        controller.dispose();
+    }
+});
+
+test('enable pressed during startup is preserved and rapid taps request permission once', async () => {
+    let releaseStartup;
+    const pending = new Promise(resolve => { releaseStartup = resolve; });
+    let reads = 0;
+    let prompts = 0;
+    const { calls, deps } = createDeps({
+        getPermissionState: async () => {
+            if (++reads === 1) await pending;
+            return { status: 'permission_not_determined', canAskAgain: true };
+        },
+        requestPermission: async () => { prompts += 1; return { status: 'permission_granted' }; },
+    });
+    const controller = createPushLifecycleController(deps);
+    const startup = controller.setSession({ user: { id: USER_A } });
+    const enable = controller.enablePushNotifications();
+    assert.equal(controller.enablePushNotifications(), enable);
+    releaseStartup();
+    assert.equal((await startup).status, 'permission_not_determined');
+    assert.equal((await enable).status, 'registered');
+    assert.equal(prompts, 1);
+    assert.equal(calls.filter(call => call.register).length, 1);
+    controller.dispose();
+});
+
+test('queued permission action does not prompt after the user logs out or switches accounts', async () => {
+    for (const nextSession of [null, { user: { id: USER_B } }]) {
+        let finish;
+        const pending = new Promise(resolve => { finish = resolve; });
+        const { deps } = createDeps({
+            getPermissionState: async () => { await pending; return { status: 'permission_not_determined' }; },
+            requestPermission: async () => assert.fail('stale action must not prompt'),
+        });
+        const controller = createPushLifecycleController(deps);
+        const startup = controller.setSession({ user: { id: USER_A } });
+        const enable = controller.enablePushNotifications();
+        const changed = controller.setSession(nextSession);
+        finish();
+        await Promise.all([startup, changed]);
+        assert.equal((await enable).status, 'session_changed');
+        controller.dispose();
+    }
+});

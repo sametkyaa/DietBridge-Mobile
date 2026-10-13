@@ -130,7 +130,8 @@ function OnboardingConnectStep({ userId, onContinue }) {
                 label="Diyetisyen kodu"
                 value={invite.code}
                 onChangeText={invite.changeCode}
-                placeholder="DB…"
+                placeholder="ABCD-2345"
+                hint="Harf ve rakamları gir; büyük harf ve çizgi otomatik düzenlenir."
                 autoCapitalize="characters"
                 autoCorrect={false}
                 maxLength={64}

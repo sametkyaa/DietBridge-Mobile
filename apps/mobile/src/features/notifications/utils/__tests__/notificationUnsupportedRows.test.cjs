@@ -118,7 +118,8 @@ test('unseen count filter only counts category/event pairs this build can displa
         filter,
         'and(category.eq.chat_message,event_type.in.(new_message)),'
         + 'and(category.eq.appointment,event_type.in.(created,updated,cancelled,assigned,removed_from_client,reminder_24h,reminder_1h)),'
-        + 'and(category.eq.relationship,event_type.in.(request_pending,accepted,rejected,removed))',
+        + 'and(category.eq.relationship,event_type.in.(request_pending,accepted,rejected,removed)),'
+        + 'and(category.eq.meal_plan,event_type.in.(updated))',
     );
 
     // Local stand-in for the server count: unseen rows matching the same pairs.
@@ -128,6 +129,7 @@ test('unseen count filter only counts category/event pairs this build can displa
         [NOTIFICATION_CATEGORIES.CHAT_MESSAGE, [...NOTIFICATION_EVENT_TYPES.CHAT_MESSAGE]],
         [NOTIFICATION_CATEGORIES.APPOINTMENT, [...NOTIFICATION_EVENT_TYPES.APPOINTMENT]],
         [NOTIFICATION_CATEGORIES.RELATIONSHIP, [...NOTIFICATION_EVENT_TYPES.RELATIONSHIP]],
+        [NOTIFICATION_CATEGORIES.MEAL_PLAN, [...NOTIFICATION_EVENT_TYPES.MEAL_PLAN]],
     ]);
     const matchesFilter = (row) => pairs.some(([category, events]) => (
         row.category === category && events.includes(row.event_type)

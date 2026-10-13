@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { Alert, AppState, Linking } from 'react-native';
 import { getClientProfile } from '../../clients/services/clientService';
 import { enablePushNotifications } from '../../push/services/pushLifecycleService';
 import { getPushPermissionState } from '../../push/services/pushPermissions';
@@ -14,6 +15,7 @@ export function useGettingStartedViewModel({ userId, hasActiveDietitian, isLoadi
     const [pushStatus, setPushStatus] = useState(null);
     const [isEnablingPush, setIsEnablingPush] = useState(false);
     const mountedRef = useRef(true);
+    const pushEnablePendingRef = useRef(false);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -39,18 +41,51 @@ export function useGettingStartedViewModel({ userId, hasActiveDietitian, isLoadi
         if (dismissed === false) void refresh();
     }, [dismissed, refresh]));
 
+    useEffect(() => {
+        let previousState = AppState.currentState;
+        const subscription = AppState.addEventListener('change', (nextState) => {
+            const returnedToApp = previousState !== 'active' && nextState === 'active';
+            previousState = nextState;
+            if (returnedToApp && dismissed === false) void refresh();
+        });
+        return () => subscription.remove();
+    }, [dismissed, refresh]);
+
     const enableNotifications = useCallback(async () => {
-        if (isEnablingPush) return;
+        if (pushEnablePendingRef.current) return;
+        pushEnablePendingRef.current = true;
         setIsEnablingPush(true);
         try {
-            await enablePushNotifications();
-        } catch (error) {
-            console.warn('Push enable from checklist failed:', error?.message || error);
+            const result = await enablePushNotifications();
+            if (!mountedRef.current) return;
+            if (result?.status === 'permission_denied') {
+                Alert.alert('Bildirim izni kapalı', 'DietBridge bildirimlerini telefonunun uygulama ayarlarından açabilirsin.', [
+                    { text: 'Vazgeç', style: 'cancel' },
+                    {
+                        text: 'Ayarları aç',
+                        onPress: async () => {
+                            if (!mountedRef.current) return;
+                            try {
+                                await Linking.openSettings();
+                            } catch {
+                                if (mountedRef.current) Alert.alert('Ayarlar açılamadı', 'Telefonunun Ayarlar bölümünden DietBridge uygulamasını seçip bildirimlere izin verebilirsin.');
+                            }
+                        },
+                    },
+                ]);
+            } else if (result?.status === 'permission_not_determined') {
+                Alert.alert('Bildirim izni verilmedi', 'Bildirimleri açmak için tekrar dokunup izin penceresinden onay verebilirsin.');
+            } else if (result?.status !== 'registered') {
+                Alert.alert('Bildirimler açılamadı', 'Bildirimler şu anda etkinleştirilemedi. Lütfen daha sonra tekrar dene.');
+            }
+        } catch {
+            if (mountedRef.current) Alert.alert('Bildirimler açılamadı', 'Bildirimler şu anda etkinleştirilemedi. Lütfen daha sonra tekrar dene.');
         } finally {
             await refresh();
+            pushEnablePendingRef.current = false;
             if (mountedRef.current) setIsEnablingPush(false);
         }
-    }, [isEnablingPush, refresh]);
+    }, [refresh]);
 
     const dismiss = useCallback(async () => {
         setDismissed(true);

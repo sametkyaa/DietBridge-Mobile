@@ -158,6 +158,14 @@ const normalizeCompletionPhotoPath = (value) => {
     return value;
 };
 
+// meals.slot_label is display-only and may be absent on older schemas; an
+// unexpected value is dropped instead of failing the whole plan.
+const normalizeSlotLabel = (value) => {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed && trimmed.length <= 40 ? trimmed : null;
+};
+
 export const normalizeCanonicalMeal = (meal, plan) => {
     if (!meal || typeof meal !== 'object') {
         throw new MealPlanReadError(MealPlanReadErrorCode.CONTRACT, 'Plan verisinde geçersiz öğün bulundu.');
@@ -195,6 +203,7 @@ export const normalizeCanonicalMeal = (meal, plan) => {
         id,
         planId,
         type: requireString(meal.type, 'meal.type'),
+        slotLabel: normalizeSlotLabel(meal.slot_label),
         title: requireString(meal.title, 'meal.title'),
         calories: optionalNumber(meal.calories, 'meal.calories'),
         protein: macros.protein,

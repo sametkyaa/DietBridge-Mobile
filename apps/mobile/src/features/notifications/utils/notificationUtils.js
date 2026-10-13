@@ -27,6 +27,10 @@ const RELATIONSHIP_SUMMARY_KEYS = Object.freeze({
     removed: 'relationship_removed',
 });
 
+const MEAL_PLAN_SUMMARY_KEYS = Object.freeze({
+    updated: 'meal_plan_updated',
+});
+
 const isValidUuid = (value) => typeof value === 'string' && UUID_PATTERN.test(value);
 
 const normalizeIsoTimestamp = (value) => {
@@ -74,6 +78,9 @@ const isSupportedEvent = (category, eventType) => {
     if (category === NOTIFICATION_CATEGORIES.RELATIONSHIP) {
         return NOTIFICATION_EVENT_TYPES.RELATIONSHIP.includes(eventType);
     }
+    if (category === NOTIFICATION_CATEGORIES.MEAL_PLAN) {
+        return NOTIFICATION_EVENT_TYPES.MEAL_PLAN.includes(eventType);
+    }
     return false;
 };
 
@@ -101,6 +108,7 @@ const buildSupportedNotificationEventFilter = () => [
     [NOTIFICATION_CATEGORIES.CHAT_MESSAGE, NOTIFICATION_EVENT_TYPES.CHAT_MESSAGE],
     [NOTIFICATION_CATEGORIES.APPOINTMENT, NOTIFICATION_EVENT_TYPES.APPOINTMENT],
     [NOTIFICATION_CATEGORIES.RELATIONSHIP, NOTIFICATION_EVENT_TYPES.RELATIONSHIP],
+    [NOTIFICATION_CATEGORIES.MEAL_PLAN, NOTIFICATION_EVENT_TYPES.MEAL_PLAN],
 ].map(([category, eventTypes]) => `and(category.eq.${category},event_type.in.(${eventTypes.join(',')}))`).join(',');
 
 const normalizeNotificationRow = (row) => {
@@ -229,6 +237,28 @@ const normalizeNotificationRow = (row) => {
         if (!validTransition) return null;
     }
 
+    // meal_plan/updated (weekly plan saved by the dietitian). The server keeps
+    // this producer disabled until this build is live in the stores; the row
+    // only needs the relationship reference, so no new column is selected and
+    // older schemas keep working.
+    if (category === NOTIFICATION_CATEGORIES.MEAL_PLAN) {
+        if (
+            !dietitianClientId
+            || !Object.prototype.hasOwnProperty.call(MEAL_PLAN_SUMMARY_KEYS, eventType)
+            || summaryKey !== MEAL_PLAN_SUMMARY_KEYS[eventType]
+            || !hasOnlyNullValues([
+                conversationId,
+                appointmentId,
+                appointmentTitleSnapshot,
+                appointmentDate,
+                appointmentTime,
+                appointmentStatus,
+                relationshipFromStatus,
+                relationshipToStatus,
+            ])
+        ) return null;
+    }
+
     return {
         id,
         recipientId,
@@ -343,4 +373,5 @@ module.exports = {
     isNotificationQueryMode,
     APPOINTMENT_SUMMARY_KEYS,
     RELATIONSHIP_SUMMARY_KEYS,
+    MEAL_PLAN_SUMMARY_KEYS,
 };

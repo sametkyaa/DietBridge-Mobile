@@ -1,7 +1,7 @@
 'use strict';
 
-const CONSENT_REQUIRED_MESSAGE = 'Sağlık bilgilerini kaydetmek için sağlık verisi tercihini onayla. Hesabını bu bilgileri paylaşmadan da kullanabilirsin.';
-const SHARING_REQUIRED_MESSAGE = 'Bu bilgiyi diyetisyenine göndermek için sağlık verisi paylaşım tercihini onayla.';
+const CONSENT_REQUIRED_MESSAGE = 'Sağlık bilgilerini kaydetmek için Ayarlar’daki sağlık verisi tercihini onayla. Hesabını bu bilgileri paylaşmadan da kullanabilirsin.';
+const SHARING_REQUIRED_MESSAGE = 'Bu bilgiyi diyetisyenine göndermek için Ayarlar’daki sağlık verisi paylaşım tercihini onayla.';
 const CONSENT_UNAVAILABLE_MESSAGE = 'Sağlık verisi tercihleri doğrulanamadı. Lütfen tekrar deneyin.';
 
 function consentError(message, code = 'HEALTH_CONSENT_UNAVAILABLE') {

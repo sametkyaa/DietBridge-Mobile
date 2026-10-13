@@ -20,6 +20,11 @@ export default function AuthScreen({ navigation }) {
     setTermsAccepted,
     kvkkAcknowledged,
     setKvkkAcknowledged,
+    healthConsentVisible,
+    healthStorageAccepted,
+    healthSharingAccepted,
+    setHealthStorageAccepted,
+    setHealthSharingAccepted,
     isPasswordVisible,
     togglePasswordVisibility,
     isConfirmPasswordVisible,
@@ -61,6 +66,11 @@ export default function AuthScreen({ navigation }) {
           kvkkAcknowledged={kvkkAcknowledged}
           onTermsChange={setTermsAccepted}
           onKvkkChange={setKvkkAcknowledged}
+          healthConsentVisible={healthConsentVisible}
+          healthStorageAccepted={healthStorageAccepted}
+          healthSharingAccepted={healthSharingAccepted}
+          onHealthStorageChange={setHealthStorageAccepted}
+          onHealthSharingChange={setHealthSharingAccepted}
           fullName={fullName}
           phone={phone}
           email={email}

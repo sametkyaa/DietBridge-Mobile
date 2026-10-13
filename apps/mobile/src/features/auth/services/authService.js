@@ -3,6 +3,9 @@ import { clearChatImageUriCache } from '../../chat/services/chatImageResolver';
 import { revokePushInstallationBestEffort } from '../../push/services/pushRegistrationService';
 import { resolvePasswordResetRedirectUrl } from '../utils/passwordResetPolicy.cjs';
 import { assertLegalAcceptance, hasLegalAcceptance } from '../utils/legalAcceptancePolicy.cjs';
+import { MOBILE_EMAIL_CONFIRMATION_URL, EMAIL_NOT_CONFIRMED_MESSAGE, isEmailNotConfirmedError } from '../utils/emailConfirmationPolicy.cjs';
+import { createRegistrationHealthChoice } from '../../healthConsent/services/registrationHealthConsent.cjs';
+import { HEALTH_CONSENT_UI_ENABLED, reconcileRegistrationHealthConsent } from '../../healthConsent/services/healthConsentService';
 import {
     PASSWORD_RECOVERY_INVALID_MESSAGE,
     parsePasswordRecoveryUrl,
@@ -388,7 +391,10 @@ export const ensureClientSession = async (session) => {
         throw new Error(CLIENT_ONLY_ERROR_MESSAGE);
     }
 
-    return createAuthState({ session, profile });
+    const healthConsent = hasLegalAcceptance(profile)
+        ? await reconcileRegistrationHealthConsent(session.user)
+        : { needsReview: false };
+    return { ...createAuthState({ session, profile }), healthConsentNeedsReview: healthConsent.needsReview };
 };
 
 export const getCurrentClientAuthState = async () => {
@@ -440,7 +446,7 @@ export const signIn = async (email, password) => {
 
     if (error) {
         await safeSignOut();
-        throw new Error(LOGIN_FAILED_ERROR_MESSAGE);
+        throw new Error(isEmailNotConfirmedError(error) ? EMAIL_NOT_CONFIRMED_MESSAGE : LOGIN_FAILED_ERROR_MESSAGE);
     }
 
     if (!data?.session || !data?.user?.id) {
@@ -500,6 +506,9 @@ export const signIn = async (email, password) => {
 
 export const signUp = async (email, password, fullName, phone = null, acceptance) => {
     assertLegalAcceptance(acceptance);
+    const healthChoice = HEALTH_CONSENT_UI_ENABLED && acceptance.healthConsent
+        ? createRegistrationHealthChoice(acceptance.healthConsent)
+        : null;
     const cleanFullName = fullName.trim();
     const cleanPhone = phone?.trim() || null;
 
@@ -507,12 +516,14 @@ export const signUp = async (email, password, fullName, phone = null, acceptance
         email,
         password,
         options: {
+            emailRedirectTo: MOBILE_EMAIL_CONFIRMATION_URL,
             data: {
                 account_type: 'client',
                 full_name: cleanFullName,
                 phone: cleanPhone,
                 terms_accepted: true,
                 kvkk_accepted: true,
+                ...(healthChoice ? { registration_health_consent: healthChoice } : {}),
             },
         },
     });

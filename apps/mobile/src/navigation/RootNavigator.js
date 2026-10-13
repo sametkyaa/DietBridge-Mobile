@@ -13,10 +13,11 @@ import OnboardingSetupScreen from '../features/onboarding/screens/OnboardingSetu
 import { useOnboardingGate } from '../features/onboarding/viewmodels/useOnboardingGate';
 import { useDietitianConnection } from '../features/dietitianConnection/context/DietitianConnectionContext';
 import { colors } from '../shared/theme';
+import PushResponseController from '../features/push/components/PushResponseController';
 
 const Stack = createNativeStackNavigator();
 
-const RootNavigator = () => {
+const RootNavigator = ({ navigationRef }) => {
     const { userId } = useDietitianConnection();
     const onboardingGate = useOnboardingGate(userId);
 
@@ -29,6 +30,8 @@ const RootNavigator = () => {
     }
 
     return (
+        <>
+        <PushResponseController userId={userId} navigationRef={navigationRef} enabled={!onboardingGate.showSetup} />
         <Stack.Navigator
             initialRouteName={onboardingGate.showSetup ? 'OnboardingSetup' : 'MainTabs'}
             screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
@@ -45,6 +48,7 @@ const RootNavigator = () => {
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="Support" component={SupportScreen} />
         </Stack.Navigator>
+        </>
     );
 };
 

@@ -155,7 +155,7 @@ test('App handles the same recovery URL path on cold start and runtime events wi
     assert.match(app, /operationVersion !== recoveryOperationRef\.current/);
     assert.match(app, /event === 'PASSWORD_RECOVERY'/);
     assert.match(app, /recoveryState\.status === 'idle'/);
-    assert.match(app, /<RootNavigator key=\{authState\.user\?\.id\} \/>/);
+    assert.match(app, /<RootNavigator key=\{authState\.user\?\.id\}(?: navigationRef=\{navigationRef\})? \/>/);
     assert.match(app, /<AuthNavigator/);
 });
 

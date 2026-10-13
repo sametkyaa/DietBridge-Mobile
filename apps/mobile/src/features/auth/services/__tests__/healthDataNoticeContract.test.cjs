@@ -15,9 +15,13 @@ test('health-data notice describes storage, authorized access and non-clinical p
   assert.doesNotMatch(notice, /rıza veriyorum|onaylıyorum|consentAccepted|setConsent/);
 });
 
-test('notice is accessible before onboarding profile data entry and on profile', () => {
+test('health notice and choices are available at registration and Settings instead of onboarding and profile', () => {
   const onboarding = read('apps/mobile/src/features/onboarding/screens/OnboardingSetupScreen.js');
   const profile = read('apps/mobile/src/features/clients/screens/ProfileScreen.js');
-  assert.match(onboarding, /stepKey="goal"[\s\S]+?<HealthDataNotice \/>/);
-  assert.match(profile, /<HealthDataNotice \/>[\s\S]+?title="Sağlık bilgileri"/);
+  const registration = read('apps/mobile/src/features/auth/components/RegisterView.js');
+  const settings = read('apps/mobile/src/features/clients/screens/SettingsScreen.js');
+  assert.doesNotMatch(onboarding, /HealthDataNotice|HealthConsentPanel/);
+  assert.doesNotMatch(profile, /HealthDataNotice|HealthConsentPanel/);
+  assert.match(registration, /<HealthDataNotice \/>[\s\S]+?<LegalAcceptanceFields[\s\S]+?<RegistrationHealthConsentFields/);
+  assert.match(settings, /KVKK ve sağlık verisi[\s\S]+?<HealthDataNotice \/>[\s\S]+?<HealthConsentPanel/);
 });

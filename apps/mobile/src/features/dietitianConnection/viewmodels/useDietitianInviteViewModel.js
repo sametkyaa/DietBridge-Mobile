@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { previewInviteCode, redeemInviteCode } from '../services/inviteCodeService';
-import { INVITE_MESSAGES, normalizeInviteCode } from '../utils/inviteCodeContract.cjs';
+import { INVITE_MESSAGES, normalizeInviteCode, formatInviteCodeInput } from '../utils/inviteCodeContract.cjs';
 import { useDietitianConnection } from '../context/DietitianConnectionContext';
 
 export function useDietitianInviteViewModel({ initialCode, userId, onComplete }) {
     const { refreshConnectionStatus } = useDietitianConnection();
-    const [code, setCode] = useState(initialCode || '');
+    const [code, setCode] = useState(formatInviteCodeInput(initialCode || ''));
     const [profile, setProfile] = useState(null);
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState(null);
@@ -19,7 +19,7 @@ export function useDietitianInviteViewModel({ initialCode, userId, onComplete })
     }, []);
     const changeCode = useCallback((value) => {
         generation.current += 1;
-        setCode(value); setProfile(null); setMessage(null); setCompleted(false);
+        setCode(formatInviteCodeInput(value)); setProfile(null); setMessage(null); setCompleted(false);
     }, []);
     const preview = useCallback(async (value = code) => {
         if (lock.current) return;

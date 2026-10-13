@@ -55,7 +55,8 @@ test('Expo/EAS production-readiness contract uses the canonical EAS project id',
     assert.equal(app.expo.name, 'DietBridge');
     assert.equal(app.expo.slug, 'dietbridge');
     assert.equal(app.expo.scheme, 'dietbridge');
-    assert.equal(app.expo.version, '1.0.0');
+    assert.equal(app.expo.version, JSON.parse(read('package.json')).version);
+    assert.match(app.expo.version, /^\d+\.\d+\.\d+$/);
     assert.equal(app.expo.android.package, 'com.dietbridge.app');
     assert.equal(app.expo.android.versionCode, 1);
     assert.equal(app.expo.android.adaptiveIcon.foregroundImage, './assets/adaptive-icon.png');

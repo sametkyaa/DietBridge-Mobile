@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -17,6 +17,8 @@ import { colors, radius, spacing, typography } from '../../../shared/theme';
 import { animateNextLayout } from '../../../shared/utils/layoutMotion';
 import PasswordToggle from '../../auth/components/PasswordToggle';
 import LeaveDietitianAction from '../../dietitianConnection/components/LeaveDietitianAction';
+import HealthConsentPanel from '../../healthConsent/components/HealthConsentPanel';
+import HealthDataNotice from '../../../shared/components/legal/HealthDataNotice';
 import { useSettingsViewModel } from '../viewmodels/useSettingsViewModel';
 
 const DELETE_TITLE = 'Hesabı sil';
@@ -27,6 +29,7 @@ const SettingsScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const vm = useSettingsViewModel();
     const reducedMotion = useReducedMotion();
+    const [healthConsentSaving, setHealthConsentSaving] = useState(false);
     const {
         email,
         loading,
@@ -74,7 +77,7 @@ const SettingsScreen = ({ navigation }) => {
     }), [deletionLoading, isDeletionLocked, navigation]);
 
     const showDeleteConfirmation = () => {
-        if (isBusy || isDeletionLocked) return;
+        if (isBusy || isDeletionLocked || healthConsentSaving) return;
 
         Alert.alert(DELETE_TITLE, DELETE_MESSAGE, [
             { text: 'Vazgeç', style: 'cancel' },
@@ -83,7 +86,7 @@ const SettingsScreen = ({ navigation }) => {
     };
 
     const showLogoutConfirmation = () => {
-        if (isBusy || isDeletionLocked) return;
+        if (isBusy || isDeletionLocked || healthConsentSaving) return;
 
         Alert.alert('Çıkış yap', LOGOUT_MESSAGE, [
             { text: 'Vazgeç', style: 'cancel' },
@@ -92,7 +95,7 @@ const SettingsScreen = ({ navigation }) => {
     };
 
     const appVersion = Constants.expoConfig?.version ?? Constants.nativeAppVersion ?? '—';
-    const operationsDisabled = loading || isBusy || isDeletionLocked;
+    const operationsDisabled = loading || isBusy || isDeletionLocked || healthConsentSaving;
 
     if (loading) {
         return (
@@ -113,7 +116,7 @@ const SettingsScreen = ({ navigation }) => {
                 title="Ayarlar"
                 onBack={() => navigation.goBack()}
                 backLabel="Ayarlar'a geri dön"
-                backDisabled={deletionLoading || isDeletionLocked}
+                backDisabled={deletionLoading || isDeletionLocked || healthConsentSaving}
             />
 
             <ScrollView
@@ -225,6 +228,10 @@ const SettingsScreen = ({ navigation }) => {
                     ) : null}
 
                 </AppCard>
+
+                <Text style={styles.sectionTitle} accessibilityRole="header">KVKK ve sağlık verisi</Text>
+                <HealthDataNotice />
+                <HealthConsentPanel disabled={operationsDisabled} onSavingChange={setHealthConsentSaving} />
 
                 <Text style={styles.sectionTitle} accessibilityRole="header">Uygulama</Text>
                 <AppCard style={styles.group}>
