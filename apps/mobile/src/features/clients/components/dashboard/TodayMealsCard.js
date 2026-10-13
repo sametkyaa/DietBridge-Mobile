@@ -4,7 +4,7 @@ import { AppCard, Icon } from '../../../../shared/components/ui';
 import { PopIn } from '../../../../shared/components/motion';
 import { useHasMounted } from '../../../../shared/hooks/useHasMounted';
 import { colors, radius, spacing, typography } from '../../../../shared/theme';
-import { formatMealType } from '../../../../shared/utils/mealType';
+import { formatMealSlotName } from '../../../../shared/utils/mealType';
 
 const NODE_SIZE = 26;
 
@@ -54,7 +54,7 @@ export function TodayMealsCard({ meals, updatingMealId, onMealPress, onToggle })
                                 style={({ pressed }) => [styles.content, isNext && styles.contentNext, pressed && styles.pressed]}
                             >
                                 <Text style={[styles.title, meal.isEaten && styles.muted]} numberOfLines={2}>{meal.title}</Text>
-                                <Text style={styles.type}>{formatMealType(meal.type)}</Text>
+                                <Text style={styles.type}>{formatMealSlotName(meal)}</Text>
                             </Pressable>
                         </View>
                     );

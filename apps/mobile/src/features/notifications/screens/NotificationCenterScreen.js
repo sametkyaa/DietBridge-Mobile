@@ -221,6 +221,10 @@ export default function NotificationCenterScreen({ navigation }) {
             }
             if (destination.kind === 'relationship') {
                 navigation.navigate('MainTabs', { screen: 'Ana Sayfa' });
+                return;
+            }
+            if (destination.kind === 'mealPlan') {
+                navigation.navigate('MainTabs', { screen: 'Öğünler' });
             }
         } catch (error) {
             setActionError('Bildirim açılamadı. Lütfen tekrar deneyin.');
