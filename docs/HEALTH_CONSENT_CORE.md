@@ -2,7 +2,11 @@
 
 11.10.2026 · Varsayılan kapalı · Mağaza paketi gönderilmedi.
 
-Mevcut başlangıç ve profil ekranlarında saklama ve aktif diyetisyene sunma için ayrı tercihler hazırlanır. Yeni tercihler boş başlar; metin ve sürüm backend'den gelir. Ayrı bir geri alma ekranı/butonu veya yeni Ayarlar bölümü eklenmez. Mevcut tercih bileşeni seçim değişikliğini sunucuda kaydeder.
+Kayıt ekranında KVKK bilgilendirmesinin altında saklama ve aktif diyetisyene sunma için ayrı, isteğe bağlı tercihler hazırlanır. Yeni tercihler boş başlar. Onboarding adımlarında ve profil ekranında KVKK/sağlık verisi bloğu bulunmaz; mevcut tercih bileşeni Ayarlar ekranında seçim değişikliğini sunucuda kaydeder. Salt bilgilendirme metni kayıt ve Ayarlar ekranlarında gösterilir.
+
+Kayıt anında oturum bulunmadığından, gösterilen belge sürümü ve tam metin ile seçimler `registration_health_consent` Auth metadata'sında taşınır. Metadata erişim izni değildir. İlk doğrulanmış danışan oturumunda mevcut `get_my_health_consent` ve `set_my_health_consent` RPC'leriyle kalıcı kayıt doğrulanır; mevcut sunucu tercihi varsa kayıt seçimi yeniden uygulanmaz. Böylece sonraki geri almalar girişte ezilmez. Başarısız kayıt veya sürüm/metin uyuşmazlığında uygulama ve veri provider'ları açılmadan güncel metinlerle tek seferlik tamamlama ekranı gösterilir; boş kutularla ret kaydetmek mümkündür.
+
+Kayıt belgesi `registrationHealthConsent.cjs` içinde mevcut backend'in `health-core-2026-10-11-v1-draft` metnine sabitlenmiştir; rollout bayrağı değiştirilmemiştir. Yayın metni güncellendiğinde bu belge de eşlenmelidir. Backend şeması, migration, RLS ve üretim verisi bu yerleşim değişikliğinde değiştirilmemiştir. Gerçek e-posta doğrulaması, ilk giriş, başka cihazdan giriş, ret ve Ayarlar'dan geri alma fiziksel cihazda ayrıca kontrol edilmelidir.
 
 `EXPO_PUBLIC_ENABLE_HEALTH_CONSENT=true` olduğunda profil sağlık yazmaları, kilo RPC'si, günlük su kaydı, öğün tamamlaması ve kişisel öğün fotoğrafı öncesinde sunucu tercihi doğrulanır. RPC veya sonuç doğrulanamazsa kayıt yapılmaz. Sağlık bilgisi adımları atlanabilir; hesap/iletişim/avatar işlemleri bu tercihe bağlanmaz. Bu istemci kontrolü backend trigger/RLS korumasının yerini tutmaz.
 

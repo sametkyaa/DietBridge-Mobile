@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { colors, spacing, typography } from '../../../shared/theme';
 
@@ -22,7 +22,11 @@ export function PlateMark({ size = 64 }) {
 export default function BrandMark() {
     return (
         <View style={styles.root} accessible={false} importantForAccessibility="no-hide-descendants">
-            <PlateMark size={44} />
+            <Image
+                source={require('../../../../../../assets/logo.png')}
+                style={styles.logo}
+                resizeMode="contain"
+            />
             <Text style={styles.wordmark}>DietBridge</Text>
         </View>
     );
@@ -30,5 +34,6 @@ export default function BrandMark() {
 
 const styles = StyleSheet.create({
     root: { flexDirection: 'row', alignItems: 'center', gap: spacing.x3 },
+    logo: { width: 44, height: 44, borderRadius: 10, backgroundColor: colors.surface },
     wordmark: { ...typography.sectionTitle, color: colors.primaryDark, letterSpacing: -0.3 },
 });

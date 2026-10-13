@@ -41,7 +41,8 @@ test('Settings 3: app version comes from Expo runtime configuration', () => {
     assert.doesNotMatch(screen, /Sürüm 1\.0\.0/);
     assert.doesNotMatch(screen, /Sürüm \{appVersion\}/);
     assert.match(screen, /<Text style=\{styles\.value\}>\{appVersion\}<\/Text>/);
-    assert.match(appConfig, /"version"\s*:\s*"1\.0\.0"/);
+    assert.equal(JSON.parse(appConfig).expo.version, JSON.parse(read('package.json')).version);
+    assert.match(JSON.parse(appConfig).expo.version, /^\d+\.\d+\.\d+$/);
 });
 
 test('Settings 4: password form has current, new, and confirmation fields', () => {

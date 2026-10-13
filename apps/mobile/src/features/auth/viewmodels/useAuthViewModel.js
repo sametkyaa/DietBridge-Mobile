@@ -18,8 +18,11 @@ import {
 import { getAccountDeletionState } from '../services/accountDeletionService';
 import { ACCOUNT_DELETION_PHASES } from '../services/accountDeletionStateStore';
 import { LEGAL_ACCEPTANCE_MESSAGE, assertLegalAcceptance } from '../utils/legalAcceptancePolicy.cjs';
+import { EMAIL_NOT_CONFIRMED_MESSAGE } from '../utils/emailConfirmationPolicy.cjs';
+import { HEALTH_CONSENT_UI_ENABLED } from '../../healthConsent/services/healthConsentService';
 
 const KNOWN_AUTH_MESSAGES = [
+    EMAIL_NOT_CONFIRMED_MESSAGE,
     LEGAL_ACCEPTANCE_MESSAGE,
     CLIENT_ONLY_ERROR_MESSAGE,
     PROFILE_NOT_FOUND_ERROR_MESSAGE,
@@ -41,6 +44,8 @@ export const useAuthViewModel = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [kvkkAcknowledged, setKvkkAcknowledged] = useState(false);
+    const [healthStorageAccepted, setHealthStorageAccepted] = useState(false);
+    const [healthSharingAccepted, setHealthSharingAccepted] = useState(false);
     const [loading, setLoading] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
@@ -149,11 +154,18 @@ export const useAuthViewModel = () => {
                     setLoading(false);
                     return;
                 }
-                const acceptance = { termsAccepted, kvkkAcknowledged };
+                const acceptance = {
+                    termsAccepted, kvkkAcknowledged,
+                    ...(HEALTH_CONSENT_UI_ENABLED ? {
+                        healthConsent: { storage: healthStorageAccepted, sharing: healthSharingAccepted },
+                    } : {}),
+                };
                 assertLegalAcceptance(acceptance);
                 await signUp(email, password, fullName, phone, acceptance);
                 setTermsAccepted(false);
                 setKvkkAcknowledged(false);
+                setHealthStorageAccepted(false);
+                setHealthSharingAccepted(false);
                 Alert.alert('Başarılı', 'Kayıt tamamlandı! Lütfen e-posta adresinizi doğrulayın.');
                 setMode('signin');
             }
@@ -205,6 +217,14 @@ export const useAuthViewModel = () => {
         setTermsAccepted,
         kvkkAcknowledged,
         setKvkkAcknowledged,
+        healthConsentVisible: HEALTH_CONSENT_UI_ENABLED,
+        healthStorageAccepted,
+        healthSharingAccepted,
+        setHealthStorageAccepted: (value) => {
+            setHealthStorageAccepted(value);
+            if (!value) setHealthSharingAccepted(false);
+        },
+        setHealthSharingAccepted,
         loading,
         isPasswordVisible,
         togglePasswordVisibility,
