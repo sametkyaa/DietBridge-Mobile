@@ -83,7 +83,10 @@ const DashboardScreen = () => {
     } = useDashboardViewModel();
     const { userId } = useDietitianConnection();
     const { openInvite } = useInviteFlow();
-    const gettingStarted = useGettingStartedViewModel({ userId, hasActiveDietitian, isLoadingConnection, water });
+    const gettingStarted = useGettingStartedViewModel({
+        userId, hasActiveDietitian, isLoadingConnection, water,
+        isWaterConfirmed: dailyLogStatus === 'ready' && !isAddingWater && !isUndoingWater,
+    });
     const [isPhotoPromptVisible, setIsPhotoPromptVisible] = useState(false);
     const [isPhotoPickerActive, setIsPhotoPickerActive] = useState(false);
     const completionButtonRef = useRef(null);
