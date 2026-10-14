@@ -34,6 +34,9 @@ const createPushLifecycleController = ({
     appState,
     getPlatform,
     getAppInfo = () => ({}),
+    scheduleTimer = setTimeout,
+    cancelTimer = clearTimeout,
+    random = Math.random,
 } = {}) => {
     let currentSession = null;
     let sessionVersion = 0;
@@ -44,6 +47,26 @@ const createPushLifecycleController = ({
     let appStateSubscription = null;
     let previousAppState = appState?.currentState || 'active';
     let disposed = false;
+    let retryTimer = null;
+    let retryCount = 0;
+    let queuedNativeToken = null;
+    let latestNativeToken = null;
+
+    const clearRetry = () => {
+        if (retryTimer !== null) cancelTimer(retryTimer);
+        retryTimer = null;
+    };
+
+    const scheduleRetry = (version, userId) => {
+        if (!isCurrentSession(version, userId) || retryTimer !== null || retryCount >= 4) return;
+        const delay = Math.min(60_000, 2000 * (2 ** retryCount)) + Math.floor(random() * 1000);
+        retryCount += 1;
+        retryTimer = scheduleTimer(() => {
+            retryTimer = null;
+            if (isCurrentSession(version, userId)) void reconcile();
+        }, delay);
+        retryTimer?.unref?.();
+    };
 
     const removeTokenListener = () => {
         tokenSubscription?.remove?.();
@@ -60,6 +83,12 @@ const createPushLifecycleController = ({
         if (tokenSubscription || typeof addPushTokenListener !== 'function') return;
 
         tokenSubscription = addPushTokenListener((nextToken) => {
+            if (['android', 'ios'].includes(nextToken?.type) && nextToken?.data && getSessionUserId(currentSession)) {
+                queuedNativeToken = nextToken;
+                latestNativeToken = nextToken;
+                void reconcile();
+                return;
+            }
             const token = normalizeTokenValue(nextToken);
             if (!token || !getSessionUserId(currentSession)) return;
             void reconcile({ tokenOverride: token, reason: 'token_change' });
@@ -106,7 +135,10 @@ const createPushLifecycleController = ({
                 };
             }
 
-            const tokenResult = tokenOverride || await getExpoPushToken(projectResult.projectId);
+            const nativeToken = queuedNativeToken || latestNativeToken;
+            queuedNativeToken = null;
+            const tokenResult = tokenOverride || await getExpoPushToken(projectResult.projectId,
+                nativeToken ? { devicePushToken: nativeToken } : undefined);
             const expoPushToken = normalizeExpoPushToken(normalizeTokenValue(tokenResult));
             if (!expoPushToken) {
                 return { status: PUSH_CAPABILITY_STATUS.TOKEN_UNAVAILABLE };
@@ -134,6 +166,8 @@ const createPushLifecycleController = ({
             });
 
             if (registrationKey === lastRegistrationKey) {
+                retryCount = 0;
+                clearRetry();
                 attachTokenListener();
                 return {
                     status: PUSH_CAPABILITY_STATUS.REGISTERED,
@@ -158,6 +192,8 @@ const createPushLifecycleController = ({
             }
 
             lastRegistrationKey = registrationKey;
+            retryCount = 0;
+            clearRetry();
             attachTokenListener();
             return {
                 status: PUSH_CAPABILITY_STATUS.REGISTERED,
@@ -167,6 +203,9 @@ const createPushLifecycleController = ({
                 result: registered,
             };
         } catch (error) {
+            if (['token_unavailable', 'registration_failed'].includes(error?.code)) {
+                scheduleRetry(version, userId);
+            }
             return {
                 status: error?.code === PUSH_CAPABILITY_STATUS.TOKEN_UNAVAILABLE
                     ? PUSH_CAPABILITY_STATUS.TOKEN_UNAVAILABLE
@@ -182,6 +221,7 @@ const createPushLifecycleController = ({
         reconcilePromise = promise;
         promise.finally(() => {
             if (reconcilePromise === promise) reconcilePromise = null;
+            if (queuedNativeToken && getSessionUserId(currentSession) && !disposed) void reconcile();
         }).catch(() => undefined);
         return promise;
     };
@@ -214,6 +254,10 @@ const createPushLifecycleController = ({
         currentSession = nextSession || null;
 
         if (previousUserId !== nextUserId) {
+            clearRetry();
+            retryCount = 0;
+            queuedNativeToken = null;
+            latestNativeToken = null;
             sessionVersion += 1;
             lastRegistrationKey = null;
             removeTokenListener();
@@ -240,6 +284,9 @@ const createPushLifecycleController = ({
         reconcile,
         enablePushNotifications,
         dispose: () => {
+            clearRetry();
+            queuedNativeToken = null;
+            latestNativeToken = null;
             disposed = true;
             sessionVersion += 1;
             removeTokenListener();

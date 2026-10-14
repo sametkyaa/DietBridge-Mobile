@@ -19,7 +19,7 @@ export const createPushLifecycleController = (overrides = {}) => createCoreContr
     requestPermission: () => requestPushPermission(),
     ensureAndroidChannels: () => ensureAndroidNotificationChannels(),
     resolveProjectId: () => resolveEasProjectId(),
-    getExpoPushToken: (projectId) => getExpoPushToken({ projectId }),
+    getExpoPushToken: (projectId, options) => getExpoPushToken({ projectId, ...options }),
     getInstallationId: () => getOrCreatePushInstallationId(),
     registerInstallation: registerPushInstallation,
     addPushTokenListener: typeof Notifications.addPushTokenListener === 'function'

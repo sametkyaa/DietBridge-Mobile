@@ -88,7 +88,9 @@ test('permission normalization preserves passive and iOS authorization states', 
 
 test('Android channels are minimal, stable, and never request an icon badge or custom sound', () => {
     const configs = getAndroidChannelConfigs({ importance: { LOW: 4, DEFAULT: 5 } });
-    assert.deepEqual(configs.map((config) => config.id), ['dietbridge-silent', 'dietbridge-appointments']);
+    assert.deepEqual(configs.map((config) => config.id), ['dietbridge-silent', 'dietbridge-appointments', 'dietbridge-chat-v1']);
+    assert.equal(configs[2].importance, 6);
+    assert.equal(configs[2].sound, 'default');
     assert.equal(configs[0].sound, null);
     assert.equal(configs[1].sound, 'default');
     assert.equal(configs[0].showBadge, false);

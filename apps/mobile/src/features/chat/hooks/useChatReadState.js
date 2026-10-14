@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
+import { setVisiblePushConversation } from '../../push/services/pushPresentationService';
 import { markChatConversationRead } from '../services/chatService';
 import {
     buildReadContextKey,
@@ -26,6 +27,10 @@ export const useChatReadState = ({
     isInitialLoading,
     hasInitialError = false,
 } = {}) => {
+    useEffect(() => {
+        if (!isScreenFocused || isInitialLoading || hasInitialError || !currentUserId || !conversationId) return undefined;
+        return setVisiblePushConversation(currentUserId, conversationId);
+    }, [currentUserId, conversationId, isScreenFocused, isInitialLoading, hasInitialError]);
     const [isMarkingRead, setIsMarkingRead] = useState(false);
     const [readStateError, setReadStateError] = useState(null);
     const inputRef = useRef({

@@ -33,6 +33,75 @@ const createDeps = (overrides = {}) => {
     return { calls, listeners, deps: { ...deps, ...overrides } };
 };
 
+test('native FCM rotation is exchanged for Expo token, not registered as native token', async () => {
+    const registrations = [];
+    const tokens = [];
+    const native = { type: 'android', data: 'synthetic-native-fcm-token' };
+    const { listeners, deps } = createDeps({
+        getExpoPushToken: async (_projectId, options) => { tokens.push(options); return options?.devicePushToken ? TOKEN_2 : TOKEN_1; },
+        registerInstallation: async (payload) => { registrations.push(payload); return payload; },
+    });
+    const controller = createPushLifecycleController(deps);
+    await controller.setSession({ user: { id: USER_A } });
+    listeners[0](native);
+    await controller.reconcile();
+    assert.deepEqual(tokens[1], { devicePushToken: native });
+    assert.equal(registrations.at(-1).expoPushToken, TOKEN_2);
+    assert.equal(registrations.at(-1).installationId, INSTALLATION);
+    controller.dispose();
+});
+
+test('transient token failure retries without asking permission and stops on logout', async () => {
+    const timers = new Map();
+    const delays = [];
+    let attempts = 0;
+    let prompts = 0;
+    const { deps } = createDeps({
+        getExpoPushToken: async () => {
+            attempts += 1;
+            if (attempts === 1) throw Object.assign(new Error('offline'), { code: 'token_unavailable' });
+            return TOKEN_1;
+        },
+        requestPermission: async () => { prompts += 1; },
+        scheduleTimer: (fn, delay) => { delays.push(delay); timers.set(1, fn); return 1; },
+        cancelTimer: (id) => timers.delete(id),
+        random: () => 0,
+    });
+    const controller = createPushLifecycleController(deps);
+    assert.equal((await controller.setSession({ user: { id: USER_A } })).status, 'token_unavailable');
+    assert.deepEqual(delays, [2000]);
+    const retry = timers.get(1); timers.delete(1); retry();
+    assert.equal((await controller.reconcile()).status, 'registered');
+    assert.equal(prompts, 0);
+    await controller.setSession(null);
+    retry();
+    assert.equal(attempts, 2);
+    assert.equal(timers.size, 0);
+    controller.dispose();
+});
+
+test('retry count is bounded and permanent configuration failure has no retry', async () => {
+    const timers = [];
+    const { deps } = createDeps({
+        getExpoPushToken: async () => { throw Object.assign(new Error('offline'), { code: 'token_unavailable' }); },
+        scheduleTimer: (fn) => { timers.push(fn); return timers.length; },
+        cancelTimer: () => {}, random: () => 0,
+    });
+    const controller = createPushLifecycleController(deps);
+    await controller.setSession({ user: { id: USER_A } });
+    for (let i = 0; i < 4; i += 1) { timers[i](); await controller.reconcile(); }
+    assert.equal(timers.length, 4);
+    controller.dispose();
+    let scheduled = 0;
+    const bad = createPushLifecycleController(createDeps({
+        resolveProjectId: () => ({ ok: false, code: 'PROJECT_ID_MISSING' }),
+        scheduleTimer: () => { scheduled += 1; },
+    }).deps);
+    await bad.setSession({ user: { id: USER_A } });
+    assert.equal(scheduled, 0);
+    bad.dispose();
+});
+
 test('passive reconciliation never prompts and does not register when permission is not determined', async () => {
     let prompted = 0;
     let registered = 0;
