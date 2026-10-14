@@ -23,6 +23,7 @@ const PUSH_PERMISSION_STATUS = Object.freeze({
 const PUSH_CHANNEL_IDS = Object.freeze({
     SILENT: 'dietbridge-silent',
     APPOINTMENTS: 'dietbridge-appointments',
+    CHAT: 'dietbridge-chat-v1',
 });
 
 const IOS_AUTHORIZATION_STATUS = Object.freeze({
@@ -199,6 +200,16 @@ const getAndroidChannelConfigs = ({ importance = {} } = {}) => ([
         id: PUSH_CHANNEL_IDS.APPOINTMENTS,
         name: 'DietBridge randevu bildirimleri',
         importance: importance.DEFAULT ?? 5,
+        sound: 'default',
+        showBadge: false,
+        enableVibrate: true,
+        vibrationPattern: [0, 250],
+        enableLights: true,
+    },
+    {
+        id: PUSH_CHANNEL_IDS.CHAT,
+        name: 'DietBridge sohbet mesajları',
+        importance: importance.HIGH ?? 6,
         sound: 'default',
         showBadge: false,
         enableVibrate: true,

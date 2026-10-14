@@ -3,6 +3,7 @@ export const PUSH_INSTALLATION_STORAGE_KEY = '@dietbridge/push/installation-id';
 export const PUSH_CHANNEL_IDS = Object.freeze({
     SILENT: 'dietbridge-silent',
     APPOINTMENTS: 'dietbridge-appointments',
+    CHAT: 'dietbridge-chat-v1',
 });
 
 export const PUSH_CAPABILITY_STATUS = Object.freeze({

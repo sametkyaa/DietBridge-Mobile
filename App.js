@@ -19,6 +19,7 @@ import { DietitianConnectionProvider } from './apps/mobile/src/features/dietitia
 import { InviteFlowProvider } from './apps/mobile/src/features/dietitianConnection/context/InviteFlowContext';
 import { NotificationProvider } from './apps/mobile/src/features/notifications/context/NotificationContext';
 import PushLifecycleController from './apps/mobile/src/features/push/components/PushLifecycleController';
+import './apps/mobile/src/features/push/services/pushPresentationService';
 import './apps/mobile/src/shared/theme/fonts'; // Updated path
 import {
   establishPasswordRecoverySession,

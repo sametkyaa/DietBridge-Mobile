@@ -1,6 +1,6 @@
 {
   "name": "dietbridge",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "engines": {
     "node": ">=24 <25",
     "npm": ">=11"
@@ -17,7 +17,7 @@
     "test:water": "node --test apps/mobile/src/features/clients/services/__tests__/dailyWaterContract.test.cjs",
     "test:appointments": "node --test \"apps/mobile/src/features/appointments/utils/__tests__/*.test.cjs\" \"apps/mobile/src/features/appointments/services/__tests__/*.test.cjs\"",
     "test:notifications": "node --test \"apps/mobile/src/features/notifications/utils/__tests__/*.test.cjs\" \"apps/mobile/src/features/notifications/services/__tests__/*.test.cjs\"",
-    "test:push": "node --test apps/mobile/src/features/push/utils/__tests__/pushClientPolicy.test.cjs apps/mobile/src/features/push/services/__tests__/pushClientServiceContract.test.cjs apps/mobile/src/features/push/services/__tests__/pushLifecycleController.test.cjs",
+    "test:push": "node --test \"apps/mobile/src/features/push/utils/__tests__/*.test.cjs\" \"apps/mobile/src/features/push/services/__tests__/*.test.cjs\"",
     "test:push:backend": "node scripts/runDisposablePushClientBackendIntegration.mjs",
     "expo:config": "expo config --type public",
     "export:android": "expo export --platform android --output-dir dist/android",
@@ -33,6 +33,7 @@
     "@react-navigation/native-stack": "^6.10.1",
     "@supabase/supabase-js": "^2.84.0",
     "expo": "~54.0.37",
+    "expo-application": "~7.0.8",
     "expo-asset": "~12.0.13",
     "expo-constants": "~18.0.14",
     "expo-crypto": "~15.0.9",

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { setForegroundPushUser } from '../services/pushPresentationService';
 import {
     createPushLifecycleController,
     setActivePushLifecycleController,
@@ -21,7 +22,9 @@ export default function PushLifecycleController({ session = null }) {
     }, []);
 
     useEffect(() => {
+        setForegroundPushUser(session?.user?.id || null);
         controllerRef.current?.setSession(session);
+        return () => setForegroundPushUser(null);
     }, [session?.user?.id]);
 
     return null;

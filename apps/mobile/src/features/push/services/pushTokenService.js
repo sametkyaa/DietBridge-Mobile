@@ -3,6 +3,7 @@ import { isUuid, normalizeExpoPushToken } from '../utils/pushClientPolicy.cjs';
 
 export const getExpoPushToken = async ({
     projectId,
+    devicePushToken,
     notifications = Notifications,
 } = {}) => {
     if (!isUuid(projectId)) {
@@ -13,7 +14,7 @@ export const getExpoPushToken = async ({
 
     let response;
     try {
-        response = await notifications.getExpoPushTokenAsync({ projectId });
+        response = await notifications.getExpoPushTokenAsync({ projectId, ...(devicePushToken ? { devicePushToken } : {}) });
     } catch {
         const error = new Error('Push token is currently unavailable.');
         error.code = 'token_unavailable';

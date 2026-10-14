@@ -2,7 +2,7 @@
   "expo": {
     "name": "DietBridge",
     "slug": "dietbridge",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "scheme": "dietbridge",
     "icon": "./assets/app-icon.png",
     "splash": {

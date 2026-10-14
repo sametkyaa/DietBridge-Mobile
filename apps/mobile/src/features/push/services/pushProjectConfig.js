@@ -1,16 +1,17 @@
 import Constants from 'expo-constants';
+import * as Application from 'expo-application';
 import { resolveEasProjectId as resolveEasProjectIdPolicy } from '../utils/pushClientPolicy.cjs';
 
 export const resolveEasProjectId = ({ constants = Constants } = {}) => (
     resolveEasProjectIdPolicy(constants)
 );
 
-export const getPushAppInfo = ({ constants = Constants, platform } = {}) => ({
+export const getPushAppInfo = ({ constants = Constants, application = Application, platform } = {}) => ({
     platform: platform || null,
-    appVersion: typeof constants?.nativeAppVersion === 'string'
-        ? constants.nativeAppVersion.trim() || null
+    appVersion: typeof (application.nativeApplicationVersion || constants?.expoConfig?.version) === 'string'
+        ? (application.nativeApplicationVersion || constants.expoConfig.version).trim() || null
         : null,
-    nativeBuildVersion: typeof constants?.nativeBuildVersion === 'string'
-        ? constants.nativeBuildVersion.trim() || null
+    nativeBuildVersion: typeof application.nativeBuildVersion === 'string'
+        ? application.nativeBuildVersion.trim() || null
         : null,
 });
