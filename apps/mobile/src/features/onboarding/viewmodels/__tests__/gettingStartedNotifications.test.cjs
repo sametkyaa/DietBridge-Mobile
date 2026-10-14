@@ -7,7 +7,7 @@ const path = require('node:path');
 
 // Run the real ViewModel with isolated hooks and native/service boundaries.
 // No React Native runtime, account, device token or database is used.
-function harness({ enable = async () => ({ status: 'registered' }), openSettings = async () => {} } = {}) {
+function harness({ enable = async () => ({ status: 'registered' }), openSettings = async () => {}, storage = new Map(), history = async () => true } = {}) {
     const values = [];
     const effects = [];
     const listeners = new Set();
@@ -15,6 +15,7 @@ function harness({ enable = async () => ({ status: 'registered' }), openSettings
     let index = 0;
     let permission = 'permission_denied';
     let settingsCalls = 0;
+    let props = { userId: 'synthetic-user', hasActiveDietitian: true, isLoadingConnection: false, water: 0, isWaterConfirmed: false };
     const inputs = {
         useState: initial => {
             const slot = index++;
@@ -46,20 +47,22 @@ function harness({ enable = async () => ({ status: 'registered' }), openSettings
         },
         Linking: { openSettings: async () => { settingsCalls += 1; return openSettings(); } },
         getClientProfile: async () => ({}),
+        hasRecordedWater: history,
         enablePushNotifications: enable,
         getPushPermissionState: async () => ({ status: permission }),
         isProfileSetUp: () => true,
-        readOnboardingState: async () => ({ checklistDismissed: false }),
-        updateOnboardingState: async () => {},
+        readOnboardingState: async userId => ({ checklistDismissed: false, ...storage.get(userId) }),
+        updateOnboardingState: async (userId, patch) => { storage.set(userId, { ...storage.get(userId), ...patch }); },
     };
     const source = fs.readFileSync(path.join(__dirname, '../useGettingStartedViewModel.js'), 'utf8')
         .replace(/^import .*;\r?\n/gm, '')
         .replace('export function', 'function');
     const viewModelFactory = new Function(...Object.keys(inputs), `${source}; return useGettingStartedViewModel;`)(...Object.values(inputs));
     return {
-        render: () => {
+        render: (patch = {}) => {
             index = 0;
-            return viewModelFactory({ userId: 'synthetic-user', hasActiveDietitian: true, isLoadingConnection: false, water: 250 });
+            props = { ...props, ...patch };
+            return viewModelFactory(props);
         },
         alerts,
         setPermission: value => { permission = value; },
@@ -160,4 +163,85 @@ test('permission result arriving after unmount does not show an alert', async ()
     finish({ status: 'permission_denied' });
     await request;
     assert.equal(h.alerts.length, 0);
+});
+
+const waterDone = h => h.render().items.find(item => item.key === 'water').done;
+
+test('older water history completes first water even with zero today', async () => {
+    const h = harness();
+    h.render();
+    await flush();
+    assert.equal(waterDone(h), true);
+    h.setPermission('permission_granted');
+    await h.render().enableNotifications();
+    assert.equal(h.render().visible, false);
+    h.unmount();
+});
+
+test('confirmed water stays complete after reset and relaunch on an empty day', async () => {
+    const storage = new Map();
+    const h = harness({ storage, history: async () => false });
+    h.render();
+    await flush();
+    assert.equal(waterDone(h), false);
+    h.render({ water: 0.25, isWaterConfirmed: true });
+    await flush();
+    h.render({ water: 0 });
+    assert.equal(waterDone(h), true);
+    h.unmount();
+    const reopened = harness({ storage, history: async () => false });
+    reopened.render();
+    await flush();
+    assert.equal(waterDone(reopened), true);
+    reopened.unmount();
+});
+
+test('optimistic and failed water additions never complete the milestone', async () => {
+    const h = harness({ history: async () => false });
+    h.render();
+    await flush();
+    h.render({ water: 0.25, isWaterConfirmed: false });
+    assert.equal(waterDone(h), false);
+    h.render({ water: 0, isWaterConfirmed: true });
+    assert.equal(waterDone(h), false);
+    h.unmount();
+});
+
+test('first water is isolated when switching accounts', async () => {
+    const h = harness({ history: async userId => userId === 'synthetic-user' });
+    h.render();
+    await flush();
+    assert.equal(waterDone(h), true);
+    assert.equal(h.render({ userId: 'other-user' }).visible, false);
+    await flush();
+    assert.equal(waterDone(h), false);
+    h.unmount();
+});
+
+test('a delayed old-account response cannot replace current-account progress', async () => {
+    let finish;
+    const pending = new Promise(resolve => { finish = resolve; });
+    const h = harness({ history: userId => userId === 'synthetic-user' ? pending : Promise.resolve(false) });
+    h.render();
+    await flush();
+    h.render({ userId: 'other-user' });
+    await flush();
+    finish(true);
+    await flush();
+    assert.equal(waterDone(h), false);
+    h.unmount();
+});
+
+test('unknown history hides the checklist and retries after returning to the app', async () => {
+    let available = false;
+    const h = harness({ history: async () => { if (!available) throw new Error('offline'); return true; } });
+    h.render();
+    await flush();
+    assert.equal(h.render().visible, false);
+    available = true;
+    h.emit('background');
+    h.emit('active');
+    await flush();
+    assert.equal(waterDone(h), true);
+    h.unmount();
 });

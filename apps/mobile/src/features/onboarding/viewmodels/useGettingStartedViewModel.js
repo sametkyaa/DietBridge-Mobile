@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Alert, AppState, Linking } from 'react-native';
 import { getClientProfile } from '../../clients/services/clientService';
+import { hasRecordedWater } from '../../clients/services/dailyLogService';
 import { enablePushNotifications } from '../../push/services/pushLifecycleService';
 import { getPushPermissionState } from '../../push/services/pushPermissions';
 import { isProfileSetUp, readOnboardingState, updateOnboardingState } from '../services/onboardingStateStore';
@@ -9,12 +10,15 @@ import { isProfileSetUp, readOnboardingState, updateOnboardingState } from '../s
 const PERMISSION_GRANTED = 'permission_granted';
 const UNSUPPORTED_RUNTIME = 'unsupported_runtime';
 
-export function useGettingStartedViewModel({ userId, hasActiveDietitian, isLoadingConnection, water }) {
+export function useGettingStartedViewModel({ userId, hasActiveDietitian, isLoadingConnection, water, isWaterConfirmed = false }) {
     const [dismissed, setDismissed] = useState(null);
     const [profileReady, setProfileReady] = useState(null);
     const [pushStatus, setPushStatus] = useState(null);
     const [isEnablingPush, setIsEnablingPush] = useState(false);
+    const [firstWater, setFirstWater] = useState({ userId: null, done: null });
     const mountedRef = useRef(true);
+    const currentUserIdRef = useRef(userId);
+    currentUserIdRef.current = userId;
     const pushEnablePendingRef = useRef(false);
 
     useEffect(() => {
@@ -24,18 +28,50 @@ export function useGettingStartedViewModel({ userId, hasActiveDietitian, isLoadi
 
     useEffect(() => {
         let active = true;
+        setDismissed(null);
+        setFirstWater({ userId, done: null });
         readOnboardingState(userId)
             .then((state) => { if (active) setDismissed(state.checklistDismissed); })
             .catch(() => { if (active) setDismissed(false); });
         return () => { active = false; };
     }, [userId]);
 
+    const refreshFirstWater = useCallback(async () => {
+        if (!userId) return;
+        try {
+            const stored = await readOnboardingState(userId);
+            const done = stored.firstWaterLogged === true || await hasRecordedWater(userId);
+            if (!mountedRef.current || currentUserIdRef.current !== userId) return;
+            setFirstWater((current) => current.userId === userId && current.done === true
+                ? current : { userId, done });
+            if (done && !stored.firstWaterLogged) {
+                await updateOnboardingState(userId, { firstWaterLogged: true });
+            }
+        } catch {
+            // Unknown history must not be presented as an unfinished first-water step.
+            console.warn('First-water milestone could not be loaded.');
+        }
+    }, [userId]);
+
+    useEffect(() => {
+        void refreshFirstWater();
+    }, [refreshFirstWater]);
+
+    useEffect(() => {
+        if (!userId || firstWater.userId !== userId || firstWater.done === true
+            || !isWaterConfirmed || !Number.isFinite(Number(water)) || Number(water) <= 0) return;
+        setFirstWater({ userId, done: true });
+        updateOnboardingState(userId, { firstWaterLogged: true })
+            .catch(() => console.warn('First-water milestone could not be stored.'));
+    }, [firstWater, isWaterConfirmed, userId, water]);
+
     const refresh = useCallback(async () => {
         const [profileResult, pushResult] = await Promise.allSettled([getClientProfile(), getPushPermissionState()]);
         if (!mountedRef.current) return;
         if (profileResult.status === 'fulfilled') setProfileReady(isProfileSetUp(profileResult.value));
         setPushStatus(pushResult.status === 'fulfilled' ? pushResult.value?.status || null : UNSUPPORTED_RUNTIME);
-    }, []);
+        void refreshFirstWater();
+    }, [refreshFirstWater]);
 
     useFocusEffect(useCallback(() => {
         if (dismissed === false) void refresh();
@@ -100,17 +136,18 @@ export function useGettingStartedViewModel({ userId, hasActiveDietitian, isLoadi
         const list = [
             { key: 'connect', label: 'Diyetisyenine bağlan', done: hasActiveDietitian === true },
             { key: 'profile', label: 'Profilini tamamla', done: profileReady === true },
-            { key: 'water', label: 'İlk bardak suyunu ekle', hint: 'Su takibi kartından ekleyebilirsin', done: Number(water) > 0 },
+            { key: 'water', label: 'İlk bardak suyunu ekle', hint: 'Su takibi kartından ekleyebilirsin', done: firstWater.userId === userId && firstWater.done === true },
         ];
         // Simulators and web cannot receive notifications, so the step is left out there.
         if (pushStatus !== UNSUPPORTED_RUNTIME) {
             list.push({ key: 'notifications', label: 'Bildirimleri aç', hint: 'Öğün ve randevu hatırlatmaları için', done: pushStatus === PERMISSION_GRANTED });
         }
         return list;
-    }, [hasActiveDietitian, profileReady, pushStatus, water]);
+    }, [firstWater, hasActiveDietitian, profileReady, pushStatus, userId]);
 
     const completedCount = items.filter((item) => item.done).length;
-    const isReady = dismissed === false && profileReady !== null && pushStatus !== null && !isLoadingConnection;
+    const isReady = dismissed === false && profileReady !== null && pushStatus !== null && !isLoadingConnection
+        && firstWater.userId === userId && firstWater.done !== null;
 
     return {
         visible: isReady && completedCount < items.length,

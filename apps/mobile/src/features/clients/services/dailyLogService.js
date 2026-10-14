@@ -1,6 +1,7 @@
 import { supabase } from '../../../lib/supabaseClient';
 import { saveCurrentWeight } from './clientService';
 import { requireHealthStorageConsent } from '../../healthConsent/services/healthConsentService';
+import { updateOnboardingState } from '../../onboarding/services/onboardingStateStore';
 const {
     INVALID_PERSISTED_WATER_MESSAGE,
     normalizePersistedWaterLiters,
@@ -59,6 +60,24 @@ export const getDailyLog = async (dateStr) => {
     return data || null;
 };
 
+export const hasRecordedWater = async (expectedUserId) => {
+    const user = await getCurrentUserOrThrow();
+    if (!expectedUserId || user.id !== expectedUserId) throw new Error(SESSION_REQUIRED_MESSAGE);
+    let response;
+    try {
+        response = await supabase.from('daily_logs')
+            .select('client_id')
+            .eq('client_id', user.id)
+            .gt('water_intake', 0)
+            .limit(1);
+    } catch (error) {
+        throw createDailyLogError({ error });
+    }
+    const { data, error, status } = response;
+    if (error) throw createDailyLogError({ error, status });
+    return Array.isArray(data) && data.length > 0;
+};
+
 export const upsertWaterIntake = async (dateStr, waterAmount) => {
     const normalizedWater = normalizePersistedWaterLiters(waterAmount);
     if (normalizedWater === null || Number.isNaN(normalizedWater)) {
@@ -92,6 +111,14 @@ export const upsertWaterIntake = async (dateStr, waterAmount) => {
         throw new Error(INVALID_PERSISTED_WATER_MESSAGE);
     }
 
+    if (persistedWater > 0) {
+        try {
+            await updateOnboardingState(user.id, { firstWaterLogged: true });
+        } catch {
+            // The water save succeeded; a local checklist failure must not roll it back.
+            console.warn('First-water milestone could not be stored.');
+        }
+    }
     return persistedWater;
 };
 
