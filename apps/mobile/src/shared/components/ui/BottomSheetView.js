@@ -35,6 +35,7 @@ export function BottomSheetView({
 }) {
   const { height: windowHeight } = useWindowDimensions();
   const safeInsets = useSafeAreaInsets();
+  const resolvedBottomInset = Math.max(bottomInset, safeInsets.bottom);
   const resolvedMaxHeight = maxHeight ?? Math.round(windowHeight * 0.9);
   const { mounted, progress } = useModalTransition(visible, { duration: 280, spring: OPEN_SPRING });
   const drag = useRef(new Animated.Value(0)).current;
@@ -79,7 +80,7 @@ export function BottomSheetView({
       {children}
     </ScrollView>
   ) : (
-    <View style={[styles.content, contentStyle]}>{children}</View>
+    <View style={[styles.body, styles.content, contentStyle]}>{children}</View>
   );
 
   return (
@@ -89,6 +90,7 @@ export function BottomSheetView({
       animationType="none"
       onRequestClose={onClose}
       statusBarTranslucent
+      navigationBarTranslucent
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -110,7 +112,7 @@ export function BottomSheetView({
               { transform: [{ translateY }] },
               {
                 maxHeight: resolvedMaxHeight,
-                paddingBottom: spacing.x6 + bottomInset,
+                paddingBottom: spacing.x6 + resolvedBottomInset,
                 paddingLeft: spacing.x5 + safeInsets.left,
                 paddingRight: spacing.x5 + safeInsets.right,
               },
@@ -159,8 +161,9 @@ const styles = StyleSheet.create({
   },
   title: { ...typography.screenTitle, fontSize: 22, lineHeight: 28, color: colors.textPrimary, marginBottom: spacing.x4 },
   scroll: { flexShrink: 1 },
+  body: { flexShrink: 1, minHeight: 0 },
   content: { gap: spacing.x3 },
-  footer: { marginTop: spacing.x4, gap: spacing.x2 },
+  footer: { flexShrink: 0, marginTop: spacing.x4, gap: spacing.x2 },
 });
 
 export default BottomSheetView;
