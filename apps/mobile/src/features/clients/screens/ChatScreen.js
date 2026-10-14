@@ -66,8 +66,9 @@ function ActiveChatContent({ activeConnection, activeDietitian, isScreenFocused 
   });
   // There is no native navigation header and the tab bar hides while the
   // keyboard is open. The in-screen header participates in this flex tree,
-  // so the correct external offset is zero. Android uses Expo's resize mode.
-  const keyboardAvoidingBehavior = Platform.OS === 'ios' ? 'padding' : undefined;
+  // so the correct external offset is zero. Edge-to-edge Android also needs
+  // explicit keyboard avoidance; native resize alone can leave the composer covered.
+  const keyboardAvoidingBehavior = Platform.OS === 'ios' ? 'padding' : 'height';
 
   const confirmDeleteMessage = useCallback((message) => {
     Alert.alert(
