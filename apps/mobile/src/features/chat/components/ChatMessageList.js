@@ -1,3 +1,4 @@
+import { formatUserError } from '../../../shared/utils/userError.cjs';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { ActivityIndicator, FlatList, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton, EmptyState, ErrorState } from '../../../shared/components/ui';
@@ -157,7 +158,7 @@ export default function ChatMessageList({
         if (!nextCursor && !loadOlderError) return <View style={styles.headerSpacing} />;
         return (
             <View style={styles.olderSection}>
-                {loadOlderError ? <Text style={styles.olderError}>{loadOlderError}</Text> : null}
+                {loadOlderError ? <Text style={styles.olderError}>{formatUserError(loadOlderError)}</Text> : null}
                 {nextCursor ? (
                     <AppButton
                         variant="text"
@@ -218,7 +219,7 @@ export default function ChatMessageList({
             )}
             ListHeaderComponent={() => (
                 <>
-                    {mealActivityError ? <Text style={styles.activityError} accessibilityRole="alert">{mealActivityError}</Text> : null}
+                    {mealActivityError ? <Text style={styles.activityError} accessibilityRole="alert">{formatUserError(mealActivityError)}</Text> : null}
                     {renderHeader()}
                 </>
             )}

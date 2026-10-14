@@ -16,6 +16,7 @@ export default function AuthScreen({ navigation }) {
     confirmPassword,
     setConfirmPassword,
     loading,
+    fieldErrors,
     termsAccepted,
     setTermsAccepted,
     kvkkAcknowledged,
@@ -43,6 +44,7 @@ export default function AuthScreen({ navigation }) {
     <AuthShell>
       {isSignIn ? (
         <LoginView
+          errors={fieldErrors}
           email={email}
           password={password}
           isPasswordVisible={isPasswordVisible}
@@ -62,6 +64,7 @@ export default function AuthScreen({ navigation }) {
         />
       ) : (
         <RegisterView
+          errors={fieldErrors}
           termsAccepted={termsAccepted}
           kvkkAcknowledged={kvkkAcknowledged}
           onTermsChange={setTermsAccepted}

@@ -1,3 +1,4 @@
+import { formatUserError } from '../../../shared/utils/userError.cjs';
 import React, { useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { getChatMediaUrl } from '../services/chatMediaService';
@@ -27,7 +28,7 @@ export default function ChatMediaBubble({ message }) {
             <Text style={[styles.name, message.isOwn ? styles.own : styles.other]}>{busy ? 'Hazırlanıyor…' : message.messageKind === 'video' ? 'Videoyu aç' : 'Dosyayı aç'}</Text>
         </Pressable>
         {message.body ? <Text style={[styles.caption, message.isOwn ? styles.own : styles.other]}>{message.body}</Text> : null}
-        {error ? <Text style={[styles.meta, message.isOwn ? styles.own : styles.other]} accessibilityRole="alert">{error}</Text> : null}
+        {error ? <Text style={[styles.meta, message.isOwn ? styles.own : styles.other]} accessibilityRole="alert">{formatUserError(error)}</Text> : null}
     </View>;
 }
 const styles = StyleSheet.create({ container: { minWidth: 180, gap: 6 }, name: { ...typography.body, fontWeight: '600' },

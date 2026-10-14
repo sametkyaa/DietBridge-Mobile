@@ -1,5 +1,6 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import { useEffect } from 'react';
-import { Alert } from 'react-native';
+
 import * as Notifications from 'expo-notifications';
 import { fetchNotificationById } from '../../notifications/services/notificationService';
 import { createPushResponseController } from '../utils/pushResponseController.cjs';

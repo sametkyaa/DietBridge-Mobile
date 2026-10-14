@@ -1,5 +1,6 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Alert, AppState } from 'react-native';
+import { AppState } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import {
     getLocalWeekDateKey,

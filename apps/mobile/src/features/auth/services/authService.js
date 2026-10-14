@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabaseClient';
+import { assertEmail, assertNewPassword, assertRegistrationHealthConsent, createUserError, getUserError } from '../../../shared/utils/userError.cjs';
 import { clearChatImageUriCache } from '../../chat/services/chatImageResolver';
 import { revokePushInstallationBestEffort } from '../../push/services/pushRegistrationService';
 import { resolvePasswordResetRedirectUrl } from '../utils/passwordResetPolicy.cjs';
@@ -301,12 +302,13 @@ const createAccountDeletionSignInResult = (data, cleanupResult) => {
 const getPasswordChangeFailure = (error) => {
     const code = error?.code;
     if (code === 'weak_password') {
-        return { ok: false, code: 'PASSWORD_WEAK', message: PASSWORD_WEAK_MESSAGE };
+        const explanation = getUserError(error);
+        return { ok: false, code: explanation.code, message: explanation.message };
     }
     if (code === 'same_password') {
         return { ok: false, code: 'PASSWORD_SAME', message: PASSWORD_SAME_MESSAGE };
     }
-    return { ok: false, code: 'PASSWORD_CHANGE_FAILED', message: PASSWORD_CHANGE_ERROR_MESSAGE };
+    return { ok: false, ...getUserError(error, 'AUTH_PASSWORD_UPDATE_FAILED') };
 };
 
 export const changeAuthenticatedPassword = async ({ currentPassword, newPassword } = {}) => {
@@ -319,6 +321,8 @@ export const changeAuthenticatedPassword = async ({ currentPassword, newPassword
     if (currentPassword === newPassword) {
         return { ok: false, code: 'PASSWORD_SAME', message: PASSWORD_SAME_MESSAGE };
     }
+    try { assertNewPassword(newPassword); }
+    catch (failure) { const explanation = getUserError(failure); return { ok: false, ...explanation }; }
 
     try {
         const {
@@ -341,6 +345,9 @@ export const changeAuthenticatedPassword = async ({ currentPassword, newPassword
         });
 
         if (reauthError || !reauthData?.user?.id) {
+            if (reauthError && reauthError.code !== 'invalid_credentials') {
+                return { ok: false, ...getUserError(reauthError, 'AUTH_PASSWORD_UPDATE_FAILED') };
+            }
             return { ok: false, code: 'PASSWORD_CURRENT_INVALID', message: PASSWORD_CURRENT_INVALID_MESSAGE };
         }
 
@@ -357,8 +364,8 @@ export const changeAuthenticatedPassword = async ({ currentPassword, newPassword
         }
 
         return { ok: true };
-    } catch (_error) {
-        return { ok: false, code: 'PASSWORD_CHANGE_FAILED', message: PASSWORD_CHANGE_ERROR_MESSAGE };
+    } catch (error) {
+        return { ok: false, ...getUserError(error, 'AUTH_PASSWORD_UPDATE_FAILED') };
     }
 };
 
@@ -446,7 +453,15 @@ export const signIn = async (email, password) => {
 
     if (error) {
         await safeSignOut();
-        throw new Error(isEmailNotConfirmedError(error) ? EMAIL_NOT_CONFIRMED_MESSAGE : LOGIN_FAILED_ERROR_MESSAGE);
+        if (isEmailNotConfirmedError(error)) {
+            const failure = new Error(EMAIL_NOT_CONFIRMED_MESSAGE);
+            failure.code = 'email_not_confirmed';
+            throw failure;
+        }
+        const explanation = getUserError(error, 'AUTH_LOGIN_FAILED');
+        const failure = new Error(explanation.message);
+        failure.code = explanation.code;
+        throw failure;
     }
 
     if (!data?.session || !data?.user?.id) {
@@ -506,6 +521,10 @@ export const signIn = async (email, password) => {
 
 export const signUp = async (email, password, fullName, phone = null, acceptance) => {
     assertLegalAcceptance(acceptance);
+    assertEmail(email);
+    assertNewPassword(password);
+    assertRegistrationHealthConsent(acceptance?.healthConsent, HEALTH_CONSENT_UI_ENABLED);
+    if (typeof fullName !== 'string' || !fullName.trim()) throw createUserError('AUTH_NAME_REQUIRED');
     const healthChoice = HEALTH_CONSENT_UI_ENABLED && acceptance.healthConsent
         ? createRegistrationHealthChoice(acceptance.healthConsent)
         : null;
@@ -686,6 +705,8 @@ export const updatePassword = async (newPassword) => {
             message: PASSWORD_UPDATE_ERROR_MESSAGE,
         };
     }
+    try { assertNewPassword(newPassword); }
+    catch (failure) { const explanation = getUserError(failure); return { ok: false, ...explanation }; }
 
     try {
         const {
@@ -708,7 +729,11 @@ export const updatePassword = async (newPassword) => {
 
         const { data, error } = await supabase.auth.updateUser({ password: newPassword });
 
-        if (error || data?.user?.id !== session.user.id) {
+        if (error) {
+            const explanation = getUserError(error, 'AUTH_PASSWORD_UPDATE_FAILED');
+            return { ok: false, ...explanation };
+        }
+        if (data?.user?.id !== session.user.id) {
             return {
                 ok: false,
                 code: 'PASSWORD_UPDATE_FAILED',
@@ -717,11 +742,7 @@ export const updatePassword = async (newPassword) => {
         }
 
         return { ok: true };
-    } catch (_error) {
-        return {
-            ok: false,
-            code: 'PASSWORD_UPDATE_FAILED',
-            message: PASSWORD_UPDATE_ERROR_MESSAGE,
-        };
+    } catch (error) {
+        return { ok: false, ...getUserError(error, 'AUTH_PASSWORD_UPDATE_FAILED') };
     }
 };

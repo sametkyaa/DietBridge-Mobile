@@ -1,25 +1,30 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '../../theme';
-import AppButton from './AppButton';
-import Icon from './Icon';
+import { colors, radius, spacing, typography } from '../../theme';
+import { AppButton } from './AppButton';
+import { Icon } from './Icon';
+import { getUserError } from '../../utils/userError.cjs';
 
 export function ErrorState({ title, description, onRetry, retryLabel = 'Tekrar dene', style }) {
+  const explanation = getUserError(description, 'LOAD_FAILED');
   return (
     <View style={[styles.root, style]} accessibilityLiveRegion="polite">
-      <View style={styles.iconWrap} accessible={false} importantForAccessibility="no">
-        <Icon name="alert" size={26} color={colors.error} />
+      <View style={styles.card}>
+        <View style={styles.iconWrap} accessible={false} importantForAccessibility="no">
+          <Icon name="alert" size={26} color={colors.error} />
+        </View>
+        <Text style={styles.title} accessibilityRole="header">{title || 'Bilgiler yüklenemedi'}</Text>
+        <Text style={styles.description}>{explanation.message}</Text>
+        <View style={styles.code}><Text selectable style={styles.codeText}>Hata kodu: {explanation.code}</Text></View>
+        {onRetry ? (
+          <AppButton
+            label={retryLabel}
+            onPress={onRetry}
+            accessibilityLabel={retryLabel}
+            style={styles.action}
+          />
+        ) : null}
       </View>
-      <Text style={styles.title} accessibilityRole="header">{title}</Text>
-      {description ? <Text style={styles.description}>{description}</Text> : null}
-      {onRetry ? (
-        <AppButton
-          label={retryLabel}
-          onPress={onRetry}
-          accessibilityLabel={retryLabel}
-          style={styles.action}
-        />
-      ) : null}
     </View>
   );
 }
@@ -29,7 +34,17 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.x6,
+    padding: spacing.x4,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 440,
+    alignItems: 'center',
+    padding: spacing.x5,
+    borderRadius: radius.card,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
     gap: spacing.x2,
   },
   iconWrap: {
@@ -43,6 +58,8 @@ const styles = StyleSheet.create({
   },
   title: { ...typography.cardTitle, color: colors.textPrimary, textAlign: 'center' },
   description: { ...typography.supporting, color: colors.textSecondary, textAlign: 'center' },
+  code: { backgroundColor: colors.background, borderRadius: radius.control, paddingHorizontal: spacing.x3, paddingVertical: spacing.x2, marginTop: spacing.x2 },
+  codeText: { ...typography.caption, color: colors.textSecondary, textAlign: 'center' },
   action: { marginTop: spacing.x3, alignSelf: 'stretch' },
 });
 

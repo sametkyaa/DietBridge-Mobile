@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, typography } from '../../theme';
 import Icon from './Icon';
+import { formatUserError } from '../../utils/userError.cjs';
 
 const VARIANTS = {
   info: { background: colors.tealSoft, foreground: colors.infoDark, icon: 'info' },
@@ -20,7 +21,7 @@ export function InlineAlert({ variant = 'info', title, message, onDismiss, style
       </View>
       <View style={styles.textWrap}>
         {title ? <Text style={[styles.title, { color: config.foreground }]}>{title}</Text> : null}
-        {message ? <Text style={styles.message}>{message}</Text> : null}
+        {message ? <Text style={styles.message}>{variant === 'error' || variant === 'warning' ? formatUserError(message) : message}</Text> : null}
       </View>
       {onDismiss ? (
         <Pressable

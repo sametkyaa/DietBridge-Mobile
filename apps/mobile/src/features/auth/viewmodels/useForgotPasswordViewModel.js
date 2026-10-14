@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { sendPasswordResetEmail } from '../services/authService';
+import { formatUserError } from '../../../shared/utils/userError.cjs';
 
 const SUCCESS_MESSAGE =
     'Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Maildeki bağlantıdan yeni şifrenizi belirleyebilirsiniz.';
-const GENERIC_ERROR_MESSAGE = 'Bir hata oluştu. Lütfen tekrar deneyin.';
 const INVALID_EMAIL_MESSAGE = 'Lütfen geçerli bir e-posta adresi girin.';
 const EMPTY_EMAIL_MESSAGE = 'Lütfen e-posta adresinizi girin.';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -46,7 +46,7 @@ export const useForgotPasswordViewModel = () => {
             setSuccessMessage(SUCCESS_MESSAGE);
         } catch (error) {
             console.warn('Password reset email error:', error?.message);
-            setErrorMessage(GENERIC_ERROR_MESSAGE);
+            setErrorMessage(formatUserError(error, 'AUTH_RESET_FAILED'));
         } finally {
             setLoading(false);
         }

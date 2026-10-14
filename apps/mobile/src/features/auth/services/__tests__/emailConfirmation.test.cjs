@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const policy = require('../../utils/emailConfirmationPolicy.cjs');
+const userError = require('../../../../shared/utils/userError.cjs');
 const source = fs.readFileSync(path.resolve(__dirname, '../authService.js'), 'utf8');
 
 test('email-not-confirmed is recognized by machine code or legacy message without guessing from HTTP status', () => {
@@ -20,7 +21,7 @@ test('real sign-in service reports confirmation error before profile access and 
   for (const error of [{ code: 'email_not_confirmed' }, { message: 'Email not confirmed' }, { code: 'invalid_credentials' }]) {
     let signOuts = 0;
     const context = {
-      ...policy, ACCOUNT_DELETION_PHASES: { LOCAL_CLEANUP_PENDING: 'local_cleanup_pending' },
+      ...policy, ...userError, ACCOUNT_DELETION_PHASES: { LOCAL_CLEANUP_PENDING: 'local_cleanup_pending' },
       readPendingAccountDeletionState: async () => ({ ok: true, state: null }),
       safeSignOut: async () => { signOuts += 1; }, LOGIN_FAILED_ERROR_MESSAGE: 'E-posta veya şifre hatalı.',
       supabase: { auth: { signInWithPassword: async () => ({ data: null, error }) } },
@@ -30,7 +31,7 @@ test('real sign-in service reports confirmation error before profile access and 
     vm.runInContext(source.slice(start, end).replace('export const signIn =', 'globalThis.signIn ='), context);
     await assert.rejects(context.signIn('fixture@example.test', 'fixture-password'),
       (failure) => failure.message === (policy.isEmailNotConfirmedError(error)
-        ? policy.EMAIL_NOT_CONFIRMED_MESSAGE : context.LOGIN_FAILED_ERROR_MESSAGE));
+        ? policy.EMAIL_NOT_CONFIRMED_MESSAGE : userError.getUserError(error).message));
     assert.equal(signOuts, 1);
   }
 });

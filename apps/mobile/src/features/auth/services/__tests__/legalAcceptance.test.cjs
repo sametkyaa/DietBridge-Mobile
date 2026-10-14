@@ -6,6 +6,7 @@ const vm = require('node:vm');
 const policy = require('../../utils/legalAcceptancePolicy.cjs');
 const { MOBILE_EMAIL_CONFIRMATION_URL } = require('../../utils/emailConfirmationPolicy.cjs');
 const registrationPolicy = require('../../../healthConsent/services/registrationHealthConsent.cjs');
+const userError = require('../../../../shared/utils/userError.cjs');
 
 const root = path.resolve(__dirname, '../../../../../../../');
 const source = fs.readFileSync(path.join(root, 'apps/mobile/src/features/auth/services/authService.js'), 'utf8');
@@ -14,7 +15,7 @@ const loadFunction = (name, next, supabase, healthConsentEnabled = false) => {
   const end = source.indexOf('export const ' + next + ' =', start);
   assert(start >= 0 && end > start);
   const context = {
-    supabase, ...policy, GENERIC_AUTH_ERROR_MESSAGE: 'Bir sorun oluştu. Lütfen tekrar deneyin.',
+    supabase, ...policy, ...userError, GENERIC_AUTH_ERROR_MESSAGE: 'Bir sorun oluştu. Lütfen tekrar deneyin.',
     MOBILE_EMAIL_CONFIRMATION_URL,
     HEALTH_CONSENT_UI_ENABLED: healthConsentEnabled, ...registrationPolicy,
   };
@@ -52,8 +53,8 @@ test('registration sends explicit legal metadata only after both choices', async
   assert.equal(payload.options.data.registration_health_consent, undefined);
 });
 
-test('registration carries separate explicit health choices without requiring consent for account creation', async () => {
-  for (const choice of [{ storage: true, sharing: true }, { storage: true, sharing: false }, { storage: false, sharing: false }]) {
+test('registration carries both mandatory health choices after explicit acceptance', async () => {
+  for (const choice of [{ storage: true, sharing: true }]) {
     let payload;
     const signUp = loadFunction('signUp', 'acceptLegalDocuments', {
       auth: { signUp: async (value) => { payload = value; return { data: { user: { id: 'client' }, session: null }, error: null }; } },
@@ -70,7 +71,7 @@ test('invalid health choices stop before account creation', async () => {
   const signUp = loadFunction('signUp', 'acceptLegalDocuments', {
     auth: { signUp: async () => assert.fail('Account must not be created') },
   }, true);
-  for (const healthConsent of [{ storage: false, sharing: true }, { storage: 'true', sharing: false }, {}]) {
+  for (const healthConsent of [undefined, { storage: true, sharing: false }, { storage: false, sharing: false }, { storage: false, sharing: true }, { storage: 'true', sharing: false }, {}]) {
     await assert.rejects(signUp('a@example.test', 'placeholder', 'Client', null, {
       termsAccepted: true, kvkkAcknowledged: true, healthConsent,
     }));

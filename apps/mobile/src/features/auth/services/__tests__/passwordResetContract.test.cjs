@@ -43,7 +43,7 @@ test('Supabase reset failures cannot report success in the existing ViewModel fl
     assert.ok(submitStart >= 0);
     assert.ok(catchStart > submitStart);
     assert.ok(successIndex > submitStart && successIndex < catchStart);
-    assert.match(viewModel.slice(catchStart), /setErrorMessage\(GENERIC_ERROR_MESSAGE\)/);
+    assert.match(viewModel.slice(catchStart), /setErrorMessage\(formatUserError\(error, 'AUTH_RESET_FAILED'\)\)/);
 });
 
 test('Expo/EAS production-readiness contract uses the canonical EAS project id', () => {

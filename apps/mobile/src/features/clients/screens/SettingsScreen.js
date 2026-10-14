@@ -1,6 +1,7 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import Constants from 'expo-constants';
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
     AppButton,

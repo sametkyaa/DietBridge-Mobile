@@ -175,11 +175,13 @@ export function useOnboardingSetupViewModel({ userId, mode = 'initial', onExit }
         }
     };
 
-    const back = () => {
-        if (isSaving || stepIndex === 0) return;
+    const back = useCallback(() => {
+        if (isSaving) return true;
+        if (stepIndex === 0) return false;
         setError(null);
         setStepIndex((index) => Math.max(index - 1, 0));
-    };
+        return true;
+    }, [isSaving, stepIndex]);
 
     return {
         steps,

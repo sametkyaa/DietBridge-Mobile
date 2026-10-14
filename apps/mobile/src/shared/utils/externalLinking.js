@@ -1,4 +1,5 @@
-import { Alert, Linking } from 'react-native';
+import { Alert } from './errorAlert';
+import { Linking } from 'react-native';
 import {
   SUPPORT_MAILTO_URL,
   openExternalTarget,

@@ -1,3 +1,4 @@
+import { formatUserError } from '../../utils/userError.cjs';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, radius, spacing, typography } from '../../theme';
@@ -47,7 +48,7 @@ export function AppInput({
           editable={editable}
           multiline={multiline}
           accessibilityLabel={accessibilityLabel || label}
-          accessibilityHint={accessibilityHint || error || hint}
+          accessibilityHint={accessibilityHint || (error ? formatUserError(error) : hint)}
           accessibilityState={{
             ...accessibilityState,
             disabled: !editable || accessibilityState?.disabled,
@@ -67,7 +68,7 @@ export function AppInput({
       </View>
       {error ? (
         <Text style={styles.error} accessibilityLiveRegion="polite">
-          {error}
+          {formatUserError(error)}
         </Text>
       ) : hint ? (
         <Text style={styles.hint}>{hint}</Text>

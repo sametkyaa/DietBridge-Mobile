@@ -1,5 +1,6 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import React, { useMemo } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppCard, AppSkeleton, ErrorState, InlineAlert, ScreenHeader } from '../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../shared/theme';
