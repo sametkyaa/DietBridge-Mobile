@@ -1,5 +1,6 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
+
 import { useFocusEffect } from '@react-navigation/native';
 import { getAnalyticsOverview, getMeasurementHistory, getWaterGoalLiters, saveAnalyticsWeight, saveBodyMeasurements } from '../services/analyticsService';
 import { useDietitianConnection } from '../../dietitianConnection/context/DietitianConnectionContext';

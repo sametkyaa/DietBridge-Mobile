@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { updatePassword } from '../services/authService';
+import { assertNewPassword, formatUserError } from '../../../shared/utils/userError.cjs';
 
 const EMPTY_PASSWORD_MESSAGE = 'Lütfen yeni şifrenizi girin.';
 const EMPTY_CONFIRMATION_MESSAGE = 'Lütfen yeni şifrenizi tekrar girin.';
@@ -49,13 +50,15 @@ export const useResetPasswordViewModel = ({ enabled = true, onSuccess } = {}) =>
             setErrorMessage(PASSWORD_MISMATCH_MESSAGE);
             return;
         }
+        try { assertNewPassword(newPassword); }
+        catch (failure) { setErrorMessage(formatUserError(failure)); return; }
 
         setLoading(true);
         try {
             const result = await updatePassword(newPassword);
 
             if (!result?.ok) {
-                setErrorMessage(result?.message || GENERIC_ERROR_MESSAGE);
+                setErrorMessage(formatUserError(result, 'AUTH_PASSWORD_UPDATE_FAILED'));
                 return;
             }
 

@@ -1,5 +1,6 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import React from 'react';
-import { Alert, Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppInput, Icon, InlineAlert } from '../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
 import DietitianConnectionRequestCard from '../../dietitianConnection/components/DietitianConnectionRequestCard';

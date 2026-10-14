@@ -1,5 +1,6 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import { useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+
 import {
     ACCOUNT_DELETION_CLEANUP_ERROR_MESSAGE,
     ACCOUNT_DELETION_PENDING_ERROR_MESSAGE,
@@ -20,6 +21,7 @@ import { ACCOUNT_DELETION_PHASES } from '../services/accountDeletionStateStore';
 import { LEGAL_ACCEPTANCE_MESSAGE, assertLegalAcceptance } from '../utils/legalAcceptancePolicy.cjs';
 import { EMAIL_NOT_CONFIRMED_MESSAGE } from '../utils/emailConfirmationPolicy.cjs';
 import { HEALTH_CONSENT_UI_ENABLED } from '../../healthConsent/services/healthConsentService';
+import { assertEmail, assertNewPassword, assertRegistrationHealthConsent, createUserError, formatUserError, getUserError } from '../../../shared/utils/userError.cjs';
 
 const KNOWN_AUTH_MESSAGES = [
     EMAIL_NOT_CONFIRMED_MESSAGE,
@@ -47,6 +49,9 @@ export const useAuthViewModel = () => {
     const [healthStorageAccepted, setHealthStorageAccepted] = useState(false);
     const [healthSharingAccepted, setHealthSharingAccepted] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [fieldErrors, setFieldErrors] = useState({});
+    const authLockRef = useRef(false);
+    useEffect(() => { setFieldErrors({}); }, [mode]);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
     const [hasPendingAccountDeletion, setHasPendingAccountDeletion] = useState(false);
@@ -112,20 +117,19 @@ export const useAuthViewModel = () => {
             return error.message;
         }
 
-        return GENERIC_AUTH_ERROR_MESSAGE;
+        return formatUserError(error, isSignIn ? 'AUTH_LOGIN_FAILED' : 'AUTH_SIGNUP_FAILED');
     };
 
     const handleAuth = async () => {
-        if (loading) return;
-        if (!email || !password) {
-            Alert.alert('Hata', 'Lütfen tüm alanları doldurun.');
-            return;
-        }
-
+        if (loading || authLockRef.current) return;
+        authLockRef.current = true;
+        setFieldErrors({});
         setLoading(true);
         try {
+            assertEmail(email);
+            if (!password) throw createUserError('AUTH_PASSWORD_REQUIRED');
             if (isSignIn) {
-                const result = await signIn(email, password);
+                const result = await signIn(email.trim(), password);
                 if (result?.accountDeletionCompleted) {
                     setHasPendingAccountDeletion(false);
                     setAccountDeletionCleanupAvailable(false);
@@ -145,14 +149,12 @@ export const useAuthViewModel = () => {
                 }
             } else {
                 if (!fullName.trim()) {
-                    Alert.alert('Hata', 'Lütfen ad soyad alanını doldurun.');
-                    setLoading(false);
-                    return;
+                    throw createUserError('AUTH_NAME_REQUIRED');
                 }
+                assertNewPassword(password);
+                if (!confirmPassword) throw createUserError('AUTH_PASSWORD_CONFIRM_REQUIRED');
                 if (password !== confirmPassword) {
-                    Alert.alert('Hata', 'Şifreler eşleşmiyor.');
-                    setLoading(false);
-                    return;
+                    throw createUserError('AUTH_PASSWORD_MISMATCH');
                 }
                 const acceptance = {
                     termsAccepted, kvkkAcknowledged,
@@ -161,7 +163,8 @@ export const useAuthViewModel = () => {
                     } : {}),
                 };
                 assertLegalAcceptance(acceptance);
-                await signUp(email, password, fullName, phone, acceptance);
+                assertRegistrationHealthConsent(acceptance.healthConsent, HEALTH_CONSENT_UI_ENABLED);
+                await signUp(email.trim(), password, fullName, phone, acceptance);
                 setTermsAccepted(false);
                 setKvkkAcknowledged(false);
                 setHealthStorageAccepted(false);
@@ -170,8 +173,18 @@ export const useAuthViewModel = () => {
                 setMode('signin');
             }
         } catch (error) {
-            Alert.alert('Hata', getDisplayErrorMessage(error));
+            const explanation = getUserError(error);
+            const fieldByCode = {
+                'DB-AUTH-EMAIL-REQUIRED': 'email', 'DB-AUTH-EMAIL-INVALID': 'email', 'DB-AUTH-EMAIL-EXISTS': 'email',
+                'DB-AUTH-NAME-REQUIRED': 'fullName', 'DB-AUTH-PASSWORD-REQUIRED': 'password', 'DB-AUTH-PASSWORD-SHORT': 'password',
+                'DB-AUTH-PASSWORD-WEAK': 'password', 'DB-AUTH-PASSWORD-CHARACTERS': 'password', 'DB-AUTH-PASSWORD-LEAKED': 'password',
+                'DB-AUTH-PASSWORD-CONFIRM-REQUIRED': 'confirmPassword', 'DB-AUTH-PASSWORD-MISMATCH': 'confirmPassword',
+            };
+            const field = fieldByCode[explanation.code];
+            if (field) setFieldErrors({ [field]: formatUserError(error) });
+            else Alert.alert('Hata', getDisplayErrorMessage(error));
         } finally {
+            authLockRef.current = false;
             setLoading(false);
         }
     };
@@ -204,15 +217,15 @@ export const useAuthViewModel = () => {
         mode,
         setMode,
         email,
-        setEmail,
+        setEmail: (value) => { setEmail(value); setFieldErrors((current) => ({ ...current, email: null })); },
         password,
-        setPassword,
+        setPassword: (value) => { setPassword(value); setFieldErrors((current) => ({ ...current, password: null, confirmPassword: null })); },
         fullName,
-        setFullName,
+        setFullName: (value) => { setFullName(value); setFieldErrors((current) => ({ ...current, fullName: null })); },
         phone,
         setPhone,
         confirmPassword,
-        setConfirmPassword,
+        setConfirmPassword: (value) => { setConfirmPassword(value); setFieldErrors((current) => ({ ...current, confirmPassword: null })); },
         termsAccepted,
         setTermsAccepted,
         kvkkAcknowledged,
@@ -226,6 +239,7 @@ export const useAuthViewModel = () => {
         },
         setHealthSharingAccepted,
         loading,
+        fieldErrors,
         isPasswordVisible,
         togglePasswordVisibility,
         isConfirmPasswordVisible,

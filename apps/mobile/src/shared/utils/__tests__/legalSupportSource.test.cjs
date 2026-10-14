@@ -12,7 +12,7 @@ test('registration preserves form actions and exposes legal acceptance with KVKK
     const fields = read('apps/mobile/src/features/auth/components/LegalAcceptanceFields.js');
     assert.match(fields, /LegalLinks includeKvkk/);
     assert.match(fields, /accessibilityRole="checkbox"/);
-    assert.match(registerView, /disabled=\{!termsAccepted \|\| !kvkkAcknowledged\}/);
+    assert.match(registerView, /disabled=\{!termsAccepted \|\| !kvkkAcknowledged \|\| \(healthConsentVisible && \(!healthStorageAccepted \|\| !healthSharingAccepted\)\)\}/);
     assert.match(registerView, /Kayıt ol/);
     assert.match(registerView, /onSubmit/);
     assert.match(registerView, /onLogin/);

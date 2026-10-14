@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, Linking, StatusBar, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AppErrorHost from './apps/mobile/src/shared/components/ui/AppErrorHost';
 import {
   useFonts,
   Figtree_300Light,
@@ -382,6 +383,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      <AppErrorHost scopeKey={authState.user?.id || 'anonymous'} />
       <PushLifecycleController session={canOpenClientRoutes ? authState.session : null} />
       <MealsProvider userId={canOpenClientRoutes ? authState.user?.id : null}>
         <DietitianConnectionProvider userId={canOpenClientRoutes ? authState.user?.id : null}>

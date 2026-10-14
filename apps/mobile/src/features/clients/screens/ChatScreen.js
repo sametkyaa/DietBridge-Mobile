@@ -1,7 +1,7 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,

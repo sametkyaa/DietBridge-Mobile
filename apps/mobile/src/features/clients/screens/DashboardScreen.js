@@ -1,5 +1,6 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import React, { useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, Alert, findNodeHandle, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, findNodeHandle, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography } from '../../../shared/theme';

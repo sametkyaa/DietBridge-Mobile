@@ -1,7 +1,8 @@
+import { formatUserError } from '../../../shared/utils/userError.cjs';
+import { Alert } from '../../../shared/utils/errorAlert';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     Keyboard,
     KeyboardAvoidingView,
     Modal,
@@ -247,7 +248,7 @@ const MultiSelectProfileModal = ({
 
                                     {!!errorMessage && (
                                         <Text style={styles.errorText} accessibilityRole="alert">
-                                            {errorMessage}
+                                            {formatUserError(errorMessage)}
                                         </Text>
                                     )}
                                 </ScrollView>

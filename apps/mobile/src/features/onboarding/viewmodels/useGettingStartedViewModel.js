@@ -1,6 +1,7 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { Alert, AppState, Linking } from 'react-native';
+import { AppState, Linking } from 'react-native';
 import { getClientProfile } from '../../clients/services/clientService';
 import { hasRecordedWater } from '../../clients/services/dailyLogService';
 import { enablePushNotifications } from '../../push/services/pushLifecycleService';

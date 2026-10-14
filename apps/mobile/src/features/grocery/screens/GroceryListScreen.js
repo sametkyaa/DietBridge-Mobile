@@ -1,5 +1,6 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import React from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useReducedMotion } from '../../../shared/hooks/useReducedMotion';
 import { animateNextLayout } from '../../../shared/utils/layoutMotion';

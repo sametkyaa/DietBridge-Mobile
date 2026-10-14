@@ -1,3 +1,4 @@
+import { formatUserError } from '../../../shared/utils/userError.cjs';
 import React, { useEffect, useMemo } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CHAT_MESSAGE_MAX_LENGTH } from '../constants/chatConstants';
@@ -78,7 +79,7 @@ export default function ChatComposer({
 
     return (
         <View style={styles.root}>
-            {mediaUpload?.error ? <Text style={styles.sendError} accessibilityLiveRegion="polite">{mediaUpload.error}</Text> : null}
+            {mediaUpload?.error ? <Text style={styles.sendError} accessibilityLiveRegion="polite">{formatUserError(mediaUpload.error)}</Text> : null}
             {mediaSelected ? <View style={styles.previewRow}>
                 <View style={styles.previewMeta}>
                     <Text style={styles.previewLabel}>{mediaUpload.selection.descriptor.fileName}</Text>
@@ -88,7 +89,7 @@ export default function ChatComposer({
                     </Pressable>
                 </View>
             </View> : null}
-            {sendError ? <Text style={styles.sendError} accessibilityLiveRegion="polite">{sendError}</Text> : null}
+            {sendError ? <Text style={styles.sendError} accessibilityLiveRegion="polite">{formatUserError(sendError)}</Text> : null}
             {picker.disabledMessage ? (
                 <Text style={styles.pickerHint} accessibilityLiveRegion="polite">{picker.disabledMessage}</Text>
             ) : null}
@@ -112,7 +113,7 @@ export default function ChatComposer({
                         ) : (
                             <Text style={styles.previewLabel}>Görsel gönderilecek</Text>
                         )}
-                        {uploadErrorMessage ? <Text style={styles.uploadError}>{uploadErrorMessage}</Text> : null}
+                        {uploadErrorMessage ? <Text style={styles.uploadError}>{formatUserError(uploadErrorMessage)}</Text> : null}
                         <View style={styles.previewActions}>
                             {showRetry ? (
                                 <Pressable

@@ -1,5 +1,6 @@
-import React, { useCallback } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useRef } from 'react';
+import { ActivityIndicator, BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton, ChoiceChip, ErrorState, Icon } from '../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../shared/theme';
@@ -34,7 +35,9 @@ function ChipGroup({ title, children }) {
 
 export default function OnboardingSetupScreen({ navigation, route, userId }) {
     const mode = route?.params?.mode === 'profile' ? 'profile' : 'initial';
+    const exitRequestedRef = useRef(false);
     const handleExit = useCallback(() => {
+        exitRequestedRef.current = true;
         if (mode === 'profile' && navigation.canGoBack()) {
             navigation.goBack();
             return;
@@ -42,6 +45,18 @@ export default function OnboardingSetupScreen({ navigation, route, userId }) {
         navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
     }, [mode, navigation]);
     const vm = useOnboardingSetupViewModel({ userId, mode, onExit: handleExit });
+    const { back, isSaving, stepIndex } = vm;
+    useFocusEffect(useCallback(() => {
+        exitRequestedRef.current = false;
+        const subscription = BackHandler.addEventListener('hardwareBackPress', back);
+        const removeListener = navigation.addListener('beforeRemove', (event) => {
+            if (!exitRequestedRef.current && (isSaving || stepIndex > 0)) {
+                event.preventDefault();
+                back();
+            }
+        });
+        return () => { subscription.remove(); removeListener(); };
+    }, [back, isSaving, navigation, stepIndex]));
     const isConnectStep = vm.step === ONBOARDING_STEPS.CONNECT;
     const questionNumber = vm.steps.filter((item) => item !== ONBOARDING_STEPS.CONNECT).indexOf(vm.step) + 1;
     const questionCount = vm.steps.filter((item) => item !== ONBOARDING_STEPS.CONNECT).length;
@@ -50,7 +65,7 @@ export default function OnboardingSetupScreen({ navigation, route, userId }) {
         <View style={styles.header}>
             <View style={styles.headerRow}>
                 {vm.stepIndex > 0 ? (
-                    <Pressable onPress={vm.back} hitSlop={8} accessibilityRole="button" accessibilityLabel="Önceki adım" style={styles.backButton}>
+                    <Pressable onPress={vm.back} disabled={vm.isSaving} hitSlop={8} accessibilityRole="button" accessibilityLabel="Önceki adım" accessibilityState={{ disabled: vm.isSaving }} style={styles.backButton}>
                         <Icon name="back" size={20} color={colors.textPrimary} />
                     </Pressable>
                 ) : (

@@ -20,7 +20,7 @@ export default function RegistrationHealthConsentFields({ storage, sharing, onSt
   return (
     <View style={styles.root}>
       <Text style={styles.title}>Sağlık verisi tercihlerin</Text>
-      <Text style={styles.label}>Bu seçimler KVKK bilgilendirmesinden ayrıdır ve isteğe bağlıdır. Tercihlerini daha sonra Ayarlar’dan değiştirebilirsin. Rıza vermeden hesap oluşturabilir, sağlık bilgisi adımlarını atlayabilirsin.</Text>
+      <Text style={styles.label}>Hesabını oluşturmak ve devam etmek için aşağıdaki iki sağlık onayını da vermelisin. Bunlar KVKK bilgilendirmesinden ayrıdır. Tercihlerini daha sonra Ayarlar’dan değiştirebilir veya rızanı geri alabilirsin.</Text>
       <Choice label={REGISTRATION_HEALTH_DOCUMENT.processingText} checked={storage} disabled={disabled} onChange={onStorageChange} />
       <Choice label={REGISTRATION_HEALTH_DOCUMENT.sharingText} checked={sharing} disabled={disabled || !storage} onChange={onSharingChange} />
     </View>

@@ -1,5 +1,6 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import React from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppInput, Icon, InlineAlert } from '../../../shared/components/ui';
 import { FadeUp, ShakeView } from '../../../shared/components/motion';
 import { colors, radius, spacing, typography } from '../../../shared/theme';

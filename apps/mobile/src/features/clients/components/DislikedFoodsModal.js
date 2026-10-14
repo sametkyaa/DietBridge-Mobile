@@ -1,5 +1,6 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppButton, AppInput, BottomSheetView, InlineAlert } from '../../../shared/components/ui';
 import { colors, radius, spacing, typography } from '../../../shared/theme';

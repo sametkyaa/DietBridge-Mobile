@@ -1,6 +1,7 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { Alert, AppState } from 'react-native';
+import { AppState } from 'react-native';
 import { useMeals } from '../../meals/context/MealsContext';
 import { getClientProfile, getDailyQuote } from '../services/clientService';
 import { getDailyLog, upsertWaterIntake, upsertDailyWeight } from '../services/dailyLogService';

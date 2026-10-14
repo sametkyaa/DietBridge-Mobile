@@ -7,6 +7,7 @@ import PasswordToggle from './PasswordToggle';
 import BrandMark from './BrandMark';
 
 export default function LoginView({
+  errors = {},
   email,
   password,
   isPasswordVisible,
@@ -66,6 +67,7 @@ export default function LoginView({
           <AppInput
             label="E-posta"
             value={email}
+            error={errors.email}
             onChangeText={onEmailChange}
             editable={!loading}
             keyboardType="email-address"
@@ -78,6 +80,7 @@ export default function LoginView({
           <AppInput
             label="Şifre"
             value={password}
+            error={errors.password}
             onChangeText={onPasswordChange}
             editable={!loading}
             secureTextEntry={!isPasswordVisible}

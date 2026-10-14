@@ -11,7 +11,11 @@ test('health review discovered after legal acceptance is displayed and legal rec
   let legalWrites = 0;
   let accepted = 0;
   let needsReview = true;
+  let receipt = { enabled: true, updated_at: '2026-10-15T10:00:00Z', storage_granted: true, sharing_granted: false };
   const context = {
+    ...require('../../../../shared/utils/userError.cjs'),
+    HEALTH_CONSENT_UI_ENABLED: true,
+    getHealthConsent: async () => receipt,
     useState: (initial) => {
       const slot = index++;
       if (!(slot in values)) values[slot] = initial;
@@ -44,6 +48,10 @@ test('health review discovered after legal acceptance is displayed and legal rec
   assert.equal(accepted, 0);
   needsReview = false;
   await pending.submit();
+  assert.equal(accepted, 0, 'A review flag alone cannot bypass the two stored health choices');
+  assert.match(render().error, /DB-HEALTH-SHARING-REQUIRED/);
+  receipt = { ...receipt, sharing_granted: true };
+  await render().submit();
   assert.equal(legalWrites, 1);
   assert.equal(accepted, 1);
 });

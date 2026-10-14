@@ -8,8 +8,10 @@ import { FadeUp } from '../../../shared/components/motion';
 import { colors, spacing, typography } from '../../../shared/theme';
 import PasswordToggle from './PasswordToggle';
 import BrandMark from './BrandMark';
+import { PASSWORD_RULES_MESSAGE } from '../../../shared/utils/userError.cjs';
 
 export default function RegisterView({
+  errors = {},
   fullName,
   phone,
   email,
@@ -60,6 +62,7 @@ export default function RegisterView({
           <AppInput
             label="Ad soyad"
             value={fullName}
+            error={errors.fullName}
             onChangeText={onFullNameChange}
             editable={!loading}
             autoCapitalize="words"
@@ -81,6 +84,7 @@ export default function RegisterView({
           <AppInput
             label="E-posta"
             value={email}
+            error={errors.email}
             onChangeText={onEmailChange}
             editable={!loading}
             keyboardType="email-address"
@@ -92,7 +96,9 @@ export default function RegisterView({
           />
           <AppInput
             label="Şifre"
+            hint={PASSWORD_RULES_MESSAGE}
             value={password}
+            error={errors.password}
             onChangeText={onPasswordChange}
             editable={!loading}
             secureTextEntry={!isPasswordVisible}
@@ -106,6 +112,7 @@ export default function RegisterView({
           <AppInput
             label="Şifre doğrulama"
             value={confirmPassword}
+            error={errors.confirmPassword}
             onChangeText={onConfirmPasswordChange}
             editable={!loading}
             secureTextEntry={!isConfirmPasswordVisible}
@@ -153,7 +160,7 @@ export default function RegisterView({
           label={loading ? 'Hesap oluşturuluyor…' : 'Kayıt ol'}
           loading={loading}
           onPress={onSubmit}
-          disabled={!termsAccepted || !kvkkAcknowledged}
+          disabled={!termsAccepted || !kvkkAcknowledged || (healthConsentVisible && (!healthStorageAccepted || !healthSharingAccepted))}
         />
         <View style={styles.footer}>
           <Text style={styles.footerText}>Zaten hesabın var mı?</Text>

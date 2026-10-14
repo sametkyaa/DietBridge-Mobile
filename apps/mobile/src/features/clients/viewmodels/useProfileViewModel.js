@@ -1,5 +1,6 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { Alert } from 'react-native';
+
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
 import {

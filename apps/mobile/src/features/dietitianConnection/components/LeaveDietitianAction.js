@@ -1,5 +1,6 @@
+import { Alert } from '../../../shared/utils/errorAlert';
 import React from 'react';
-import { Alert } from 'react-native';
+
 import { AppButton, AppCard, InlineAlert } from '../../../shared/components/ui';
 import { useInviteProfileActions } from '../viewmodels/useInviteProfileActions';
 
