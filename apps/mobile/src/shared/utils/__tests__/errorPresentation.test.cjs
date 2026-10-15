@@ -41,7 +41,7 @@ function renderModule(relative, dependencies = {}) {
   return module.exports;
 }
 
-test('branded error modal renders safe explanation, accessible code and keeps retry/cancel actions', () => {
+test('branded error modal renders only safe explanation and keeps retry/cancel actions', () => {
   const presenter = createErrorPresenter();
   let current;
   let retries = 0;
@@ -53,7 +53,7 @@ test('branded error modal renders safe explanation, accessible code and keeps re
   assert.equal(tree.type, 'Modal');
   assert.equal(tree.props.visible, true);
   assert.equal(tree.props.transparent, true);
-  assert.match(text(tree), /DB-NETWORK-UNAVAILABLE/);
+  assert.doesNotMatch(text(tree), /Hata kodu:|DB-[A-Z0-9-]+/);
   assert.match(text(tree), /İnternet bağlantını kontrol/);
   assert.equal(elements(tree, 'SafeAreaView')[0].props.edges.length, 4);
   const buttons = elements(tree, 'AppButton');
@@ -62,15 +62,15 @@ test('branded error modal renders safe explanation, accessible code and keeps re
   assert.equal(retries, 1);
 });
 
-test('page error state uses a DietBridge card, selectable code and original retry callback', () => {
+test('page error state uses a DietBridge card, safe explanation and original retry callback', () => {
   const { ErrorState } = renderModule('shared/components/ui/ErrorState.js');
   let retry = 0;
   const tree = ErrorState({ title: 'Plan yüklenemedi', description: 'private database response', onRetry: () => { retry += 1; } });
   assert.match(text(tree), /Plan yüklenemedi/);
-  assert.match(text(tree), /DB-LOAD-FAILED/);
+  assert.match(text(tree), /Bilgiler yüklenemedi/);
+  assert.doesNotMatch(text(tree), /Hata kodu:|DB-[A-Z0-9-]+/);
   assert.doesNotMatch(text(tree), /private database/);
   assert(elements(tree, 'View').some(x => x.props.style?.borderRadius === 22 && x.props.style?.backgroundColor === '#FFFFFF'));
-  assert(elements(tree, 'Text').some(x => x.props.selectable));
   elements(tree, 'AppButton')[0].props.onPress();
   assert.equal(retry, 1);
 });
@@ -107,8 +107,26 @@ test('field validation stays beside the input and is available to a screen reade
   const { AppInput } = renderModule('shared/components/ui/AppInput.js');
   const tree = AppInput({ label: 'Şifre', value: 'abc', error: getUserError({ code: 'AUTH_PASSWORD_SHORT' }), hint: 'Şifre kuralları' });
   assert.match(text(tree), /en az 6 karakter/);
-  assert.match(elements(tree, 'TextInput')[0].props.accessibilityHint, /DB-AUTH-PASSWORD-SHORT/);
+  assert.equal(elements(tree, 'TextInput')[0].props.accessibilityHint, 'Şifren en az 6 karakter olmalı.');
+  assert.doesNotMatch(text(tree), /Hata kodu:|DB-[A-Z0-9-]+/);
   assert.equal(elements(tree, 'TextInput')[0].props.value, 'abc');
+});
+
+test('inputs and inline warnings show explanations without codes, including previously formatted errors', () => {
+  const { AppInput } = renderModule('shared/components/ui/AppInput.js');
+  const { InlineAlert } = renderModule('shared/components/ui/InlineAlert.js');
+  for (const code of ['AUTH_EMAIL_REQUIRED', 'AUTH_EMAIL_INVALID', 'AUTH_PASSWORD_MISMATCH', 'NETWORK_UNAVAILABLE', 'HEALTH_STORAGE_REQUIRED']) {
+    const error = getUserError({ code });
+    const previousFormat = `${error.message}\nHata kodu: ${error.code}`;
+    const input = AppInput({ label: 'Bilgi', value: '', error: previousFormat });
+    assert.equal(elements(input, 'TextInput')[0].props.accessibilityHint, error.message);
+    assert.doesNotMatch(text(input), /Hata kodu:|DB-[A-Z0-9-]+/);
+    for (const variant of ['error', 'warning']) {
+      const alert = InlineAlert({ variant, message: previousFormat });
+      assert.equal(text(alert), error.message);
+      assert.equal(alert.props.accessibilityRole, 'alert');
+    }
+  }
 });
 
 test('error adapter keeps successful and destructive confirmation alerts native while failures use the branded host', () => {

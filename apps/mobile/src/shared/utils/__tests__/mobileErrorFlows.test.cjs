@@ -70,7 +70,7 @@ test('short and mismatched registration passwords stay on their field without re
     await h.fill(input).handleAuth();
     assert.equal(h.writes, 0);
     assert.equal(h.alerts.length, 0);
-    assert.match(h.render().fieldErrors[field], new RegExp(code));
+    assert.equal(h.render().fieldErrors[field], userError.getUserError({ code }).message);
     h.render().setPassword('Correct123!');
     assert.equal(h.render().fieldErrors.password, null);
     assert.equal(h.render().fieldErrors.confirmPassword, null);
@@ -82,8 +82,28 @@ test('unchecked startup health choices cannot create an account even when submit
     const h = authHarness();
     await h.fill(input).handleAuth();
     assert.equal(h.writes, 0);
-    assert.match(h.alerts[0][1], /DB-HEALTH-(STORAGE|SHARING)-REQUIRED/);
+    assert.equal(h.alerts[0][1], userError.getUserError({ code: input.storage ? 'HEALTH_SHARING_REQUIRED' : 'HEALTH_STORAGE_REQUIRED' }).message);
   }
+});
+
+test('registration email validation explains the fix without exposing a code or creating an account', async () => {
+  for (const [email, expected] of [['', 'E-posta adresini gir.'], ['a@example', 'Geçerli bir e-posta adresi gir. Örnek: ad@ornek.com']]) {
+    const h = authHarness();
+    h.fill().setEmail(email);
+    await h.render().handleAuth();
+    assert.equal(h.writes, 0);
+    assert.equal(h.alerts.length, 0);
+    assert.equal(h.render().fieldErrors.email, expected);
+    h.render().setEmail('valid@example.test');
+    assert.equal(h.render().fieldErrors.email, null);
+  }
+});
+
+test('registration backend email failures keep the actionable message on the email field', async () => {
+  const h = authHarness({ signup: async () => { throw { code: 'email_exists', message: 'private backend details' }; } });
+  await h.fill().handleAuth();
+  assert.equal(h.render().fieldErrors.email, 'Bu e-posta adresiyle zaten hesap var. Giriş yapabilir veya şifreni sıfırlayabilirsin.');
+  assert.equal(h.alerts.length, 0);
 });
 
 test('valid registration sends explicit choices and a double tap cannot submit twice', async () => {
@@ -105,7 +125,7 @@ test('existing short login passwords remain valid inputs and backend network fai
   h.render().setEmail('fixture@example.test'); h.render().setPassword('old');
   await h.render().handleAuth();
   assert.equal(h.logins, 1);
-  assert.match(h.alerts[0][1], /DB-NETWORK-UNAVAILABLE/);
+  assert.equal(h.alerts[0][1], userError.getUserError({ code: 'NETWORK_UNAVAILABLE' }).message);
 });
 
 test('backend password minimum is displayed accurately in the registration field', async () => {

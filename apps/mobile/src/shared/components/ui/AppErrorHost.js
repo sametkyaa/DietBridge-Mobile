@@ -21,7 +21,6 @@ export default function AppErrorHost({ scopeKey }) {
             <View style={styles.icon}><Icon name="alert" color={colors.errorDark} size={28} /></View>
             <Text style={styles.title} accessibilityRole="header">{current.title === 'Uyarı' ? 'Bilgini kontrol et' : current.title === 'Hata' || current.title === 'Bilgi' ? 'İşlem tamamlanamadı' : current.title}</Text>
             <Text style={styles.message} accessibilityRole="alert" accessibilityLiveRegion="polite">{current.explanation.message}</Text>
-            <View style={styles.code}><Text selectable style={styles.codeText}>Hata kodu: {current.explanation.code}</Text></View>
           </ScrollView>
           <View style={styles.actions}>{current.actions.map((action, index) => (
             <AppButton key={`${current.id}:${index}`} label={action.text || 'Tamam'}
@@ -40,7 +39,5 @@ const styles = StyleSheet.create({
   icon: { width: 56, height: 56, borderRadius: radius.round, backgroundColor: colors.errorSoft, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.screenTitle, color: colors.textPrimary },
   message: { ...typography.body, color: colors.textSecondary },
-  code: { borderRadius: radius.control, paddingHorizontal: spacing.x3, paddingVertical: spacing.x2, backgroundColor: colors.background },
-  codeText: { ...typography.caption, color: colors.textSecondary },
   actions: { padding: spacing.x5, paddingTop: 0, gap: spacing.x2 },
 });
