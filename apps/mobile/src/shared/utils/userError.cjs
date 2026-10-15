@@ -130,8 +130,8 @@ function getUserError(error, fallback = 'GENERAL_FAILED') {
   return catalog.get(fallback) ?? catalog.get('GENERAL_FAILED');
 }
 const formatUserError = (error, fallback) => {
-  const entry = getUserError(error, fallback);
-  return `${entry.message}\nHata kodu: ${entry.code}`;
+  // Codes stay available to internal error handling, never to user-facing copy.
+  return getUserError(error, fallback).message;
 };
 function createUserError(name) {
   const entry = catalog.get(name) ?? catalog.get('GENERAL_FAILED');

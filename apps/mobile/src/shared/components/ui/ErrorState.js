@@ -15,7 +15,6 @@ export function ErrorState({ title, description, onRetry, retryLabel = 'Tekrar d
         </View>
         <Text style={styles.title} accessibilityRole="header">{title || 'Bilgiler yüklenemedi'}</Text>
         <Text style={styles.description}>{explanation.message}</Text>
-        <View style={styles.code}><Text selectable style={styles.codeText}>Hata kodu: {explanation.code}</Text></View>
         {onRetry ? (
           <AppButton
             label={retryLabel}
@@ -58,8 +57,6 @@ const styles = StyleSheet.create({
   },
   title: { ...typography.cardTitle, color: colors.textPrimary, textAlign: 'center' },
   description: { ...typography.supporting, color: colors.textSecondary, textAlign: 'center' },
-  code: { backgroundColor: colors.background, borderRadius: radius.control, paddingHorizontal: spacing.x3, paddingVertical: spacing.x2, marginTop: spacing.x2 },
-  codeText: { ...typography.caption, color: colors.textSecondary, textAlign: 'center' },
   action: { marginTop: spacing.x3, alignSelf: 'stretch' },
 });
 

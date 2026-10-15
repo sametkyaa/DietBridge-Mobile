@@ -49,7 +49,7 @@ test('health review discovered after legal acceptance is displayed and legal rec
   needsReview = false;
   await pending.submit();
   assert.equal(accepted, 0, 'A review flag alone cannot bypass the two stored health choices');
-  assert.match(render().error, /DB-HEALTH-SHARING-REQUIRED/);
+  assert.equal(render().error, 'Devam etmek için sağlık verilerinin bağlı diyetisyeninle paylaşılması onayını ver.');
   receipt = { ...receipt, sharing_granted: true };
   await render().submit();
   assert.equal(legalWrites, 1);

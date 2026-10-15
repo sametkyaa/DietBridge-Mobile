@@ -9,6 +9,8 @@ test('every reviewed message has a unique stable code and round-trips without du
   assert.equal(new Set(ERROR_CATALOG.map(x => x.code)).size, ERROR_CATALOG.length);
   for (const entry of ERROR_CATALOG) {
     assert.match(entry.code, /^DB-[A-Z0-9-]+$/);
+    assert.equal(formatUserError(entry), entry.message);
+    assert.doesNotMatch(formatUserError(entry), /Hata kodu:|DB-[A-Z0-9-]+/);
     assert.equal(formatUserError(formatUserError(entry)), formatUserError(entry));
   }
   for (const entry of ERROR_MESSAGES) assert.deepEqual(getUserError(entry.message), entry);
@@ -18,6 +20,13 @@ test('password validation distinguishes missing and short passwords and never ch
   for (const password of [undefined, '', '      ']) assert.throws(() => assertNewPassword(password), { code: 'AUTH_PASSWORD_REQUIRED' });
   for (const password of ['a', '12345']) assert.throws(() => assertNewPassword(password), { code: 'AUTH_PASSWORD_SHORT' });
   for (const password of ['123456', ' şifre ', 'LongerSafe1!']) assert.doesNotThrow(() => assertNewPassword(password));
+});
+
+test('previously formatted messages lose their display code while preserving the reviewed explanation', () => {
+  for (const entry of ERROR_CATALOG) {
+    assert.equal(formatUserError(`${entry.message}\nHata kodu: ${entry.code}`), entry.message);
+  }
+  assert.equal(formatUserError('Şifren en az 8 karakter olmalı.\nHata kodu: DB-AUTH-PASSWORD-SHORT'), 'Şifren en az 8 karakter olmalı.');
 });
 
 test('backend weak password reasons and a stronger backend minimum remain specific after service/UI formatting', () => {
@@ -45,7 +54,7 @@ test('email, confirmation, session, network, timeout and rate failures have dist
 test('unknown errors and forged formatted messages cannot expose server details or personal data', () => {
   for (const error of [null, { message: 'SQL profiles account@example.test token=private' }, 'Account private\nHata kodu: DB-AUTH-EMAIL-REQUIRED', { code: 'validation_failed', message: 'private' }]) {
     const result = formatUserError(error, 'LOAD_FAILED');
-    assert.match(result, /DB-LOAD-FAILED/);
+    assert.equal(result, getUserError(null, 'LOAD_FAILED').message);
     assert.doesNotMatch(result, /SQL|private|account@/);
   }
 });
