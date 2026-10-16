@@ -2,7 +2,7 @@ import { Alert } from '../../../shared/utils/errorAlert';
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppCard, AppSkeleton, ErrorState, InlineAlert, ScreenHeader } from '../../../shared/components/ui';
+import { AppButton, AppCard, AppSkeleton, ErrorState, InlineAlert, ScreenHeader } from '../../../shared/components/ui';
 import { colors, spacing, typography } from '../../../shared/theme';
 import {
     AvatarPreviewSheet,
@@ -37,7 +37,11 @@ const FIELD_META = {
 
 const display = (value, unit = '') => (value === null || value === undefined || value === '' ? '' : `${value}${unit ? ` ${unit}` : ''}`);
 
-const ProfileScreen = ({ navigation }) => {
+const ProfileScreen = ({ navigation, route }) => {
+    // In the directory tabs Profile is a tab root: no back button, and the
+    // settings entry that the dashboard menu normally provides sits here.
+    const isTab = route?.params?.asTab === true;
+    const safeAreaEdges = isTab ? ['top', 'left', 'right'] : ['top', 'bottom', 'left', 'right'];
     const insets = useSafeAreaInsets();
     const vm = useProfileViewModel();
     const {
@@ -105,15 +109,19 @@ const ProfileScreen = ({ navigation }) => {
     ];
 
     if (loading) return (
-        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}><View style={styles.loading} accessible accessibilityRole="progressbar" accessibilityLabel="Profil bilgileri yükleniyor" accessibilityState={{ busy: true }}><AppSkeleton width="45%" height={28} animated /><AppSkeleton height={150} animated style={styles.gap} /><AppSkeleton height={220} animated style={styles.gap} /><Text style={styles.loadingText}>Profil bilgileri yükleniyor...</Text></View></SafeAreaView>
+        <SafeAreaView style={styles.safeArea} edges={safeAreaEdges}><View style={styles.loading} accessible accessibilityRole="progressbar" accessibilityLabel="Profil bilgileri yükleniyor" accessibilityState={{ busy: true }}><AppSkeleton width="45%" height={28} animated /><AppSkeleton height={150} animated style={styles.gap} /><AppSkeleton height={220} animated style={styles.gap} /><Text style={styles.loadingText}>Profil bilgileri yükleniyor...</Text></View></SafeAreaView>
     );
     if (error && !profile) return (
-        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}><View style={styles.centered}><AppCard><ErrorState title="Profil yüklenemedi" description="Profil bilgileri yüklenemedi. Lütfen tekrar deneyin." onRetry={retry} /></AppCard></View></SafeAreaView>
+        <SafeAreaView style={styles.safeArea} edges={safeAreaEdges}><View style={styles.centered}><AppCard><ErrorState title="Profil yüklenemedi" description="Profil bilgileri yüklenemedi. Lütfen tekrar deneyin." onRetry={retry} /></AppCard></View></SafeAreaView>
     );
 
     return (
-        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
-            <ScreenHeader onBack={() => navigation.goBack()} style={styles.header} />
+        <SafeAreaView style={styles.safeArea} edges={safeAreaEdges}>
+            <ScreenHeader
+                onBack={isTab ? undefined : () => navigation.goBack()}
+                right={isTab ? <AppButton variant="text" icon="settings" label="Ayarlar" onPress={() => navigation.navigate('Settings')} /> : null}
+                style={styles.header}
+            />
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 {error ? <InlineAlert variant="error" message="Bazı profil bilgileri yüklenemedi. Lütfen tekrar deneyin." /> : null}
                 {successMessage ? <InlineAlert variant="success" message={successMessage} /> : null}
