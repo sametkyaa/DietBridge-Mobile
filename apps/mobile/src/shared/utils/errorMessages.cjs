@@ -151,6 +151,19 @@ const ERROR_MESSAGES = Object.freeze([
   ["DB-APP-003", "Geçerli bir hafta günü bulunamadı."],
   ["DB-APP-004", "1–9999 ml arasında geçerli bir miktar girin."],
   ["DB-APP-005", "Günlük su kaydı geçersiz."],
+  ["DB-DIRECTORY-001", "Aynı anda en fazla 3 diyetisyenle ön görüşme yapabilirsin. Yeni bir diyetisyene yazmak için açık görüşmelerinden birini kapat."],
+  ["DB-DIRECTORY-002", "Bu ön görüşme kapandı. Yeni mesaj gönderilemez."],
+  ["DB-DIRECTORY-003", "Bu diyetisyen şu anda yeni mesaj kabul etmiyor."],
+  ["DB-DIRECTORY-004", "Zaten bir diyetisyene bağlısın. Diyetisyeninle Sohbet sekmesinden konuşabilirsin."],
+  ["DB-DIRECTORY-005", "Kısa sürede çok fazla mesaj gönderdin. Lütfen biraz sonra tekrar dene."],
+  ["DB-DIRECTORY-006", "Mesaj 1 ile 1000 karakter arasında olmalı."],
+  ["DB-DIRECTORY-007", "Bu diyetisyene zaten bağlanma isteği gönderdin."],
+  ["DB-DIRECTORY-008", "Bekleyen bir bağlanma isteğin var. Yeni istek göndermek için önce onu iptal et."],
+  ["DB-DIRECTORY-009", "Zaten bir diyetisyene bağlısın."],
+  ["DB-DIRECTORY-010", "Bu diyetisyen sana zaten bağlantı isteği göndermiş. Diyetisyenler sekmesinden kabul edebilirsin."],
+  ["DB-DIRECTORY-011", "Bu diyetisyen şu anda yeni bağlanma isteği kabul etmiyor."],
+  ["DB-DIRECTORY-012", "Not en fazla 500 karakter olabilir."],
+  ["DB-DIRECTORY-013", "Mesaj en fazla 1000 karakter olabilir."],
 ].map(([code, message]) => Object.freeze({ code, message })));
 
 module.exports = { ERROR_MESSAGES };

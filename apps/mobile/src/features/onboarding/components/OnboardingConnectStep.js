@@ -125,7 +125,19 @@ function OnboardingConnectStep({ userId, onContinue }) {
             title="Diyetisyenine bağlan"
             description="Diyetisyeninin sana verdiği kodu gir. Planın ve sohbet bağlantıdan sonra açılır."
             error={invite.message}
-            footer={<AppButton label="Kodu kontrol et" onPress={invite.preview} loading={invite.busy} disabled={!invite.code.trim()} />}
+            footer={(
+                <>
+                    <AppButton label="Kodu kontrol et" onPress={invite.preview} loading={invite.busy} disabled={!invite.code.trim()} />
+                    <AppButton
+                        label="Diyetisyenim yok, diyetisyen bul"
+                        variant="text"
+                        style={styles.centered}
+                        disabled={invite.busy}
+                        onPress={onContinue}
+                        accessibilityLabel="Diyetisyenim yok, kurulumdan sonra diyetisyen bul"
+                    />
+                </>
+            )}
         >
             <AppInput
                 label="Diyetisyen kodu"
@@ -142,7 +154,7 @@ function OnboardingConnectStep({ userId, onContinue }) {
             />
             <View style={styles.hint}>
                 <Icon name="info" size={18} color={colors.textSecondary} />
-                <Text style={styles.hintText}>Kodun yok mu? Diyetisyeninden iste ya da sana gönderdiği davet bağlantısına dokun. Bu adımı şimdilik atlayabilirsin.</Text>
+                <Text style={styles.hintText}>Kodun yok mu? Diyetisyeninden iste ya da sana gönderdiği davet bağlantısına dokun. Diyetisyenin yoksa kurulumdan sonra listedeki diyetisyenlerin profillerini inceleyip onlara mesaj atabilirsin.</Text>
             </View>
         </OnboardingStepLayout>
     );

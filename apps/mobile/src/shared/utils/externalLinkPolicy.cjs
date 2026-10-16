@@ -17,9 +17,14 @@ const isAllowedExternalTarget = (target) => (
     typeof target === 'string' && ALLOWED_EXTERNAL_TARGETS.has(target)
 );
 
-const openExternalTarget = async (target, dependencies) => {
+const openExternalTarget = (target, dependencies) => openCheckedTarget(target, isAllowedExternalTarget, dependencies);
+
+// Opens a target only when the given predicate accepts it. Fixed legal links
+// use the allowlist above; dietitian social links use the directory rules.
+const openCheckedTarget = async (target, isAllowed, dependencies) => {
     if (
-        !isAllowedExternalTarget(target)
+        typeof isAllowed !== 'function'
+        || !isAllowed(target)
         || !dependencies
         || typeof dependencies.canOpenURL !== 'function'
         || typeof dependencies.openURL !== 'function'
@@ -47,5 +52,6 @@ module.exports = {
     SUPPORT_EMAIL,
     SUPPORT_MAILTO_URL,
     isAllowedExternalTarget,
+    openCheckedTarget,
     openExternalTarget,
 };

@@ -18,6 +18,8 @@ const EMPTY_CONNECTION_STATE = {
 
 const defaultContext = {
     ...EMPTY_CONNECTION_STATE,
+    hasLoadedConnection: false,
+    hasConnectionLoadError: false,
     isLoadingConnection: false,
     connectionAction: null,
     connectionError: null,
@@ -34,6 +36,10 @@ export const DietitianConnectionProvider = ({ children, userId }) => {
     const [isLoadingConnection, setIsLoadingConnection] = useState(false);
     const [connectionAction, setConnectionAction] = useState(null);
     const [connectionError, setConnectionError] = useState(null);
+    // The user whose connection status was last read successfully. Screens
+    // that depend on "no dietitian" wait for this instead of the empty default.
+    const [loadedUserId, setLoadedUserId] = useState(null);
+    const [hasConnectionLoadError, setHasConnectionLoadError] = useState(false);
     const isMountedRef = useRef(true);
     const inFlightRefreshRef = useRef(null);
     const actionLockRef = useRef(false);
@@ -44,6 +50,8 @@ export const DietitianConnectionProvider = ({ children, userId }) => {
         if (!isMountedRef.current) return;
         setConnectionState(EMPTY_CONNECTION_STATE);
         setConnectionError(null);
+        setLoadedUserId(null);
+        setHasConnectionLoadError(false);
         setIsLoadingConnection(false);
         setConnectionAction(null);
     }, []);
@@ -62,13 +70,18 @@ export const DietitianConnectionProvider = ({ children, userId }) => {
             }
             try {
                 const nextState = await getDietitianConnectionStatus();
-                if (isMountedRef.current) setConnectionState(nextState);
+                if (isMountedRef.current) {
+                    setConnectionState(nextState);
+                    setLoadedUserId(userId);
+                    setHasConnectionLoadError(false);
+                }
                 return nextState;
             } catch (error) {
                 const message = normalizeErrorMessage(error);
                 if (isMountedRef.current) {
                     setConnectionError(message);
                     setConnectionState(EMPTY_CONNECTION_STATE);
+                    setHasConnectionLoadError(true);
                 }
                 return { ...EMPTY_CONNECTION_STATE, error: message };
             } finally {
@@ -155,6 +168,8 @@ export const DietitianConnectionProvider = ({ children, userId }) => {
     const value = useMemo(() => ({
         ...connectionState,
         userId: userId || null,
+        hasLoadedConnection: Boolean(userId) && loadedUserId === userId,
+        hasConnectionLoadError,
         isLoadingConnection,
         connectionAction,
         connectionError,
@@ -163,7 +178,7 @@ export const DietitianConnectionProvider = ({ children, userId }) => {
         rejectPendingRequest,
     }), [
         approvePendingRequest, connectionAction, connectionError, connectionState,
-        isLoadingConnection, refreshConnectionStatus, rejectPendingRequest, userId,
+        hasConnectionLoadError, isLoadingConnection, loadedUserId, refreshConnectionStatus, rejectPendingRequest, userId,
     ]);
 
     return <DietitianConnectionContext.Provider value={value}>{children}</DietitianConnectionContext.Provider>;
